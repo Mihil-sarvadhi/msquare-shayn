@@ -1,0 +1,207 @@
+import { QueryTypes } from 'sequelize';
+import { sequelize } from '@db/sequelize';
+import type {
+  RtoByStateRow,
+  CodVsPrepaidRow,
+  GeoRevenueRow,
+  LogisticsCostsRow,
+  CodCashFlowRow,
+  CustomerOverviewRow,
+  CustomerSegmentRow,
+  TopCustomerRow,
+  DiscountRow,
+  MarketingTrendRow,
+  AttributionGapRow,
+} from './analytics.types';
+
+export async function getNetRevenue(since: string, until: string) {
+  const [shopify] = await sequelize.query<{ gross_revenue: string }>(
+    `SELECT COALESCE(SUM(revenue), 0) AS gross_revenue
+     FROM shopify_orders
+     WHERE created_at::date BETWEEN :since AND :until AND financial_status != 'voided'`,
+    { type: QueryTypes.SELECT, replacements: { since, until } },
+  );
+  const [ithink] = await sequelize.query<{ logistics_cost: string; rto_waste: string }>(
+    `SELECT
+       COALESCE(SUM(billed_total), 0) AS logistics_cost,
+       COALESCE(SUM(CASE WHEN current_status_code LIKE 'RT%'
+         THEN billed_fwd_charges + billed_rto_charges ELSE 0 END), 0) AS rto_waste
+     FROM ithink_shipments WHERE order_date BETWEEN :since AND :until`,
+    { type: QueryTypes.SELECT, replacements: { since, until } },
+  );
+  const gross = parseFloat(shopify?.gross_revenue ?? '0');
+  const logistics = parseFloat(ithink?.logistics_cost ?? '0');
+  const rtoWaste = parseFloat(ithink?.rto_waste ?? '0');
+  return {
+    gross_revenue: gross,
+    logistics_cost: logistics,
+    net_revenue: gross - logistics,
+    rto_waste: rtoWaste,
+  };
+}
+
+export async function getRtoByState(since: string, until: string): Promise<RtoByStateRow[]> {
+  return sequelize.query<RtoByStateRow>(
+    `SELECT customer_state AS state, COUNT(*) AS total,
+       SUM(CASE WHEN current_status_code LIKE 'RT%' THEN 1 ELSE 0 END) AS rto_count,
+       ROUND(100.0 * SUM(CASE WHEN current_status_code LIKE 'RT%' THEN 1 ELSE 0 END)
+         / NULLIF(COUNT(*), 0), 1) AS rto_rate
+     FROM ithink_shipments
+     WHERE order_date BETWEEN :since AND :until
+       AND customer_state IS NOT NULL AND customer_state != ''
+     GROUP BY customer_state
+     ORDER BY rto_count DESC LIMIT 12`,
+    { type: QueryTypes.SELECT, replacements: { since, until } },
+  );
+}
+
+export async function getCodVsPrepaidRto(since: string, until: string): Promise<CodVsPrepaidRow[]> {
+  return sequelize.query<CodVsPrepaidRow>(
+    `SELECT payment_mode, COUNT(*) AS total,
+       SUM(CASE WHEN current_status_code LIKE 'RT%' THEN 1 ELSE 0 END) AS rto_count,
+       ROUND(100.0 * SUM(CASE WHEN current_status_code LIKE 'RT%' THEN 1 ELSE 0 END)
+         / NULLIF(COUNT(*), 0), 1) AS rto_rate
+     FROM ithink_shipments
+     WHERE order_date BETWEEN :since AND :until
+       AND payment_mode IN ('COD', 'Prepaid')
+     GROUP BY payment_mode`,
+    { type: QueryTypes.SELECT, replacements: { since, until } },
+  );
+}
+
+export async function getGeoRevenue(since: string, until: string): Promise<GeoRevenueRow[]> {
+  return sequelize.query<GeoRevenueRow>(
+    `SELECT customer_state AS state, COALESCE(SUM(revenue), 0) AS revenue, COUNT(*) AS orders
+     FROM shopify_orders
+     WHERE created_at::date BETWEEN :since AND :until AND financial_status != 'voided'
+       AND customer_state IS NOT NULL AND customer_state != ''
+     GROUP BY customer_state ORDER BY revenue DESC LIMIT 10`,
+    { type: QueryTypes.SELECT, replacements: { since, until } },
+  );
+}
+
+export async function getLogisticsCosts(since: string, until: string): Promise<LogisticsCostsRow> {
+  const [row] = await sequelize.query<LogisticsCostsRow>(
+    `SELECT COALESCE(SUM(billed_fwd_charges), 0) AS fwd,
+            COALESCE(SUM(billed_rto_charges), 0) AS rto,
+            COALESCE(SUM(billed_cod_charges), 0) AS cod,
+            COALESCE(SUM(billed_gst_charges), 0) AS gst,
+            COALESCE(SUM(billed_total), 0) AS total
+     FROM ithink_shipments WHERE order_date BETWEEN :since AND :until`,
+    { type: QueryTypes.SELECT, replacements: { since, until } },
+  );
+  return row;
+}
+
+export async function getCodCashFlow(): Promise<CodCashFlowRow> {
+  const [row] = await sequelize.query<CodCashFlowRow>(
+    `SELECT COALESCE(SUM(cod_generated), 0) AS cod_generated,
+            COALESCE(SUM(cod_remitted), 0) AS cod_remitted,
+            COALESCE(SUM(cod_generated - cod_remitted), 0) AS pending
+     FROM ithink_remittance
+     WHERE remittance_date >= NOW() - INTERVAL '30 days'`,
+    { type: QueryTypes.SELECT },
+  );
+  return row;
+}
+
+export async function getCustomerOverview(
+  since: string,
+  until: string,
+): Promise<CustomerOverviewRow> {
+  const [row] = await sequelize.query<CustomerOverviewRow>(
+    `SELECT
+       COUNT(DISTINCT o.customer_id) AS total_customers,
+       COUNT(DISTINCT CASE WHEN fo.min_date BETWEEN :since AND :until
+         THEN o.customer_id END) AS new_customers
+     FROM shopify_orders o
+     JOIN (
+       SELECT customer_id, MIN(created_at::date) AS min_date
+       FROM shopify_orders WHERE financial_status != 'voided' AND customer_id IS NOT NULL
+       GROUP BY customer_id
+     ) fo ON fo.customer_id = o.customer_id
+     WHERE o.created_at::date BETWEEN :since AND :until
+       AND o.financial_status != 'voided' AND o.customer_id IS NOT NULL`,
+    { type: QueryTypes.SELECT, replacements: { since, until } },
+  );
+  return row;
+}
+
+export async function getCustomerSegments(): Promise<CustomerSegmentRow[]> {
+  return sequelize.query<CustomerSegmentRow>(
+    `SELECT
+       CASE WHEN orders_count = 1 THEN '1 order'
+            WHEN orders_count BETWEEN 2 AND 3 THEN '2–3 orders'
+            WHEN orders_count BETWEEN 4 AND 5 THEN '4–5 orders'
+            ELSE '6+ orders' END AS bucket,
+       MIN(orders_count) AS sort_key,
+       COUNT(*) AS count
+     FROM shopify_customers WHERE orders_count > 0
+     GROUP BY 1 ORDER BY MIN(orders_count)`,
+    { type: QueryTypes.SELECT },
+  );
+}
+
+export async function getTopCustomers(since: string, until: string): Promise<TopCustomerRow[]> {
+  return sequelize.query<TopCustomerRow>(
+    `SELECT sc.customer_id, sc.email, sc.city, sc.state,
+            sc.orders_count, sc.total_spent::text AS total_spent,
+            MAX(o.created_at)::date AS last_order_date
+     FROM shopify_customers sc
+     JOIN shopify_orders o ON o.customer_id = sc.customer_id
+     WHERE o.created_at::date BETWEEN :since AND :until AND o.financial_status != 'voided'
+     GROUP BY sc.customer_id, sc.email, sc.city, sc.state, sc.orders_count, sc.total_spent
+     ORDER BY sc.total_spent DESC LIMIT 10`,
+    { type: QueryTypes.SELECT, replacements: { since, until } },
+  );
+}
+
+export async function getDiscountAnalysis(since: string, until: string): Promise<DiscountRow[]> {
+  return sequelize.query<DiscountRow>(
+    `SELECT COALESCE(NULLIF(discount_code, ''), 'No Discount') AS discount_code,
+            COUNT(*) AS orders,
+            COALESCE(SUM(revenue), 0) AS revenue,
+            COALESCE(AVG(revenue), 0) AS aov,
+            ROUND(100.0 * COUNT(*) / NULLIF(SUM(COUNT(*)) OVER (), 0), 1) AS pct_of_total
+     FROM shopify_orders
+     WHERE created_at::date BETWEEN :since AND :until AND financial_status != 'voided'
+     GROUP BY 1 ORDER BY orders DESC LIMIT 20`,
+    { type: QueryTypes.SELECT, replacements: { since, until } },
+  );
+}
+
+export async function getMarketingTrend(
+  since: string,
+  until: string,
+): Promise<MarketingTrendRow[]> {
+  return sequelize.query<MarketingTrendRow>(
+    `SELECT date::text,
+            SUM(spend) AS spend, SUM(purchases) AS purchases,
+            SUM(purchase_value) AS purchase_value,
+            CASE WHEN SUM(spend) > 0
+              THEN ROUND((SUM(purchase_value) / SUM(spend))::numeric, 2) ELSE 0 END AS roas,
+            ROUND(AVG(ctr)::numeric, 2) AS ctr,
+            CASE WHEN SUM(purchases) > 0
+              THEN ROUND((SUM(spend) / SUM(purchases))::numeric, 2) ELSE 0 END AS cpp
+     FROM meta_daily_insights WHERE date BETWEEN :since AND :until
+     GROUP BY date ORDER BY date ASC`,
+    { type: QueryTypes.SELECT, replacements: { since, until } },
+  );
+}
+
+export async function getAttributionGap(since: string, until: string): Promise<AttributionGapRow> {
+  const [meta] = await sequelize.query<{ meta_purchases: string }>(
+    `SELECT COALESCE(SUM(purchases), 0) AS meta_purchases
+     FROM meta_daily_insights WHERE date BETWEEN :since AND :until`,
+    { type: QueryTypes.SELECT, replacements: { since, until } },
+  );
+  const [shopify] = await sequelize.query<{ shopify_orders: string }>(
+    `SELECT COUNT(*) AS shopify_orders FROM shopify_orders
+     WHERE created_at::date BETWEEN :since AND :until AND financial_status != 'voided'`,
+    { type: QueryTypes.SELECT, replacements: { since, until } },
+  );
+  return {
+    meta_purchases: meta?.meta_purchases ?? '0',
+    shopify_orders: shopify?.shopify_orders ?? '0',
+  };
+}

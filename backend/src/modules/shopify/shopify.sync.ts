@@ -32,14 +32,17 @@ export async function syncShopifyOrders(): Promise<void> {
         customer_email: order.customer?.email || undefined,
         customer_city: order.customer?.defaultAddress?.city || undefined,
         customer_state: order.customer?.defaultAddress?.province || undefined,
-        discount_code: order.discountCodes?.[0]?.code || undefined,
+        discount_code: order.discountCodes?.[0] || undefined,
       });
 
       for (const { node: item } of order.lineItems?.edges || []) {
+        const lineWhere = item.sku
+          ? { order_id: order.id, sku: item.sku, title: item.title }
+          : { order_id: order.id, title: item.title };
         await ShopifyOrderLineitem.findOrCreate({
-          where: { order_id: order.id, sku: item.sku || undefined, title: item.title },
+          where: lineWhere,
           defaults: {
-            order_id: order.id, sku: item.sku, title: item.title,
+            order_id: order.id, sku: item.sku || undefined, title: item.title,
             variant: item.variant?.title || undefined, quantity: item.quantity,
             unit_price: parseFloat(item.originalUnitPriceSet?.shopMoney?.amount || '0'),
           },

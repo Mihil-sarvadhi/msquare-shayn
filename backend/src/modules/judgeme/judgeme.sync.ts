@@ -2,7 +2,6 @@ import { QueryTypes } from 'sequelize';
 import { sequelize } from '@db/sequelize';
 import { ConnectorHealth, JudgemeReview, JudgemeProduct, JudgemeStoreSummary } from '@db/models';
 import {
-  fetchStoreSummary,
   fetchAllProducts,
   fetchAllReviews,
   type JudgeMeReview,
@@ -14,8 +13,8 @@ async function upsertReviews(reviews: JudgeMeReview[]): Promise<number> {
   let count = 0;
   for (const r of reviews) {
     await JudgemeReview.upsert({
-      review_id: r.id,
-      product_id: r.product_external_id != null ? Number(r.product_external_id) : undefined,
+      review_id: BigInt(r.id),
+      product_id: r.product_external_id != null ? BigInt(r.product_external_id) : undefined,
       external_id: r.product_handle || undefined,
       rating: r.rating,
       title: r.title || undefined,
@@ -37,25 +36,19 @@ async function upsertReviews(reviews: JudgeMeReview[]): Promise<number> {
 async function upsertProducts(products: JudgeMeProduct[]): Promise<void> {
   for (const p of products) {
     await JudgemeProduct.upsert({
-      product_id: p.id,
+      product_id: BigInt(p.id),
       external_id: p.external_id,
       handle: p.handle,
       title: p.title,
       average_rating: p.average_rating,
       reviews_count: p.reviews_count,
-      updated_at: new Date(p.updated_at),
+      updated_at: p.updated_at ? new Date(p.updated_at) : new Date(),
     });
   }
 }
 
 export async function syncJudgeMe(): Promise<void> {
   try {
-    const summary = await fetchStoreSummary();
-    await JudgemeStoreSummary.create({
-      average_rating: summary.rating,
-      total_reviews: summary.count,
-    });
-
     const products = await fetchAllProducts();
     await upsertProducts(products);
 
@@ -66,6 +59,19 @@ export async function syncJudgeMe(): Promise<void> {
     const lastSync: string | undefined = healthRow?.last_sync_at?.toISOString().split('T')[0];
     const reviews = await fetchAllReviews(lastSync);
     const count = await upsertReviews(reviews);
+
+    // Calculate store summary from all published reviews in DB
+    const [summary] = await sequelize.query<{ avg_rating: string; total: string }>(
+      `SELECT ROUND(AVG(rating)::numeric, 2) AS avg_rating, COUNT(*) AS total
+       FROM judgeme_reviews WHERE published = true`,
+      { type: QueryTypes.SELECT }
+    );
+    if (summary && Number(summary.total) > 0) {
+      await JudgemeStoreSummary.create({
+        average_rating: parseFloat(summary.avg_rating),
+        total_reviews: parseInt(summary.total, 10),
+      });
+    }
 
     await ConnectorHealth.update(
       { last_sync_at: new Date(), status: 'green', records_synced: count, error_message: undefined },

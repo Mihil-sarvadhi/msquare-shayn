@@ -40,3 +40,37 @@ export function useSyncIthink() {
     onError: () => { toast.error('Failed to trigger iThink sync'); },
   });
 }
+
+export function useSyncJudgeme() {
+  const refetch = useRefetchDashboard();
+  return useMutation({
+    mutationFn: () => triggerSync('judgeme'),
+    onSuccess: () => { toast.success('Judge.me sync triggered'); refetch(); },
+    onError: () => { toast.error('Failed to trigger Judge.me sync'); },
+  });
+}
+
+export function useSyncAll() {
+  const refetch = useRefetchDashboard();
+  return useMutation({
+    mutationFn: () =>
+      Promise.allSettled([
+        triggerSync('shopify'),
+        triggerSync('meta'),
+        triggerSync('ithink'),
+        triggerSync('judgeme'),
+      ]),
+    onSuccess: (results) => {
+      const failed = results.filter((r) => r.status === 'rejected').length;
+      if (failed === 0) {
+        toast.success('All connectors synced successfully');
+      } else if (failed < results.length) {
+        toast.warning(`Sync done — ${failed} connector(s) failed`);
+      } else {
+        toast.error('All syncs failed — check connector credentials');
+      }
+      refetch();
+    },
+    onError: () => { toast.error('Sync failed'); },
+  });
+}

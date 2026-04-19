@@ -1,15 +1,30 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { DashboardPage } from '@pages/dashboard/page';
-import { ReviewsPage } from '@pages/reviews/page';
+import { AppShell } from '@components/layout/AppShell';
+
+const DashboardPage  = lazy(() => import('@pages/dashboard/page').then((m) => ({ default: m.DashboardPage })));
+const ReviewsPage    = lazy(() => import('@pages/reviews/page').then((m) => ({ default: m.ReviewsPage })));
+const OperationsPage = lazy(() => import('@pages/operations/page').then((m) => ({ default: m.OperationsPage })));
+const CustomersPage  = lazy(() => import('@pages/customers/page').then((m) => ({ default: m.CustomersPage })));
+const MarketingPage  = lazy(() => import('@pages/marketing/page').then((m) => ({ default: m.MarketingPage })));
 
 export function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/reviews" element={<ReviewsPage />} />
-      </Routes>
+      <AppShell>
+        <Suspense fallback={
+          <div className="flex h-screen items-center justify-center text-sm text-gray-400">Loading…</div>
+        }>
+          <Routes>
+            <Route path="/"           element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard"  element={<DashboardPage />} />
+            <Route path="/reviews"    element={<ReviewsPage />} />
+            <Route path="/operations" element={<OperationsPage />} />
+            <Route path="/customers"  element={<CustomersPage />} />
+            <Route path="/marketing"  element={<MarketingPage />} />
+          </Routes>
+        </Suspense>
+      </AppShell>
     </BrowserRouter>
   );
 }

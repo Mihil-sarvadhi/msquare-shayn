@@ -17,7 +17,7 @@ const ORDERS_QUERY = `
           id name createdAt displayFinancialStatus displayFulfillmentStatus
           paymentGatewayNames
           totalPriceSet { shopMoney { amount currencyCode } }
-          discountCodes { code }
+          discountCodes
           customer { id email defaultAddress { city province } }
           lineItems(first: 20) {
             edges { node {
@@ -37,7 +37,7 @@ export interface ShopifyOrder {
   displayFinancialStatus: string; displayFulfillmentStatus: string;
   paymentGatewayNames: string[];
   totalPriceSet: { shopMoney: { amount: string; currencyCode: string } };
-  discountCodes: Array<{ code: string }>;
+  discountCodes: string[];
   customer?: { id: string; email: string; defaultAddress?: { city: string; province: string } };
   lineItems: { edges: Array<{ node: { sku: string; title: string; quantity: number; variant?: { id: string; title: string }; originalUnitPriceSet: { shopMoney: { amount: string } } } }> };
 }

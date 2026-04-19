@@ -17,7 +17,7 @@ export async function judgemeBackfill(): Promise<void> {
   const products = await fetchAllProducts();
   for (const p of products) {
     await JudgemeProduct.upsert({
-      product_id: p.id,
+      product_id: BigInt(p.id),
       external_id: p.external_id,
       handle: p.handle,
       title: p.title,
@@ -33,8 +33,8 @@ export async function judgemeBackfill(): Promise<void> {
   let count = 0;
   for (const r of reviews) {
     await JudgemeReview.upsert({
-      review_id: r.id,
-      product_id: r.product_external_id != null ? Number(r.product_external_id) : undefined,
+      review_id: BigInt(r.id),
+      product_id: r.product_external_id != null ? BigInt(r.product_external_id) : undefined,
       external_id: r.product_handle || undefined,
       rating: r.rating,
       title: r.title || undefined,

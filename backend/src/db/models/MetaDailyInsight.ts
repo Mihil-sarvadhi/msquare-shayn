@@ -23,7 +23,7 @@ MetaDailyInsight.init({
   date: DataTypes.DATEONLY, campaign_id: DataTypes.TEXT, campaign_name: DataTypes.TEXT,
   objective: DataTypes.TEXT, status: DataTypes.TEXT,
   spend: DataTypes.DECIMAL(12, 2), impressions: DataTypes.INTEGER, reach: DataTypes.INTEGER,
-  clicks: DataTypes.INTEGER, ctr: DataTypes.DECIMAL(6, 4), cpm: DataTypes.DECIMAL(10, 4),
+  clicks: DataTypes.INTEGER, ctr: DataTypes.DECIMAL(10, 4), cpm: DataTypes.DECIMAL(10, 4),
   cpc: DataTypes.DECIMAL(10, 4), purchases: DataTypes.INTEGER,
   purchase_value: DataTypes.DECIMAL(12, 2), roas: DataTypes.DECIMAL(8, 4),
   synced_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
