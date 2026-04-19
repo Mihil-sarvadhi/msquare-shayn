@@ -36,10 +36,16 @@
       "Bash(PGPASSWORD=mihil psql -U shayn_user -d shayn_mis -c \"SELECT review_id, created_at, has_photos FROM judgeme_reviews WHERE published = TRUE ORDER BY created_at DESC LIMIT 20;\")",
       "Bash(curl -s \"http://localhost:4000/api/dashboard/recent-reviews\")",
       "Bash(python3 -c ' *)",
-      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('count:', len\\(d\\)\\)\")"
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('count:', len\\(d\\)\\)\")",
+      "Read(//Users/apple/Documents/Projects/react-node-template-main/**)",
+      "Bash(xargs ls *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(npx husky *)"
     ],
     "additionalDirectories": [
-      "/private/tmp"
+      "/private/tmp",
+      "/Users/apple/Documents/Projects/Shayn/docs/superpowers"
     ]
   }
 }
