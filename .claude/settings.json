@@ -1,0 +1,45 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(psql postgres *)",
+      "Bash(createdb shayn_mis)",
+      "Bash(psql shayn_mis -c \"SELECT current_user;\")",
+      "Bash(psql shayn_mis -c \"SELECT rolname FROM pg_roles WHERE rolname = 'shayn_user';\")",
+      "Bash(psql shayn_mis -c \"CREATE USER shayn_user WITH PASSWORD 'password';\")",
+      "Bash(psql shayn_mis -c \"GRANT ALL ON DATABASE shayn_mis TO shayn_user;\")",
+      "Bash(psql shayn_mis -c \"GRANT ALL ON SCHEMA public TO shayn_user;\")",
+      "Bash(npm run *)",
+      "Bash(npx tsc *)",
+      "Bash(node -e ' *)",
+      "Read(//tmp/**)",
+      "Bash(xargs kill *)",
+      "Bash(npm start *)",
+      "Read(//private/tmp/**)",
+      "Bash(pkill -f \"react-scripts start\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "Bash(ts-node -e ' *)",
+      "Bash(npx ts-node -e ' *)",
+      "Bash(PGPASSWORD=mihil psql -U shayn_user -d shayn_mis -c \"SELECT COUNT\\(*\\), MAX\\(average_rating\\), MAX\\(reviews_count\\) FROM judgeme_products;\")",
+      "Bash(PGPASSWORD=mihil psql -U shayn_user -d shayn_mis -c \"SELECT product_id, title, average_rating, reviews_count FROM judgeme_products WHERE reviews_count > 0 ORDER BY average_rating DESC, reviews_count DESC LIMIT 5;\")",
+      "Bash(curl -s http://localhost:4000/api/dashboard/top-rated-products)",
+      "Bash(PGPASSWORD=mihil psql -U shayn_user -d shayn_mis -c \"SELECT product_id, rating FROM judgeme_reviews LIMIT 3;\")",
+      "Bash(PGPASSWORD=mihil psql -U shayn_user -d shayn_mis -c \"SELECT product_id, external_id, title FROM judgeme_products LIMIT 3;\")",
+      "Bash(PGPASSWORD=mihil psql -U shayn_user -d shayn_mis -c \"TRUNCATE judgeme_reviews;\")",
+      "Bash(PGPASSWORD=mihil psql -U shayn_user -d shayn_mis -c \"SELECT COUNT\\(*\\) FROM judgeme_reviews WHERE product_id IS NOT NULL;\")",
+      "Bash(PGPASSWORD=mihil psql -U shayn_user -d shayn_mis -c \"SELECT p.title, ROUND\\(AVG\\(r.rating\\)::numeric,2\\) AS avg, COUNT\\(r.review_id\\) AS cnt FROM judgeme_products p JOIN judgeme_reviews r ON r.product_id = p.product_id WHERE r.published GROUP BY p.title ORDER BY avg DESC, cnt DESC LIMIT 5;\")",
+      "Bash(PGPASSWORD=mihil psql -U shayn_user -d shayn_mis -c \"ALTER TABLE judgeme_reviews ADD COLUMN IF NOT EXISTS product_external_id TEXT; ALTER TABLE judgeme_reviews ADD COLUMN IF NOT EXISTS product_handle TEXT;\")",
+      "Bash(PGPASSWORD=mihil psql -U shayn_user -d shayn_mis -c \"SELECT COUNT\\(*\\) FROM judgeme_reviews WHERE product_external_id IS NOT NULL;\")",
+      "Bash(PGPASSWORD=mihil psql -U shayn_user -d shayn_mis -c \"SELECT p.title, ROUND\\(AVG\\(r.rating\\)::numeric,2\\) AS avg, COUNT\\(*\\) AS cnt FROM judgeme_products p JOIN judgeme_reviews r ON r.product_external_id = p.external_id WHERE r.published GROUP BY p.title ORDER BY avg DESC, cnt DESC LIMIT 5;\")",
+      "Bash(curl -s http://localhost:4000/api/dashboard/recent-reviews)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'count={len\\(d\\)}'\\)\")",
+      "Bash(PGPASSWORD=mihil psql -U shayn_user -d shayn_mis -c \"SELECT review_id, created_at, has_photos FROM judgeme_reviews WHERE published = TRUE ORDER BY created_at DESC LIMIT 20;\")",
+      "Bash(curl -s \"http://localhost:4000/api/dashboard/recent-reviews\")",
+      "Bash(python3 -c ' *)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('count:', len\\(d\\)\\)\")"
+    ],
+    "additionalDirectories": [
+      "/private/tmp"
+    ]
+  }
+}
