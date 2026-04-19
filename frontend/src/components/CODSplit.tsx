@@ -1,7 +1,6 @@
-import React from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
-import { KPIs } from '../hooks/useDashboard';
-import { formatNum } from '../utils/formatters';
+import { KPIs } from '@app/types/dashboard';
+import { formatNum } from '@utils/formatters';
 
 interface Props { kpis: KPIs | null; loading: boolean; }
 

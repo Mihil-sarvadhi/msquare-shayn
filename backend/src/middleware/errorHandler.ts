@@ -19,7 +19,7 @@ const mapErrorTypeToStatus = (errorType: ErrorType): number => {
 
 export const ErrorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   let statusCode = 500;
-  let message = RES_TYPES.INTERNAL_SERVER_ERROR;
+  let message: string = RES_TYPES.INTERNAL_SERVER_ERROR;
   let code: string | undefined;
   let errorPayload: unknown;
 

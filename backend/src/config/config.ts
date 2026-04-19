@@ -26,6 +26,7 @@ const envSchema = z.object({
   SHOPIFY_STORE_DOMAIN: z.string().min(1, 'SHOPIFY_STORE_DOMAIN is required'),
   SHOPIFY_ACCESS_TOKEN: z.string().min(1, 'SHOPIFY_ACCESS_TOKEN is required'),
   SHOPIFY_API_VERSION: z.string().default('2026-01'),
+  SHOPIFY_WEBHOOK_SECRET: z.string().default(''),
   // Meta Ads
   META_USER_TOKEN: z.string().min(1, 'META_USER_TOKEN is required'),
   META_AD_ACCOUNT_ID: z.string().min(1, 'META_AD_ACCOUNT_ID is required'),
@@ -63,6 +64,7 @@ export const environment = {
     storeDomain: env.SHOPIFY_STORE_DOMAIN,
     accessToken: env.SHOPIFY_ACCESS_TOKEN,
     apiVersion: env.SHOPIFY_API_VERSION,
+    webhookSecret: env.SHOPIFY_WEBHOOK_SECRET,
   },
   meta: {
     userToken: env.META_USER_TOKEN,

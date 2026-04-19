@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { RecentReview } from '../hooks/useDashboard';
+import { RecentReview } from '@app/types/dashboard';
 
 interface Props {
   reviews: RecentReview[];

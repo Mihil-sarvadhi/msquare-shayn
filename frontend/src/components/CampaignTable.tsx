@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Campaign } from '../hooks/useDashboard';
-import { formatINR, formatNum } from '../utils/formatters';
+import { useState } from 'react';
+import { Campaign } from '@app/types/dashboard';
+import { formatINR, formatNum } from '@utils/formatters';
 
 interface CampaignTableProps {
   campaigns: Campaign[];

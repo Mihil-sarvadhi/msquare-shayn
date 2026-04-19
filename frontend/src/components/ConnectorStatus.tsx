@@ -1,5 +1,4 @@
-import React from 'react';
-import { ConnectorHealth } from '../hooks/useDashboard';
+import { ConnectorHealth } from '@app/types/dashboard';
 
 interface ConnectorStatusProps {
   health: ConnectorHealth[];

@@ -1,6 +1,5 @@
-import React from 'react';
-import { KPIs } from '../hooks/useDashboard';
-import { formatNum } from '../utils/formatters';
+import { KPIs } from '@app/types/dashboard';
+import { formatNum } from '@utils/formatters';
 import ComingSoon from './ComingSoon';
 
 interface PlatformOrdersProps {

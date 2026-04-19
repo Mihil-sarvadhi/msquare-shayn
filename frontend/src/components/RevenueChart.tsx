@@ -1,10 +1,9 @@
-import React from 'react';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid,
 } from 'recharts';
-import { RevenueTrendItem } from '../hooks/useDashboard';
-import { formatINR, formatDate } from '../utils/formatters';
+import { RevenueTrendItem } from '@app/types/dashboard';
+import { formatINR, formatDate } from '@utils/formatters';
 
 interface RevenueChartProps {
   data: RevenueTrendItem[];

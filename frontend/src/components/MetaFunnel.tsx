@@ -1,6 +1,5 @@
-import React from 'react';
-import { MetaFunnel as MetaFunnelType } from '../hooks/useDashboard';
-import { formatNum, formatINR } from '../utils/formatters';
+import { MetaFunnel as MetaFunnelType } from '@app/types/dashboard';
+import { formatNum, formatINR } from '@utils/formatters';
 
 interface MetaFunnelProps {
   data: MetaFunnelType | null;

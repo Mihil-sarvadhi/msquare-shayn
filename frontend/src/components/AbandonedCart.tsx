@@ -1,6 +1,5 @@
-import React from 'react';
-import { AbandonedCarts } from '../hooks/useDashboard';
-import { formatNum, formatINR } from '../utils/formatters';
+import { AbandonedCarts } from '@app/types/dashboard';
+import { formatNum, formatINR } from '@utils/formatters';
 
 interface AbandonedCartProps {
   data: AbandonedCarts | null;

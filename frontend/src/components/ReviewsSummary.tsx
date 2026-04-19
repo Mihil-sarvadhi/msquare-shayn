@@ -1,5 +1,4 @@
-import React from 'react';
-import { ReviewsSummary as ReviewsSummaryType } from '../hooks/useDashboard';
+import { ReviewsSummary as ReviewsSummaryType } from '@app/types/dashboard';
 
 interface Props {
   data: ReviewsSummaryType | null;

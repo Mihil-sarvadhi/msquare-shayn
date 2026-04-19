@@ -1,6 +1,5 @@
-import React from 'react';
-import { Product } from '../hooks/useDashboard';
-import { formatINR, formatNum } from '../utils/formatters';
+import { Product } from '@app/types/dashboard';
+import { formatINR, formatNum } from '@utils/formatters';
 
 interface TopProductsProps {
   products: Product[];

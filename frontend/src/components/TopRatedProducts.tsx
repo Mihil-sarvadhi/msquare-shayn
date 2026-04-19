@@ -1,5 +1,4 @@
-import React from 'react';
-import { TopRatedProduct } from '../hooks/useDashboard';
+import { TopRatedProduct } from '@app/types/dashboard';
 
 interface Props {
   products: TopRatedProduct[];

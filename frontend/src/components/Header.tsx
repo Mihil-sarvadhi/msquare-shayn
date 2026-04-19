@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ConnectorHealth } from '../hooks/useDashboard';
+import { useState } from 'react';
+import { ConnectorHealth } from '@app/types/dashboard';
 
 interface HeaderProps {
   range: string;
