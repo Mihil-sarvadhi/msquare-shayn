@@ -41,7 +41,12 @@
       "Bash(xargs ls *)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(npx husky *)"
+      "Bash(npx husky *)",
+      "Bash(cp /Users/apple/Documents/Projects/Shayn/.claude-new/HOW-TO-USE.md /Users/apple/Documents/Projects/Shayn/.claude/HOW-TO-USE.md)",
+      "Bash(cp /Users/apple/Documents/Projects/Shayn/.claude-new/PROGRESS.md /Users/apple/Documents/Projects/Shayn/.claude/PROGRESS.md)",
+      "Bash(cp /Users/apple/Documents/Projects/Shayn/.claude-new/QUESTIONS.md /Users/apple/Documents/Projects/Shayn/.claude/QUESTIONS.md)",
+      "Bash(cp /Users/apple/Documents/Projects/Shayn/.claude-new/TASKS.md /Users/apple/Documents/Projects/Shayn/.claude/TASKS.md)",
+      "Bash(cp -r /Users/apple/Documents/Projects/Shayn/.claude-new/rules /Users/apple/Documents/Projects/Shayn/.claude/)"
     ],
     "additionalDirectories": [
       "/private/tmp",
