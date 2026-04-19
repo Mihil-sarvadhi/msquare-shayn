@@ -1,4 +1,4 @@
-import AllReviewsPage from '@components/AllReviewsPage';
+import AllReviewsPage from './components/AllReviewsPage';
 
 export function ReviewsPage() {
   return <AllReviewsPage />;

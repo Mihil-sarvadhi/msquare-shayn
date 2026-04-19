@@ -1,5 +1,5 @@
 import { combineReducers } from '@reduxjs/toolkit';
-import dashboardReducer from './dashboardSlice';
+import dashboardReducer from './slices/dashboardSlice';
 
 const rootReducer = combineReducers({
   dashboard: dashboardReducer,

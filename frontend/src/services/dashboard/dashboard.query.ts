@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { useAppDispatch, useAppSelector } from '@store/hooks';
-import { fetchDashboard } from '@store/dashboardSlice';
+import { fetchDashboard } from '@store/slices/dashboardSlice';
 import baseService from '@services/configs/baseService';
 import { toast } from '@/components/ui/toast';
 
