@@ -1,10 +1,14 @@
+import type { ReactNode } from 'react';
 import { ReduxProvider } from './ReduxProvider';
 import { QueryProvider } from './QueryProvider';
+import { ToastProvider } from '@/components/ui/toast';
 
-export function AppProviders({ children }: { children: React.ReactNode }) {
+export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <ReduxProvider>
-      <QueryProvider>{children}</QueryProvider>
+      <QueryProvider>
+        <ToastProvider>{children}</ToastProvider>
+      </QueryProvider>
     </ReduxProvider>
   );
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import baseService from '@services/baseService';
+import baseService from '@services/configs/baseService';
 import type { RecentReview } from '@app/types/dashboard';
 
 const ratingColor = (r: number) => r >= 4 ? '#C9991A' : r === 3 ? '#B45309' : '#C0394B';

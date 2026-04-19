@@ -2,7 +2,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 import db from '../config/database';
-import { fetchAllReviews, fetchAllProducts, fetchStoreSummary, JudgeMeReview, JudgeMeProduct } from '../connectors/judgeMe';
+import { fetchAllReviews, fetchAllProducts, fetchStoreSummary } from '../connectors/judgeMe';
 
 async function judgeMeBackfill(): Promise<void> {
   console.log('[Judge.me Backfill] Pulling ALL historical reviews...');

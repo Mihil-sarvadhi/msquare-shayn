@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { fetchAllDashboard } from '@services/dashboard.api';
+import { fetchAllDashboard } from '@services/dashboard/dashboard.api';
 import type { DashboardState } from '@app/types/dashboard';
 
 const initialState: DashboardState = {

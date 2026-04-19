@@ -1,8 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import DashboardPage from '@pages/dashboard/page';
-import ReviewsPage from '@pages/reviews/page';
+import { DashboardPage } from '@pages/dashboard/page';
+import { ReviewsPage } from '@pages/reviews/page';
 
-export default function App() {
+export function App() {
   return (
     <BrowserRouter>
       <Routes>

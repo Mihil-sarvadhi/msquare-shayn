@@ -20,7 +20,7 @@ import RecentReviews from '@components/RecentReviews';
 import { formatINR, formatNum, formatPct } from '@utils/formatters';
 import { IndianRupee, ShoppingCart, Receipt, Megaphone, TrendingUp, PackageX } from 'lucide-react';
 
-export default function DashboardPage() {
+export function DashboardPage() {
   const dispatch = useAppDispatch();
   const { range, kpis, revenueTrend, metaFunnel, campaigns, topProducts,
     abandonedCarts, health, reviewsSummary, topRatedProducts, recentReviews,

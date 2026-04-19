@@ -1,0 +1,35 @@
+# Shayn MIS Frontend — Cursor Rules
+
+## Architecture
+- Pages: src/pages/{feature}/page.tsx (named export)
+- API layer: src/services/{feature}/{feature}.api.ts
+- Mutations: src/services/{feature}/{feature}.query.ts (React Query)
+- State: src/store/slices/{feature}Slice.ts (Redux Toolkit)
+- Shared UI: src/components/shared/ | Layout: src/components/layout/
+
+## TypeScript
+- verbatimModuleSyntax: true — type-only imports MUST use `import type`
+- strict: true, noUnusedLocals: true, noUnusedParameters: true
+- Named exports only — no default exports (except Redux reducers)
+- Path aliases: @/, @components/*, @pages/*, @store/*, @services/*, @utils/*, @lib/*, @app/types/*
+
+## State Management
+- ALL fetched data and UI state → Redux (useAppSelector / useAppDispatch)
+- Mutations only → React Query (useMutation)
+- No useState for fetched data, filters, pagination, dialogs
+
+## API
+- baseService: Axios instance in src/services/configs/baseService.ts
+- apiService: auto-unwraps response.data.data in src/services/configs/apiService.ts
+- Always use API_ENDPOINTS from src/utils/constants/api.constant.ts
+- Always PUT for updates — never PATCH
+
+## Forms
+- Zod schemas: src/utils/validations/index.ts only — never in component files
+- React Hook Form + zodResolver
+
+## Quality
+- 0 ESLint warnings (--max-warnings 0)
+- logger from src/lib/logger.ts — never console.log
+- cn() from src/lib/utils.ts for all conditional Tailwind
+- Toast on every mutation success and error
