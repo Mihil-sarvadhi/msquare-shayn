@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { handleApiResponse, handleErrorResponse } from '@utils/handleResponse';
+import { logger } from '@logger/logger';
 import {
   triggerShopifySync,
   triggerMetaSync,
@@ -72,9 +73,7 @@ export async function syncJudgeMeHandler(_req: Request, res: Response): Promise<
 }
 
 export async function syncAllHandler(_req: Request, res: Response): Promise<void> {
-  try {
-    handleApiResponse(res, { data: await triggerAllSync() });
-  } catch (err) {
-    handleErrorResponse(res, errOpts(err));
-  }
+  // Respond immediately — sync runs in background to avoid gateway timeout
+  res.status(202).json({ success: true, message: 'Sync started in background' });
+  triggerAllSync().catch((err: Error) => logger.error(`[SyncAll] background error: ${err.message}`));
 }
