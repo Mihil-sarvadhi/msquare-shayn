@@ -19,7 +19,6 @@ import ReviewsSummary from './components/ReviewsSummary';
 import TopRatedProducts from './components/TopRatedProducts';
 import RecentReviews from './components/RecentReviews';
 import { TopSkus } from './components/TopSkus';
-import { useSyncAll } from '@services/dashboard/dashboard.query';
 import { formatINR, formatNum, formatPct } from '@utils/formatters';
 import { IndianRupee, ShoppingCart, Receipt, Megaphone, TrendingUp, PackageX } from 'lucide-react';
 
@@ -37,8 +36,6 @@ export function DashboardPage() {
   useEffect(() => {
     dispatch(fetchOperationsData(range));
   }, [dispatch, range]);
-
-  const syncAll = useSyncAll();
 
   const handleRangeChange = (r: string) => {
     dispatch(setRange(r));
@@ -58,7 +55,7 @@ export function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-ivory font-sans">
-      <Header range={range} setRange={handleRangeChange} health={health} onSyncAll={() => syncAll.mutate()} isSyncing={syncAll.isPending} />
+      <Header range={range} setRange={handleRangeChange} />
 
       <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-4 sm:py-5 space-y-4">
 
