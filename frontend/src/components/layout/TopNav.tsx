@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
-import { RefreshCw, CalendarDays, Wifi } from 'lucide-react';
+import { RefreshCw, CalendarDays, ArrowLeftRight } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '@store/hooks';
 import { setPreset, setCustomRange } from '@store/slices/rangeSlice';
 import type { RangePreset } from '@store/slices/rangeSlice';
@@ -250,7 +250,7 @@ export function TopNav() {
                 : 'border-[#E8E0D0] text-[#8C7B64] hover:border-[#B8860B] hover:text-[#B8860B]'
             )}
           >
-            <Wifi size={13} strokeWidth={1.5} />
+            <ArrowLeftRight size={13} strokeWidth={1.5} />
             Sync Status
           </button>
 
