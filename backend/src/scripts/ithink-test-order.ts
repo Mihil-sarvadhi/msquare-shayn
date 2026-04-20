@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { getStoreOrderDetails, trackAWBs } from '../modules/ithink/ithink.connector';
 
 async function main(): Promise<void> {
@@ -12,11 +13,11 @@ async function main(): Promise<void> {
 
   // Extract numeric part from GQL ID
   const numericId = gqlOrderId.includes('/') ? gqlOrderId.split('/').pop()! : gqlOrderId;
-  console.error(`\n── Step 1: Store Order Details for order ${numericId} ──`);
+  console.log(`\n── Step 1: Store Order Details for order ${numericId} ──`);
 
   const storeRes = await getStoreOrderDetails([numericId]);
-  console.error('Status:', storeRes.status);
-  console.error('Data:', JSON.stringify(storeRes.data, null, 2));
+  console.log('Status:', storeRes.status);
+  console.log('Data:', JSON.stringify(storeRes.data, null, 2));
 
   if (storeRes.status !== 'success' || !storeRes.data) {
     console.error('❌ Store order details failed. Stopping.');
@@ -30,13 +31,13 @@ async function main(): Promise<void> {
   }
 
   const awb = orderData.awb_no;
-  console.error(`\n── Step 2: Track AWB ${awb} ──`);
+  console.log(`\n── Step 2: Track AWB ${awb} ──`);
 
   const trackRes = await trackAWBs([awb]);
-  console.error('Tracking result:', JSON.stringify(trackRes, null, 2));
+  console.log('Tracking result:', JSON.stringify(trackRes, null, 2));
 
-  console.error('\n── Merged result ──');
-  console.error({
+  console.log('\n── Merged result ──');
+  console.log({
     shopify_order_gql_id: gqlOrderId,
     numeric_order_id: numericId,
     awb,
