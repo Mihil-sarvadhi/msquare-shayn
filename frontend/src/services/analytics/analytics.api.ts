@@ -4,7 +4,7 @@ import type {
   NetRevenue, RtoByStateItem, CodVsPrepaidItem, GeoRevenueItem,
   LogisticsCosts, CodCashFlow, CustomerOverview, CustomerSegmentItem,
   TopCustomerItem, DiscountItem, MarketingTrendItem, AttributionGap, TopSkuItem,
-  MoneyStuck,
+  MoneyStuck, ChannelRevenue,
 } from '@app/types/analytics';
 
 const get = <T>(url: string, range: string) =>
@@ -45,9 +45,10 @@ export async function fetchCustomers(range: string) {
 
 export async function fetchMarketing(range: string) {
   const e = API_ENDPOINTS.analytics;
-  const [marketingTrend, attributionGapRaw] = await Promise.all([
+  const [marketingTrend, attributionGapRaw, channelRevenueRaw] = await Promise.all([
     get<MarketingTrendItem[]>(e.marketingTrend, range),
     get<{ meta_purchases: number; shopify_orders: number }>(e.attributionGap, range),
+    get<{ shopify_revenue: number; meta_revenue: number; organic_revenue: number }>(e.channelRevenue, range),
   ]);
   const meta    = Number(attributionGapRaw.meta_purchases ?? 0);
   const shopify = Number(attributionGapRaw.shopify_orders ?? 0);
@@ -57,5 +58,10 @@ export async function fetchMarketing(range: string) {
     attribution_rate: shopify > 0 ? Math.round((meta / shopify) * 100) : 0,
     gap: meta - shopify,
   };
-  return { marketingTrend, attributionGap };
+  const channelRevenue: ChannelRevenue = {
+    shopify_revenue: Number(channelRevenueRaw.shopify_revenue ?? 0),
+    meta_revenue: Number(channelRevenueRaw.meta_revenue ?? 0),
+    organic_revenue: Number(channelRevenueRaw.organic_revenue ?? 0),
+  };
+  return { marketingTrend, attributionGap, channelRevenue };
 }

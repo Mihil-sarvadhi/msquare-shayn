@@ -103,6 +103,12 @@ export interface MoneyStuck {
   total_stuck: number;
 }
 
+export interface ChannelRevenue {
+  shopify_revenue: number;
+  meta_revenue: number;
+  organic_revenue: number;
+}
+
 export interface AnalyticsState {
   range: string;
   netRevenue: NetRevenue | null;
@@ -119,6 +125,7 @@ export interface AnalyticsState {
   attributionGap: AttributionGap | null;
   topSkus: TopSkuItem[];
   moneyStuck: MoneyStuck | null;
+  channelRevenue: ChannelRevenue | null;
   loadingOperations: boolean;
   loadingCustomers: boolean;
   loadingMarketing: boolean;

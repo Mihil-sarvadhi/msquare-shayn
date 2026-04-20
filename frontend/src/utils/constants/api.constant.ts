@@ -27,6 +27,7 @@ export const API_ENDPOINTS = {
     attributionGap: '/analytics/attribution-gap',
     topSkus: '/analytics/top-skus',
     moneyStuck: '/analytics/money-stuck',
+    channelRevenue: '/analytics/channel-revenue',
   },
   health: '/health',
   sync: {

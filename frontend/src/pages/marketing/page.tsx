@@ -7,11 +7,12 @@ import { RoasTrend }       from './components/RoasTrend';
 import { CppTrend }        from './components/CppTrend';
 import { AttributionGap }  from './components/AttributionGap';
 import { CtrTrend }        from './components/CtrTrend';
+import { ChannelRevenue }  from './components/ChannelRevenue';
 
 export function MarketingPage() {
   const dispatch = useAppDispatch();
   const {
-    range, marketingTrend, attributionGap, loadingMarketing,
+    range, marketingTrend, attributionGap, channelRevenue, loadingMarketing,
   } = useAppSelector((s) => s.analytics);
 
   useEffect(() => {
@@ -29,6 +30,13 @@ export function MarketingPage() {
       <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-4 sm:py-5 space-y-4">
 
         <MarketingKPIs trend={marketingTrend} attribution={attributionGap} loading={L} />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white rounded-xl border border-parch shadow-card p-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted mb-4">Revenue by Channel</h3>
+            <ChannelRevenue data={channelRevenue} loading={L} />
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white rounded-xl border border-parch shadow-card p-4">
