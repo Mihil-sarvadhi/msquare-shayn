@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
-import { RefreshCw, CalendarDays } from 'lucide-react';
+import { RefreshCw, CalendarDays, Wifi } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '@store/hooks';
 import { setPreset, setCustomRange } from '@store/slices/rangeSlice';
 import type { RangePreset } from '@store/slices/rangeSlice';
@@ -250,15 +250,7 @@ export function TopNav() {
                 : 'border-[#E8E0D0] text-[#8C7B64] hover:border-[#B8860B] hover:text-[#B8860B]'
             )}
           >
-            {/* Status dots summary */}
-            <span className="flex gap-0.5">
-              {health.slice(0, 4).map((h) => (
-                <span
-                  key={h.connector_name}
-                  className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[h.status] ?? STATUS_DOT.unknown}`}
-                />
-              ))}
-            </span>
+            <Wifi size={13} strokeWidth={1.5} />
             Sync Status
           </button>
 
