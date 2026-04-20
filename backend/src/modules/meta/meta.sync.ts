@@ -58,20 +58,27 @@ export async function syncMetaInsights(): Promise<void> {
         );
         count++;
       } catch (rowErr) {
-        logger.error(`[Meta Ads] Row upsert failed for campaign ${insight.campaign_id} on ${insight.date_start}: ${(rowErr as Error).message}`);
+        logger.error(
+          `[Meta Ads] Row upsert failed for campaign ${insight.campaign_id} on ${insight.date_start}: ${(rowErr as Error).message}`,
+        );
       }
     }
 
     await ConnectorHealth.update(
-      { last_sync_at: new Date(), status: 'green', records_synced: count, error_message: undefined },
-      { where: { connector_name: 'meta_ads' } }
+      {
+        last_sync_at: new Date(),
+        status: 'green',
+        records_synced: count,
+        error_message: undefined,
+      },
+      { where: { connector_name: 'meta_ads' } },
     );
 
     logger.info(`[Meta Ads] Synced ${count} insight rows`);
   } catch (err) {
     await ConnectorHealth.update(
       { status: 'red', error_message: (err as Error).message },
-      { where: { connector_name: 'meta_ads' } }
+      { where: { connector_name: 'meta_ads' } },
     );
     logger.error(`[Meta Ads] Sync error: ${(err as Error).message}`);
   }

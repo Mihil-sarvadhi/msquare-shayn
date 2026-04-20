@@ -1,7 +1,11 @@
 import type { Response } from 'express';
 import { RES_STATUS, RES_TYPES, type ResponseStatus } from '@constant/message.constant';
 
-export interface PaginationMeta { page: number; limit: number; total: number; }
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+}
 
 export interface ApiResponseOptions<T> {
   statusCode?: number;
@@ -20,8 +24,10 @@ export interface ErrorResponseOptions {
 
 const getStatusCode = (responseType: ResponseStatus): number => {
   switch (responseType) {
-    case RES_STATUS.CREATE: return 201;
-    default: return 200;
+    case RES_STATUS.CREATE:
+      return 201;
+    default:
+      return 200;
   }
 };
 
@@ -29,8 +35,11 @@ export const handleApiResponse = <T>(res: Response, options: ApiResponseOptions<
   const { statusCode, responseType = RES_STATUS.GET, message, data, pagination } = options;
   const httpStatus = statusCode ?? getStatusCode(responseType);
   return res.status(httpStatus).json({
-    success: true, statusCode: httpStatus,
-    message: message ?? RES_TYPES.SUCCESS, data, pagination,
+    success: true,
+    statusCode: httpStatus,
+    message: message ?? RES_TYPES.SUCCESS,
+    data,
+    pagination,
   });
 };
 

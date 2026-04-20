@@ -2,8 +2,11 @@ import { QueryTypes } from 'sequelize';
 import { sequelize } from '@db/sequelize';
 
 export interface HealthRow {
-  connector_name: string; status: string; error_message: string | null;
-  records_synced: number; last_sync_at: string | null;
+  connector_name: string;
+  status: string;
+  error_message: string | null;
+  records_synced: number;
+  last_sync_at: string | null;
 }
 
 export async function getConnectorHealth(): Promise<HealthRow[]> {
@@ -16,6 +19,6 @@ export async function getConnectorHealth(): Promise<HealthRow[]> {
               END
             ) AS last_sync_at
      FROM connector_health ch ORDER BY connector_name`,
-    { type: QueryTypes.SELECT }
+    { type: QueryTypes.SELECT },
   );
 }

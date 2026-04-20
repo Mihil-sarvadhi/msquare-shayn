@@ -15,7 +15,13 @@ export class AppError extends Error {
   public readonly sourcePath?: string;
   public readonly details?: unknown;
 
-  constructor({ errorType = ERROR_TYPES.UNKNOWN_ERROR, message, code, sourcePath, details }: AppErrorParams) {
+  constructor({
+    errorType = ERROR_TYPES.UNKNOWN_ERROR,
+    message,
+    code,
+    sourcePath,
+    details,
+  }: AppErrorParams) {
     super(message);
     this.name = 'AppError';
     this.errorType = errorType;

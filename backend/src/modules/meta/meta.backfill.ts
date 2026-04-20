@@ -15,7 +15,9 @@ function monthChunks(since: Date, until: Date): Array<{ since: string; until: st
   return chunks;
 }
 
-async function upsertInsights(insights: Awaited<ReturnType<typeof fetchCampaignInsights>>): Promise<number> {
+async function upsertInsights(
+  insights: Awaited<ReturnType<typeof fetchCampaignInsights>>,
+): Promise<number> {
   let count = 0;
   for (const insight of insights) {
     const { purchases, purchaseValue } = parseActions(insight.actions, insight.action_values);
@@ -46,7 +48,9 @@ export async function metaBackfill(): Promise<void> {
   since.setMonth(since.getMonth() - 12);
 
   const chunks = monthChunks(since, until);
-  logger.info(`[Meta Backfill] Fetching ${chunks.length} monthly chunks (${since.toISOString().split('T')[0]} → ${until.toISOString().split('T')[0]})`);
+  logger.info(
+    `[Meta Backfill] Fetching ${chunks.length} monthly chunks (${since.toISOString().split('T')[0]} → ${until.toISOString().split('T')[0]})`,
+  );
 
   let total = 0;
   for (const chunk of chunks) {
@@ -61,5 +65,8 @@ export async function metaBackfill(): Promise<void> {
 }
 
 if (require.main === module) {
-  metaBackfill().catch((err) => { logger.error(err); process.exit(1); });
+  metaBackfill().catch((err) => {
+    logger.error(err);
+    process.exit(1);
+  });
 }

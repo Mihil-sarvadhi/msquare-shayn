@@ -18,7 +18,7 @@ const ORDERS_QUERY = `
           paymentGatewayNames
           totalPriceSet { shopMoney { amount currencyCode } }
           discountCodes
-          customer { id email defaultAddress { city province } }
+          customer { id email firstName lastName defaultAddress { city province } }
           lineItems(first: 20) {
             edges { node {
               sku title quantity
@@ -33,16 +33,38 @@ const ORDERS_QUERY = `
 `;
 
 export interface ShopifyOrder {
-  id: string; name: string; createdAt: string;
-  displayFinancialStatus: string; displayFulfillmentStatus: string;
+  id: string;
+  name: string;
+  createdAt: string;
+  displayFinancialStatus: string;
+  displayFulfillmentStatus: string;
   paymentGatewayNames: string[];
   totalPriceSet: { shopMoney: { amount: string; currencyCode: string } };
   discountCodes: string[];
-  customer?: { id: string; email: string; defaultAddress?: { city: string; province: string } };
-  lineItems: { edges: Array<{ node: { sku: string; title: string; quantity: number; variant?: { id: string; title: string }; originalUnitPriceSet: { shopMoney: { amount: string } } } }> };
+  customer?: {
+    id: string;
+    email: string;
+    firstName?: string;
+    lastName?: string;
+    defaultAddress?: { city: string; province: string };
+  };
+  lineItems: {
+    edges: Array<{
+      node: {
+        sku: string;
+        title: string;
+        quantity: number;
+        variant?: { id: string; title: string };
+        originalUnitPriceSet: { shopMoney: { amount: string } };
+      };
+    }>;
+  };
 }
 
-export async function graphqlRequest<T>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
+export async function graphqlRequest<T>(
+  query: string,
+  variables: Record<string, unknown> = {},
+): Promise<T> {
   const response = await axios.post(SHOPIFY_ENDPOINT, { query, variables }, { headers });
   if (response.data.errors) throw new Error(JSON.stringify(response.data.errors));
   return response.data.data as T;
@@ -55,9 +77,14 @@ export async function fetchRecentOrders(updatedAtMin?: string): Promise<ShopifyO
   let hasNextPage = true;
 
   type OrdersEdge = { node: ShopifyOrder };
-  type OrdersResponse = { orders: { edges: Array<OrdersEdge>; pageInfo: { hasNextPage: boolean; endCursor: string } } };
+  type OrdersResponse = {
+    orders: { edges: Array<OrdersEdge>; pageInfo: { hasNextPage: boolean; endCursor: string } };
+  };
   while (hasNextPage) {
-    const data: OrdersResponse = await graphqlRequest<OrdersResponse>(ORDERS_QUERY, { query: queryStr, cursor });
+    const data: OrdersResponse = await graphqlRequest<OrdersResponse>(ORDERS_QUERY, {
+      query: queryStr,
+      cursor,
+    });
     allOrders = allOrders.concat(data.orders.edges.map((e: OrdersEdge) => e.node));
     hasNextPage = data.orders.pageInfo.hasNextPage;
     cursor = data.orders.pageInfo.endCursor;
@@ -78,30 +105,46 @@ const BULK_ORDERS_QUERY = `
 `;
 
 export async function startBulkBackfill(): Promise<{ id: string; status: string }> {
-  const data = await graphqlRequest<{ bulkOperationRunQuery: { bulkOperation: { id: string; status: string } | null; userErrors: Array<{ field: string; message: string }> } }>(BULK_ORDERS_QUERY);
+  const data = await graphqlRequest<{
+    bulkOperationRunQuery: {
+      bulkOperation: { id: string; status: string } | null;
+      userErrors: Array<{ field: string; message: string }>;
+    };
+  }>(BULK_ORDERS_QUERY);
   const { bulkOperation, userErrors } = data.bulkOperationRunQuery;
-  if (userErrors?.length) throw new Error(`Shopify bulk operation error: ${userErrors.map((e) => e.message).join(', ')}`);
+  if (userErrors?.length)
+    throw new Error(`Shopify bulk operation error: ${userErrors.map((e) => e.message).join(', ')}`);
   if (!bulkOperation) throw new Error('Shopify returned null bulkOperation');
   return bulkOperation;
 }
 
-export async function checkBulkStatus(operationId: string): Promise<{ id: string; status: string; url?: string; errorCode?: string }> {
+export async function checkBulkStatus(
+  operationId: string,
+): Promise<{ id: string; status: string; url?: string; errorCode?: string }> {
   const query = `query { bulkOperation(id: "${operationId}") { id status url errorCode } }`;
-  const data = await graphqlRequest<{ bulkOperation: { id: string; status: string; url?: string; errorCode?: string } }>(query);
+  const data = await graphqlRequest<{
+    bulkOperation: { id: string; status: string; url?: string; errorCode?: string };
+  }>(query);
   return data.bulkOperation;
 }
 
 export interface AbandonedCheckout {
-  id: string; createdAt: string; abandonedCheckoutUrl: string;
-  totalPriceV2: { amount: string }; email: string;
+  id: string;
+  createdAt: string;
+  abandonedCheckoutUrl: string;
+  totalPriceSet: { shopMoney: { amount: string } };
+  customer: { email: string } | null;
   lineItems: { edges: Array<{ node: { title: string; quantity: number } }> };
 }
 
 export async function fetchAbandonedCheckouts(): Promise<AbandonedCheckout[]> {
   const query = `query { abandonedCheckouts(first: 250) { edges { node {
-    id createdAt abandonedCheckoutUrl totalPriceV2 { amount } email
+    id createdAt abandonedCheckoutUrl totalPriceSet { shopMoney { amount } }
+    customer { email }
     lineItems(first: 5) { edges { node { title quantity } }}
   }}}}`;
-  const data = await graphqlRequest<{ abandonedCheckouts: { edges: Array<{ node: AbandonedCheckout }> } }>(query);
+  const data = await graphqlRequest<{
+    abandonedCheckouts: { edges: Array<{ node: AbandonedCheckout }> };
+  }>(query);
   return data.abandonedCheckouts.edges.map((e) => e.node);
 }

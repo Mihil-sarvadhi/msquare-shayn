@@ -6,17 +6,23 @@ import { logger } from '@logger/logger';
 async function cancelExistingBulkOperation(): Promise<void> {
   const checkQuery = `query { currentBulkOperation { id status } }`;
   try {
-    const data = await graphqlRequest<{ currentBulkOperation: { id: string; status: string } | null }>(checkQuery);
+    const data = await graphqlRequest<{
+      currentBulkOperation: { id: string; status: string } | null;
+    }>(checkQuery);
     const current = data.currentBulkOperation;
     if (current && ['CREATED', 'RUNNING'].includes(current.status)) {
-      logger.info(`[Shopify Backfill] Cancelling existing operation ${current.id} (${current.status})...`);
+      logger.info(
+        `[Shopify Backfill] Cancelling existing operation ${current.id} (${current.status})...`,
+      );
       const cancelMutation = `mutation { bulkOperationCancel(id: "${current.id}") { bulkOperation { id status } userErrors { message } } }`;
       await graphqlRequest(cancelMutation);
       await new Promise((r) => setTimeout(r, 5000));
       logger.info('[Shopify Backfill] Operation cancelled.');
     }
   } catch (err) {
-    logger.warn(`[Shopify Backfill] Could not cancel existing operation: ${(err as Error).message}`);
+    logger.warn(
+      `[Shopify Backfill] Could not cancel existing operation: ${(err as Error).message}`,
+    );
   }
 }
 
@@ -54,9 +60,14 @@ async function downloadAndInsertBulkData(url: string): Promise<number> {
       fulfillment_status: order.displayFulfillmentStatus as string,
       customer_id: (order.customer as Record<string, string> | undefined)?.id || undefined,
       customer_email: (order.customer as Record<string, string> | undefined)?.email || undefined,
-      customer_city: (order.customer as { defaultAddress?: Record<string, string> } | undefined)?.defaultAddress?.city || undefined,
-      customer_state: (order.customer as { defaultAddress?: Record<string, string> } | undefined)?.defaultAddress?.province || undefined,
-      discount_code: (order.discountCodes as Array<{ code: string }> | undefined)?.[0]?.code || undefined,
+      customer_city:
+        (order.customer as { defaultAddress?: Record<string, string> } | undefined)?.defaultAddress
+          ?.city || undefined,
+      customer_state:
+        (order.customer as { defaultAddress?: Record<string, string> } | undefined)?.defaultAddress
+          ?.province || undefined,
+      discount_code:
+        (order.discountCodes as Array<{ code: string }> | undefined)?.[0]?.code || undefined,
     });
 
     inserted++;
@@ -67,7 +78,11 @@ async function downloadAndInsertBulkData(url: string): Promise<number> {
     if (!orders[orderId]) continue;
     const price = item.originalUnitPriceSet as { shopMoney: { amount: string } } | undefined;
     await ShopifyOrderLineitem.findOrCreate({
-      where: { order_id: orderId, sku: (item.sku as string) || undefined, title: item.title as string },
+      where: {
+        order_id: orderId,
+        sku: (item.sku as string) || undefined,
+        title: item.title as string,
+      },
       defaults: {
         order_id: orderId,
         sku: item.sku as string,
@@ -106,5 +121,8 @@ export async function shopifyBackfill(): Promise<void> {
 }
 
 if (require.main === module) {
-  shopifyBackfill().catch((err) => { logger.error(err); process.exit(1); });
+  shopifyBackfill().catch((err) => {
+    logger.error(err);
+    process.exit(1);
+  });
 }

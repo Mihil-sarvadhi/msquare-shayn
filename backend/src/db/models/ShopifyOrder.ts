@@ -12,15 +12,35 @@ interface ShopifyOrderAttributes {
   fulfillment_status?: string;
   customer_id?: string;
   customer_email?: string;
+  customer_name?: string;
   customer_city?: string;
   customer_state?: string;
   discount_code?: string;
   synced_at?: Date;
 }
 
-type ShopifyOrderCreationAttributes = Optional<ShopifyOrderAttributes, 'order_name' | 'created_at' | 'channel' | 'revenue' | 'payment_mode' | 'financial_status' | 'fulfillment_status' | 'customer_id' | 'customer_email' | 'customer_city' | 'customer_state' | 'discount_code' | 'synced_at'>;
+type ShopifyOrderCreationAttributes = Optional<
+  ShopifyOrderAttributes,
+  | 'order_name'
+  | 'created_at'
+  | 'channel'
+  | 'revenue'
+  | 'payment_mode'
+  | 'financial_status'
+  | 'fulfillment_status'
+  | 'customer_id'
+  | 'customer_email'
+  | 'customer_name'
+  | 'customer_city'
+  | 'customer_state'
+  | 'discount_code'
+  | 'synced_at'
+>;
 
-export class ShopifyOrder extends Model<ShopifyOrderAttributes, ShopifyOrderCreationAttributes> implements ShopifyOrderAttributes {
+export class ShopifyOrder
+  extends Model<ShopifyOrderAttributes, ShopifyOrderCreationAttributes>
+  implements ShopifyOrderAttributes
+{
   declare order_id: string;
   declare order_name?: string;
   declare created_at?: Date;
@@ -31,25 +51,30 @@ export class ShopifyOrder extends Model<ShopifyOrderAttributes, ShopifyOrderCrea
   declare fulfillment_status?: string;
   declare customer_id?: string;
   declare customer_email?: string;
+  declare customer_name?: string;
   declare customer_city?: string;
   declare customer_state?: string;
   declare discount_code?: string;
   declare synced_at?: Date;
 }
 
-ShopifyOrder.init({
-  order_id: { type: DataTypes.TEXT, primaryKey: true },
-  order_name: DataTypes.TEXT,
-  created_at: DataTypes.DATE,
-  channel: DataTypes.TEXT,
-  revenue: DataTypes.DECIMAL(12, 2),
-  payment_mode: DataTypes.TEXT,
-  financial_status: DataTypes.TEXT,
-  fulfillment_status: DataTypes.TEXT,
-  customer_id: DataTypes.TEXT,
-  customer_email: DataTypes.TEXT,
-  customer_city: DataTypes.TEXT,
-  customer_state: DataTypes.TEXT,
-  discount_code: DataTypes.TEXT,
-  synced_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
-}, { sequelize, modelName: 'ShopifyOrder', tableName: 'shopify_orders', timestamps: false });
+ShopifyOrder.init(
+  {
+    order_id: { type: DataTypes.TEXT, primaryKey: true },
+    order_name: DataTypes.TEXT,
+    created_at: DataTypes.DATE,
+    channel: DataTypes.TEXT,
+    revenue: DataTypes.DECIMAL(12, 2),
+    payment_mode: DataTypes.TEXT,
+    financial_status: DataTypes.TEXT,
+    fulfillment_status: DataTypes.TEXT,
+    customer_id: DataTypes.TEXT,
+    customer_email: DataTypes.TEXT,
+    customer_name: DataTypes.TEXT,
+    customer_city: DataTypes.TEXT,
+    customer_state: DataTypes.TEXT,
+    discount_code: DataTypes.TEXT,
+    synced_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  },
+  { sequelize, modelName: 'ShopifyOrder', tableName: 'shopify_orders', timestamps: false },
+);

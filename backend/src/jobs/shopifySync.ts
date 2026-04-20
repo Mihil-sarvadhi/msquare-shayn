@@ -4,7 +4,7 @@ import { fetchRecentOrders, fetchAbandonedCheckouts, ShopifyOrder } from '../con
 export async function syncShopifyOrders(): Promise<void> {
   try {
     const { rows } = await db.query(
-      "SELECT last_sync_at FROM connector_health WHERE connector_name = 'shopify'"
+      "SELECT last_sync_at FROM connector_health WHERE connector_name = 'shopify'",
     );
     const lastSync: string | undefined = rows[0]?.last_sync_at?.toISOString().split('T')[0];
 
@@ -40,7 +40,7 @@ export async function syncShopifyOrders(): Promise<void> {
           order.customer?.defaultAddress?.city || null,
           order.customer?.defaultAddress?.province || null,
           order.discountCodes?.[0]?.code || null,
-        ]
+        ],
       );
 
       for (const { node: item } of order.lineItems?.edges || []) {
@@ -56,7 +56,7 @@ export async function syncShopifyOrders(): Promise<void> {
             item.variant?.title || null,
             item.quantity,
             parseFloat(item.originalUnitPriceSet?.shopMoney?.amount || '0'),
-          ]
+          ],
         );
       }
       count++;
@@ -66,15 +66,15 @@ export async function syncShopifyOrders(): Promise<void> {
       `UPDATE connector_health
        SET last_sync_at = NOW(), status = 'green', records_synced = $1, error_message = NULL
        WHERE connector_name = 'shopify'`,
-      [count]
+      [count],
     );
 
-    console.log(`[Shopify] Synced ${count} orders`);
+    console.error(`[Shopify] Synced ${count} orders`);
   } catch (err) {
     await db.query(
       `UPDATE connector_health SET status = 'red', error_message = $1
        WHERE connector_name = 'shopify'`,
-      [(err as Error).message]
+      [(err as Error).message],
     );
     console.error('[Shopify] Sync error:', (err as Error).message);
   }
@@ -95,11 +95,11 @@ export async function syncAbandonedCheckouts(): Promise<void> {
           checkout.createdAt,
           parseFloat(checkout.totalPriceV2?.amount || '0'),
           checkout.email || null,
-        ]
+        ],
       );
       count++;
     }
-    console.log(`[Shopify] Synced ${count} abandoned checkouts`);
+    console.error(`[Shopify] Synced ${count} abandoned checkouts`);
   } catch (err) {
     console.error('[Shopify] Abandoned checkout sync error:', (err as Error).message);
   }

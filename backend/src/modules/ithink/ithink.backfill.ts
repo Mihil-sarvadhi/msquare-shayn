@@ -68,5 +68,8 @@ export async function ithinkBackfill(): Promise<void> {
 }
 
 if (require.main === module) {
-  ithinkBackfill().catch((err) => { logger.error(err); process.exit(1); });
+  ithinkBackfill().catch((err) => {
+    logger.error(err);
+    process.exit(1);
+  });
 }

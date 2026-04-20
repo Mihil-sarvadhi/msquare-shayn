@@ -1,14 +1,23 @@
 import { QueryTypes } from 'sequelize';
 import { sequelize } from '@db/sequelize';
-import { ShopifyOrder, ShopifyOrderLineitem, ShopifyAbandonedCheckout, ConnectorHealth } from '@db/models';
-import { fetchRecentOrders, fetchAbandonedCheckouts, type ShopifyOrder as ShopifyOrderData } from './shopify.connector';
+import {
+  ShopifyOrder,
+  ShopifyOrderLineitem,
+  ShopifyAbandonedCheckout,
+  ConnectorHealth,
+} from '@db/models';
+import {
+  fetchRecentOrders,
+  fetchAbandonedCheckouts,
+  type ShopifyOrder as ShopifyOrderData,
+} from './shopify.connector';
 import { logger } from '@logger/logger';
 
 export async function syncShopifyOrders(): Promise<void> {
   try {
     const [healthRow] = await sequelize.query<{ last_sync_at: Date | null }>(
       `SELECT last_sync_at FROM connector_health WHERE connector_name = 'shopify'`,
-      { type: QueryTypes.SELECT }
+      { type: QueryTypes.SELECT },
     );
     const lastSync = healthRow?.last_sync_at?.toISOString().split('T')[0];
 
@@ -16,7 +25,8 @@ export async function syncShopifyOrders(): Promise<void> {
     let count = 0;
 
     for (const order of orders) {
-      const isCOD = order.paymentGatewayNames?.includes('cash on delivery') ||
+      const isCOD =
+        order.paymentGatewayNames?.includes('cash on delivery') ||
         order.paymentGatewayNames?.some((g) => g.toLowerCase().includes('cod'));
       const paymentMode = isCOD ? 'COD' : 'Prepaid';
 
@@ -30,6 +40,10 @@ export async function syncShopifyOrders(): Promise<void> {
         fulfillment_status: order.displayFulfillmentStatus,
         customer_id: order.customer?.id || undefined,
         customer_email: order.customer?.email || undefined,
+        customer_name: order.customer
+          ? [order.customer.firstName, order.customer.lastName].filter(Boolean).join(' ') ||
+            undefined
+          : undefined,
         customer_city: order.customer?.defaultAddress?.city || undefined,
         customer_state: order.customer?.defaultAddress?.province || undefined,
         discount_code: order.discountCodes?.[0] || undefined,
@@ -42,8 +56,11 @@ export async function syncShopifyOrders(): Promise<void> {
         await ShopifyOrderLineitem.findOrCreate({
           where: lineWhere,
           defaults: {
-            order_id: order.id, sku: item.sku || undefined, title: item.title,
-            variant: item.variant?.title || undefined, quantity: item.quantity,
+            order_id: order.id,
+            sku: item.sku || undefined,
+            title: item.title,
+            variant: item.variant?.title || undefined,
+            quantity: item.quantity,
             unit_price: parseFloat(item.originalUnitPriceSet?.shopMoney?.amount || '0'),
           },
         });
@@ -52,15 +69,20 @@ export async function syncShopifyOrders(): Promise<void> {
     }
 
     await ConnectorHealth.update(
-      { last_sync_at: new Date(), status: 'green', records_synced: count, error_message: undefined },
-      { where: { connector_name: 'shopify' } }
+      {
+        last_sync_at: new Date(),
+        status: 'green',
+        records_synced: count,
+        error_message: undefined,
+      },
+      { where: { connector_name: 'shopify' } },
     );
 
     logger.info(`[Shopify] Synced ${count} orders`);
   } catch (err) {
     await ConnectorHealth.update(
       { status: 'red', error_message: (err as Error).message },
-      { where: { connector_name: 'shopify' } }
+      { where: { connector_name: 'shopify' } },
     );
     logger.error(`[Shopify] Sync error: ${(err as Error).message}`);
   }
@@ -76,8 +98,8 @@ export async function syncAbandonedCheckouts(): Promise<void> {
         defaults: {
           checkout_id: checkout.id,
           created_at: new Date(checkout.createdAt),
-          cart_value: parseFloat(checkout.totalPriceV2?.amount || '0'),
-          email: checkout.email || undefined,
+          cart_value: parseFloat(checkout.totalPriceSet?.shopMoney?.amount || '0'),
+          email: checkout.customer?.email || undefined,
         },
       });
       count++;

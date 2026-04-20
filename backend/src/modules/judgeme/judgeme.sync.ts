@@ -25,7 +25,11 @@ async function upsertReviews(reviews: JudgeMeReview[]): Promise<number> {
       published: r.published ?? true,
       verified: !!r.verified,
       has_photos: r.pictures?.length > 0,
-      picture_urls: r.pictures?.map((p) => p.urls?.original).filter(Boolean).join(',') || undefined,
+      picture_urls:
+        r.pictures
+          ?.map((p) => p.urls?.original)
+          .filter(Boolean)
+          .join(',') || undefined,
       source: r.source || undefined,
     });
     count++;
@@ -54,7 +58,7 @@ export async function syncJudgeMe(): Promise<void> {
 
     const [healthRow] = await sequelize.query<{ last_sync_at: Date | null }>(
       `SELECT last_sync_at FROM connector_health WHERE connector_name = 'judgeme'`,
-      { type: QueryTypes.SELECT }
+      { type: QueryTypes.SELECT },
     );
     const lastSync: string | undefined = healthRow?.last_sync_at?.toISOString().split('T')[0];
     const reviews = await fetchAllReviews(lastSync);
@@ -64,7 +68,7 @@ export async function syncJudgeMe(): Promise<void> {
     const [summary] = await sequelize.query<{ avg_rating: string; total: string }>(
       `SELECT ROUND(AVG(rating)::numeric, 2) AS avg_rating, COUNT(*) AS total
        FROM judgeme_reviews WHERE published = true`,
-      { type: QueryTypes.SELECT }
+      { type: QueryTypes.SELECT },
     );
     if (summary && Number(summary.total) > 0) {
       await JudgemeStoreSummary.create({
@@ -74,15 +78,20 @@ export async function syncJudgeMe(): Promise<void> {
     }
 
     await ConnectorHealth.update(
-      { last_sync_at: new Date(), status: 'green', records_synced: count, error_message: undefined },
-      { where: { connector_name: 'judgeme' } }
+      {
+        last_sync_at: new Date(),
+        status: 'green',
+        records_synced: count,
+        error_message: undefined,
+      },
+      { where: { connector_name: 'judgeme' } },
     );
 
     logger.info(`[Judge.me] Synced ${count} reviews, ${products.length} products`);
   } catch (err) {
     await ConnectorHealth.update(
       { status: 'red', error_message: (err as Error).message },
-      { where: { connector_name: 'judgeme' } }
+      { where: { connector_name: 'judgeme' } },
     );
     logger.error(`[Judge.me] Sync error: ${(err as Error).message}`);
   }

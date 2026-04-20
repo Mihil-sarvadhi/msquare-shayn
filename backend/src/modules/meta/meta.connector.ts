@@ -6,15 +6,33 @@ const AD_ACCOUNT = environment.meta.adAccountId;
 const TOKEN = environment.meta.userToken;
 
 const INSIGHT_FIELDS = [
-  'campaign_id', 'campaign_name', 'objective',
-  'spend', 'impressions', 'reach', 'clicks', 'ctr', 'cpm', 'cpc',
-  'actions', 'action_values', 'purchase_roas',
+  'campaign_id',
+  'campaign_name',
+  'objective',
+  'spend',
+  'impressions',
+  'reach',
+  'clicks',
+  'ctr',
+  'cpm',
+  'cpc',
+  'actions',
+  'action_values',
+  'purchase_roas',
 ].join(',');
 
 export interface MetaInsight {
-  date_start: string; campaign_id: string; campaign_name: string; objective: string;
-  spend: string; impressions: string; reach: string; clicks: string;
-  ctr: string; cpm: string; cpc: string;
+  date_start: string;
+  campaign_id: string;
+  campaign_name: string;
+  objective: string;
+  spend: string;
+  impressions: string;
+  reach: string;
+  clicks: string;
+  ctr: string;
+  cpm: string;
+  cpc: string;
   actions?: Array<{ action_type: string; value: string }>;
   action_values?: Array<{ action_type: string; value: string }>;
   purchase_roas?: Array<{ action_type: string; value: string }>;
@@ -37,7 +55,8 @@ export async function fetchCampaignInsights(since: string, until: string): Promi
   let nextUrl: string | null = null;
 
   try {
-    const firstRes = (await axios.get<InsightsPage>(`${BASE}/${AD_ACCOUNT}/insights`, { params })).data;
+    const firstRes = (await axios.get<InsightsPage>(`${BASE}/${AD_ACCOUNT}/insights`, { params }))
+      .data;
     allInsights = allInsights.concat(firstRes.data ?? []);
     nextUrl = firstRes.paging?.next ?? null;
 
@@ -58,7 +77,7 @@ export async function fetchCampaignInsights(since: string, until: string): Promi
 
 export function parseActions(
   actions: Array<{ action_type: string; value: string }> = [],
-  actionValues: Array<{ action_type: string; value: string }> = []
+  actionValues: Array<{ action_type: string; value: string }> = [],
 ): { purchases: number; purchaseValue: number } {
   const purchases = actions.find((a) => a.action_type === 'purchase')?.value ?? '0';
   const purchaseValue = actionValues.find((a) => a.action_type === 'purchase')?.value ?? '0';

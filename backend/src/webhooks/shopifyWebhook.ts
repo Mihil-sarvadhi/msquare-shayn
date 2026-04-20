@@ -46,7 +46,7 @@ router.post('/orders/create', async (req: Request, res: Response) => {
         order.shipping_address?.city || null,
         order.shipping_address?.province || null,
         order.discount_codes?.[0]?.code || null,
-      ]
+      ],
     );
 
     res.status(200).json({ received: true });
@@ -74,7 +74,7 @@ router.post('/orders/updated', async (req: Request, res: Response) => {
         order.financial_status,
         order.fulfillment_status || 'unfulfilled',
         `gid://shopify/Order/${order.id}`,
-      ]
+      ],
     );
     res.status(200).json({ received: true });
   } catch (err) {

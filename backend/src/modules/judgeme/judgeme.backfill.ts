@@ -7,8 +7,13 @@ export async function judgemeBackfill(): Promise<void> {
 
   try {
     const summary = await fetchStoreSummary();
-    await JudgemeStoreSummary.create({ average_rating: summary.rating, total_reviews: summary.count });
-    logger.info(`[Judge.me Backfill] Store summary: ${summary.rating}★ across ${summary.count} reviews`);
+    await JudgemeStoreSummary.create({
+      average_rating: summary.rating,
+      total_reviews: summary.count,
+    });
+    logger.info(
+      `[Judge.me Backfill] Store summary: ${summary.rating}★ across ${summary.count} reviews`,
+    );
   } catch (err) {
     logger.error(`[Judge.me Backfill] Store summary error: ${(err as Error).message}`);
   }
@@ -45,7 +50,11 @@ export async function judgemeBackfill(): Promise<void> {
       published: r.published ?? true,
       verified: !!r.verified,
       has_photos: r.pictures?.length > 0,
-      picture_urls: r.pictures?.map((p) => p.urls?.original).filter(Boolean).join(',') || undefined,
+      picture_urls:
+        r.pictures
+          ?.map((p) => p.urls?.original)
+          .filter(Boolean)
+          .join(',') || undefined,
       source: r.source || undefined,
     });
     count++;
@@ -55,5 +64,8 @@ export async function judgemeBackfill(): Promise<void> {
 }
 
 if (require.main === module) {
-  judgemeBackfill().catch((err) => { logger.error(err); process.exit(1); });
+  judgemeBackfill().catch((err) => {
+    logger.error(err);
+    process.exit(1);
+  });
 }

@@ -8,7 +8,9 @@ import { startScheduler } from '@modules/jobs/scheduler';
 
 // BigInt serialization for JSON responses
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-(BigInt.prototype as any).toJSON = function toJSON() { return this.toString(); };
+(BigInt.prototype as any).toJSON = function toJSON() {
+  return this.toString();
+};
 
 const app = createApp();
 const server = http.createServer(app);
@@ -20,14 +22,18 @@ const startServer = async () => {
     await connectDatabase();
     logger.info('Database connection established successfully.');
   } catch (error) {
-    logger.error(`Failed to connect to database: ${error instanceof Error ? error.message : error}`);
+    logger.error(
+      `Failed to connect to database: ${error instanceof Error ? error.message : error}`,
+    );
     process.exit(1);
   }
 
   startScheduler();
 
   server.listen(environment.port, () => {
-    logger.info(`SHAYN MIS Backend running on port ${environment.port} (env: ${environment.appEnv})`);
+    logger.info(
+      `SHAYN MIS Backend running on port ${environment.port} (env: ${environment.appEnv})`,
+    );
   });
 };
 

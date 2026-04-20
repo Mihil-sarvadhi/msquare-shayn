@@ -11,18 +11,22 @@ export const registerSecurityMiddlewares = (app: Express) => {
     'http://localhost:5001',
     'http://localhost:5002',
   ];
-  app.use(cors({
-    origin: (origin, cb) => {
-      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-      cb(new Error(`CORS: origin ${origin} not allowed`));
-    },
-    credentials: true,
-  }));
+  app.use(
+    cors({
+      origin: (origin, cb) => {
+        if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+        cb(new Error(`CORS: origin ${origin} not allowed`));
+      },
+      credentials: true,
+    }),
+  );
   app.use(helmet());
-  app.use(rateLimit({
-    windowMs: environment.rateLimitWindowMs,
-    max: environment.rateLimitMax,
-    standardHeaders: true,
-    legacyHeaders: false,
-  }));
+  app.use(
+    rateLimit({
+      windowMs: environment.rateLimitWindowMs,
+      max: environment.rateLimitMax,
+      standardHeaders: true,
+      legacyHeaders: false,
+    }),
+  );
 };

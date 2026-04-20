@@ -41,7 +41,7 @@ export async function syncMetaInsights(): Promise<void> {
           purchases,
           purchaseValue,
           parseFloat(roas),
-        ]
+        ],
       );
       count++;
     }
@@ -50,15 +50,15 @@ export async function syncMetaInsights(): Promise<void> {
       `UPDATE connector_health
        SET last_sync_at = NOW(), status = 'green', records_synced = $1, error_message = NULL
        WHERE connector_name = 'meta_ads'`,
-      [count]
+      [count],
     );
 
-    console.log(`[Meta Ads] Synced ${count} insight rows`);
+    console.error(`[Meta Ads] Synced ${count} insight rows`);
   } catch (err) {
     await db.query(
       `UPDATE connector_health SET status = 'red', error_message = $1
        WHERE connector_name = 'meta_ads'`,
-      [(err as Error).message]
+      [(err as Error).message],
     );
     console.error('[Meta Ads] Sync error:', (err as Error).message);
   }

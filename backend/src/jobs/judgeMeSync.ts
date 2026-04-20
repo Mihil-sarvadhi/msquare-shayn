@@ -1,5 +1,11 @@
 import db from '../config/database';
-import { fetchStoreSummary, fetchAllProducts, fetchAllReviews, JudgeMeReview, JudgeMeProduct } from '../connectors/judgeMe';
+import {
+  fetchStoreSummary,
+  fetchAllProducts,
+  fetchAllReviews,
+  JudgeMeReview,
+  JudgeMeProduct,
+} from '../connectors/judgeMe';
 
 async function upsertReviews(reviews: JudgeMeReview[]): Promise<number> {
   let count = 0;
@@ -27,9 +33,12 @@ async function upsertReviews(reviews: JudgeMeReview[]): Promise<number> {
         r.published ?? true,
         !!r.verified,
         r.pictures?.length > 0,
-        r.pictures?.map((p) => p.urls?.original).filter(Boolean).join(',') || null,
+        r.pictures
+          ?.map((p) => p.urls?.original)
+          .filter(Boolean)
+          .join(',') || null,
         r.source || null,
-      ]
+      ],
     );
     count++;
   }
@@ -47,7 +56,7 @@ async function upsertProducts(products: JudgeMeProduct[]): Promise<void> {
          reviews_count = EXCLUDED.reviews_count,
          updated_at = EXCLUDED.updated_at,
          synced_at = NOW()`,
-      [p.id, p.external_id, p.handle, p.title, p.average_rating, p.reviews_count, p.updated_at]
+      [p.id, p.external_id, p.handle, p.title, p.average_rating, p.reviews_count, p.updated_at],
     );
   }
 }
@@ -59,7 +68,7 @@ export async function syncJudgeMe(): Promise<void> {
     await db.query(
       `INSERT INTO judgeme_store_summary (average_rating, total_reviews)
        VALUES ($1, $2)`,
-      [summary.rating, summary.count]
+      [summary.rating, summary.count],
     );
 
     // 2. Products
@@ -68,7 +77,7 @@ export async function syncJudgeMe(): Promise<void> {
 
     // 3. Reviews since last sync
     const { rows } = await db.query(
-      "SELECT last_sync_at FROM connector_health WHERE connector_name = 'judgeme'"
+      "SELECT last_sync_at FROM connector_health WHERE connector_name = 'judgeme'",
     );
     const lastSync: string | undefined = rows[0]?.last_sync_at?.toISOString().split('T')[0];
     const reviews = await fetchAllReviews(lastSync);
@@ -78,15 +87,15 @@ export async function syncJudgeMe(): Promise<void> {
       `UPDATE connector_health
        SET last_sync_at = NOW(), status = 'green', records_synced = $1, error_message = NULL
        WHERE connector_name = 'judgeme'`,
-      [count]
+      [count],
     );
 
-    console.log(`[Judge.me] Synced ${count} reviews, ${products.length} products`);
+    console.error(`[Judge.me] Synced ${count} reviews, ${products.length} products`);
   } catch (err) {
     await db.query(
       `UPDATE connector_health SET status = 'red', error_message = $1
        WHERE connector_name = 'judgeme'`,
-      [(err as Error).message]
+      [(err as Error).message],
     );
     console.error('[Judge.me] Sync error:', (err as Error).message);
   }

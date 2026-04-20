@@ -89,9 +89,8 @@ export async function fetchAllProducts(): Promise<JudgeMeProduct[]> {
 }
 
 export async function fetchStoreSummary(): Promise<JudgeMeAggregate> {
-  const res = await axios.get<JudgeMeAggregate>(
-    'https://judge.me/api/reviews/aggregate_feed',
-    { params: AUTH }
-  );
+  const res = await axios.get<JudgeMeAggregate>('https://judge.me/api/reviews/aggregate_feed', {
+    params: AUTH,
+  });
   return res.data;
 }

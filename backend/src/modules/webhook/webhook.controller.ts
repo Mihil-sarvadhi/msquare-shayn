@@ -62,7 +62,7 @@ export async function shopifyOrderUpdateHandler(req: Request, res: Response): Pr
         financial_status: order.financial_status,
         fulfillment_status: order.fulfillment_status || 'unfulfilled',
       },
-      { where: { order_id: `gid://shopify/Order/${order.id}` } }
+      { where: { order_id: `gid://shopify/Order/${order.id}` } },
     );
     res.status(200).json({ received: true });
   } catch (err) {
