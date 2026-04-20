@@ -26,9 +26,7 @@ async function postTo<T>(
         { data: { ...AUTH, ...payload } },
         { headers: { 'Content-Type': 'application/json' }, timeout: 15000 },
       );
-      logger.info(
-        `[iThink] ${endpoint} | status=${res.status} | ${Date.now() - start}ms`,
-      );
+      logger.info(`[iThink] ${endpoint} | status=${res.status} | ${Date.now() - start}ms`);
       return res.data;
     } catch (err) {
       lastErr = err as Error;
@@ -126,24 +124,16 @@ export interface PincodeCheckResponse {
 
 // ── Endpoint 1: Store Order Details ───────────────────────────────────────
 
-export async function getStoreOrderDetails(
-  numericOrderIds: string[],
-): Promise<StoreOrderResponse> {
-  return postTo<StoreOrderResponse>(
-    MY_BASE,
-    '/api_v3/store/get-order-details.json',
-    {
-      order_no_list: numericOrderIds.join(','),
-      platform_id: environment.ithink.platformId,
-    },
-  );
+export async function getStoreOrderDetails(numericOrderIds: string[]): Promise<StoreOrderResponse> {
+  return postTo<StoreOrderResponse>(MY_BASE, '/api_v3/store/get-order-details.json', {
+    order_no_list: numericOrderIds.join(','),
+    platform_id: environment.ithink.platformId,
+  });
 }
 
 // ── Endpoint 2: Track AWBs (uses api.ithinklogistics.com, max 10 per call) ──
 
-export async function trackAWBs(
-  awbList: string[],
-): Promise<Record<string, TrackResult>> {
+export async function trackAWBs(awbList: string[]): Promise<Record<string, TrackResult>> {
   const results: Record<string, TrackResult> = {};
   const chunks: string[][] = [];
   for (let i = 0; i < awbList.length; i += 10) {
@@ -151,11 +141,9 @@ export async function trackAWBs(
   }
 
   for (const chunk of chunks) {
-    const res = await postTo<TrackResponse>(
-      API_BASE,
-      '/api_v3/order/track.json',
-      { awb_number_list: chunk.join(',') },
-    );
+    const res = await postTo<TrackResponse>(API_BASE, '/api_v3/order/track.json', {
+      awb_number_list: chunk.join(','),
+    });
     for (const [awb, data] of Object.entries(res.data ?? {})) {
       if (data && !('message' in data)) {
         results[awb] = data as TrackResult;
@@ -169,29 +157,21 @@ export async function trackAWBs(
 // ── Endpoint 3: Remittance Summary ────────────────────────────────────────
 
 export async function getRemittanceSummary(date: string): Promise<RemittanceResponse> {
-  return postTo<RemittanceResponse>(
-    MY_BASE,
-    '/api_v3/remittance/get.json',
-    { remittance_date: date },
-  );
+  return postTo<RemittanceResponse>(MY_BASE, '/api_v3/remittance/get.json', {
+    remittance_date: date,
+  });
 }
 
 // ── Endpoint 4: Remittance Details (AWB-level breakdown) ──────────────────
 
 export async function getRemittanceDetails(date: string): Promise<RemittanceDetailResponse> {
-  return postTo<RemittanceDetailResponse>(
-    MY_BASE,
-    '/api_v3/remittance/get_details.json',
-    { remittance_date: date },
-  );
+  return postTo<RemittanceDetailResponse>(MY_BASE, '/api_v3/remittance/get_details.json', {
+    remittance_date: date,
+  });
 }
 
 // ── Endpoint 5: Pincode check (healthcheck / credential sanity) ────────────
 
 export async function checkPincode(pincode = '380001'): Promise<PincodeCheckResponse> {
-  return postTo<PincodeCheckResponse>(
-    MY_BASE,
-    '/api_v3/pincode/check.json',
-    { pincode },
-  );
+  return postTo<PincodeCheckResponse>(MY_BASE, '/api_v3/pincode/check.json', { pincode });
 }
