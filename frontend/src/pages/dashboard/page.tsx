@@ -54,7 +54,7 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-ivory font-sans">
+    <div className="min-h-full bg-ivory font-sans">
       <Header range={range} setRange={handleRangeChange} />
 
       <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-4 sm:py-5 space-y-4">

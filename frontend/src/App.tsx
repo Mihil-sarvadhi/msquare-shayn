@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppShell } from '@components/layout/AppShell';
 
@@ -12,18 +12,14 @@ export function App() {
   return (
     <BrowserRouter>
       <AppShell>
-        <Suspense fallback={
-          <div className="flex h-screen items-center justify-center text-sm text-gray-400">Loading…</div>
-        }>
-          <Routes>
-            <Route path="/"           element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard"  element={<DashboardPage />} />
-            <Route path="/reviews"    element={<ReviewsPage />} />
-            <Route path="/operations" element={<OperationsPage />} />
-            <Route path="/customers"  element={<CustomersPage />} />
-            <Route path="/marketing"  element={<MarketingPage />} />
-          </Routes>
-        </Suspense>
+        <Routes>
+          <Route path="/"           element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard"  element={<DashboardPage />} />
+          <Route path="/reviews"    element={<ReviewsPage />} />
+          <Route path="/operations" element={<OperationsPage />} />
+          <Route path="/customers"  element={<CustomersPage />} />
+          <Route path="/marketing"  element={<MarketingPage />} />
+        </Routes>
       </AppShell>
     </BrowserRouter>
   );

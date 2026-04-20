@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
-import { useAppSelector } from '@/store/hooks';
-import { useSyncAll } from '@/services/dashboard/dashboard.query';
+import { useAppSelector } from '@store/hooks';
+import { useSyncAll } from '@services/dashboard/dashboard.query';
 import { cn } from '@/lib/utils';
 
 const NAV = [
