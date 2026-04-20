@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useAppDispatch, useAppSelector } from '@store/hooks';
 import { fetchDashboard } from '@store/slices/dashboardSlice';
@@ -6,8 +7,8 @@ import { toast } from '@/components/ui/toast';
 
 function useRefetchDashboard() {
   const dispatch = useAppDispatch();
-  const range = useAppSelector((s) => s.dashboard.range);
-  return () => { dispatch(fetchDashboard(range)); };
+  const range = useAppSelector((s) => s.range);
+  return useCallback(() => { dispatch(fetchDashboard(range)); }, [dispatch, range]);
 }
 
 function triggerSync(connector: string) {

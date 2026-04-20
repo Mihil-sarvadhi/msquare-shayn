@@ -2,14 +2,20 @@ import { Request, Response } from 'express';
 import { handleApiResponse, handleErrorResponse } from '@utils/handleResponse';
 import * as service from './dashboard.service';
 import type { AllReviewsQuery } from './dashboard.types';
+import type { DateRangeQuery } from '@utils/resolveDateRange';
+
+function resolve(req: Request) {
+  return service.resolveDateRange(req.query as DateRangeQuery);
+}
 
 function errOpts(err: unknown) {
-  return { statusCode: 500, message: (err as Error).message, error: err };
+  const message = err instanceof Error ? err.message : String(err);
+  return { statusCode: 500, message, error: err };
 }
 
 export async function kpisHandler(req: Request, res: Response): Promise<void> {
   try {
-    const { since, until } = service.getDateRange((req.query as { range?: string }).range);
+    const { since, until } = resolve(req);
     handleApiResponse(res, { data: await service.getKpis(since, until) });
   } catch (err) {
     handleErrorResponse(res, errOpts(err));
@@ -18,7 +24,7 @@ export async function kpisHandler(req: Request, res: Response): Promise<void> {
 
 export async function revenueTrendHandler(req: Request, res: Response): Promise<void> {
   try {
-    const { since, until } = service.getDateRange((req.query as { range?: string }).range);
+    const { since, until } = resolve(req);
     handleApiResponse(res, { data: await service.getRevenueTrend(since, until) });
   } catch (err) {
     handleErrorResponse(res, errOpts(err));
@@ -27,7 +33,7 @@ export async function revenueTrendHandler(req: Request, res: Response): Promise<
 
 export async function metaFunnelHandler(req: Request, res: Response): Promise<void> {
   try {
-    const { since, until } = service.getDateRange((req.query as { range?: string }).range);
+    const { since, until } = resolve(req);
     handleApiResponse(res, { data: await service.getMetaFunnel(since, until) });
   } catch (err) {
     handleErrorResponse(res, errOpts(err));
@@ -36,7 +42,7 @@ export async function metaFunnelHandler(req: Request, res: Response): Promise<vo
 
 export async function campaignsHandler(req: Request, res: Response): Promise<void> {
   try {
-    const { since, until } = service.getDateRange((req.query as { range?: string }).range);
+    const { since, until } = resolve(req);
     handleApiResponse(res, { data: await service.getCampaigns(since, until) });
   } catch (err) {
     handleErrorResponse(res, errOpts(err));
@@ -45,7 +51,7 @@ export async function campaignsHandler(req: Request, res: Response): Promise<voi
 
 export async function topProductsHandler(req: Request, res: Response): Promise<void> {
   try {
-    const { since, until } = service.getDateRange((req.query as { range?: string }).range);
+    const { since, until } = resolve(req);
     handleApiResponse(res, { data: await service.getTopProducts(since, until) });
   } catch (err) {
     handleErrorResponse(res, errOpts(err));
@@ -54,7 +60,7 @@ export async function topProductsHandler(req: Request, res: Response): Promise<v
 
 export async function logisticsHandler(req: Request, res: Response): Promise<void> {
   try {
-    const { since, until } = service.getDateRange((req.query as { range?: string }).range);
+    const { since, until } = resolve(req);
     handleApiResponse(res, { data: await service.getLogistics(since, until) });
   } catch (err) {
     handleErrorResponse(res, errOpts(err));
@@ -63,7 +69,7 @@ export async function logisticsHandler(req: Request, res: Response): Promise<voi
 
 export async function abandonedCartsHandler(req: Request, res: Response): Promise<void> {
   try {
-    const { since, until } = service.getDateRange((req.query as { range?: string }).range);
+    const { since, until } = resolve(req);
     handleApiResponse(res, { data: await service.getAbandonedCarts(since, until) });
   } catch (err) {
     handleErrorResponse(res, errOpts(err));
@@ -72,7 +78,7 @@ export async function abandonedCartsHandler(req: Request, res: Response): Promis
 
 export async function reviewsSummaryHandler(req: Request, res: Response): Promise<void> {
   try {
-    const { since, until } = service.getDateRange((req.query as { range?: string }).range);
+    const { since, until } = resolve(req);
     handleApiResponse(res, { data: await service.getReviewsSummary(since, until) });
   } catch (err) {
     handleErrorResponse(res, errOpts(err));
@@ -81,7 +87,7 @@ export async function reviewsSummaryHandler(req: Request, res: Response): Promis
 
 export async function reviewsTrendHandler(req: Request, res: Response): Promise<void> {
   try {
-    const { since, until } = service.getDateRange((req.query as { range?: string }).range);
+    const { since, until } = resolve(req);
     handleApiResponse(res, { data: await service.getReviewsTrend(since, until) });
   } catch (err) {
     handleErrorResponse(res, errOpts(err));
@@ -90,7 +96,7 @@ export async function reviewsTrendHandler(req: Request, res: Response): Promise<
 
 export async function topRatedProductsHandler(req: Request, res: Response): Promise<void> {
   try {
-    const { since, until } = service.getDateRange((req.query as { range?: string }).range);
+    const { since, until } = resolve(req);
     handleApiResponse(res, { data: await service.getTopRatedProducts(since, until) });
   } catch (err) {
     handleErrorResponse(res, errOpts(err));
@@ -99,7 +105,7 @@ export async function topRatedProductsHandler(req: Request, res: Response): Prom
 
 export async function recentReviewsHandler(req: Request, res: Response): Promise<void> {
   try {
-    const { since, until } = service.getDateRange((req.query as { range?: string }).range);
+    const { since, until } = resolve(req);
     handleApiResponse(res, { data: await service.getRecentReviews(since, until) });
   } catch (err) {
     handleErrorResponse(res, errOpts(err));

@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@store/hooks';
 import { fetchMarketingData } from '@store/slices/analyticsSlice';
-import { AnalyticsHeader } from '../analytics/AnalyticsHeader';
 import { MarketingKPIs }   from './components/MarketingKPIs';
 import { RoasTrend }       from './components/RoasTrend';
 import { CppTrend }        from './components/CppTrend';
@@ -11,9 +10,9 @@ import { ChannelRevenue }  from './components/ChannelRevenue';
 
 export function MarketingPage() {
   const dispatch = useAppDispatch();
-  const {
-    range, marketingTrend, attributionGap, channelRevenue, loadingMarketing,
-  } = useAppSelector((s) => s.analytics);
+  const { marketingTrend, attributionGap, channelRevenue, loadingMarketing } =
+    useAppSelector((s) => s.analytics);
+  const range = useAppSelector((s) => s.range);
 
   useEffect(() => {
     dispatch(fetchMarketingData(range));
@@ -22,12 +21,8 @@ export function MarketingPage() {
   const L = loadingMarketing;
 
   return (
-    <div className="min-h-screen bg-ivory font-sans">
-      <AnalyticsHeader
-        title="Marketing"
-        subtitle="ROAS trends, attribution gap, and campaign efficiency"
-      />
-      <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-4 sm:py-5 space-y-4">
+    <div className="bg-ivory font-sans">
+      <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 pt-4 sm:pt-5 pb-10 space-y-4">
 
         <MarketingKPIs trend={marketingTrend} attribution={attributionGap} loading={L} />
 

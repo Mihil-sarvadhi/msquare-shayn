@@ -21,12 +21,13 @@ const envSchema = z.object({
   FRONTEND_URL: z.string().default('http://localhost:5000'),
   LOG_LEVEL: z.string().default('info'),
   RATE_LIMIT_WINDOW_MS: z.string().default('60000'),
-  RATE_LIMIT_MAX: z.string().default('100'),
+  RATE_LIMIT_MAX: z.string().default('1000'),
   // Shopify
   SHOPIFY_STORE_DOMAIN: z.string().min(1, 'SHOPIFY_STORE_DOMAIN is required'),
   SHOPIFY_ACCESS_TOKEN: z.string().min(1, 'SHOPIFY_ACCESS_TOKEN is required'),
   SHOPIFY_API_VERSION: z.string().default('2026-01'),
   SHOPIFY_WEBHOOK_SECRET: z.string().default(''),
+  SHOPIFY_SYNC_START_DATE: z.string().default('2025-01-01'),
   // Meta Ads
   META_USER_TOKEN: z.string().min(1, 'META_USER_TOKEN is required'),
   META_AD_ACCOUNT_ID: z.string().min(1, 'META_AD_ACCOUNT_ID is required'),
@@ -65,6 +66,7 @@ export const environment = {
     accessToken: env.SHOPIFY_ACCESS_TOKEN,
     apiVersion: env.SHOPIFY_API_VERSION,
     webhookSecret: env.SHOPIFY_WEBHOOK_SECRET,
+    syncStartDate: env.SHOPIFY_SYNC_START_DATE || '2025-01-01',
   },
   meta: {
     userToken: env.META_USER_TOKEN,

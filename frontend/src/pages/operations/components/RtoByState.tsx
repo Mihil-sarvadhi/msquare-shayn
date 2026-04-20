@@ -5,7 +5,7 @@ interface Props { data: RtoByStateItem[]; loading: boolean; }
 
 function rtoColor(rate: number) {
   if (rate > 20) return '#9B2235';
-  if (rate > 10) return '#B45309';
+  if (rate > 10) return '#B8860B';
   return '#2D7D46';
 }
 
@@ -38,7 +38,7 @@ export function RtoByState({ data, loading }: Props) {
       </ResponsiveContainer>
       <div className="flex gap-4 mt-2 justify-center text-xs text-muted">
         <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#9B2235] inline-block" />&gt;20% rate</span>
-        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#B45309] inline-block" />10–20%</span>
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#B8860B] inline-block" />10–20%</span>
         <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#2D7D46] inline-block" />&lt;10%</span>
       </div>
     </div>

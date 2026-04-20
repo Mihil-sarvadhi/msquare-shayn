@@ -1,61 +1,62 @@
 import type { NextFunction, Request, Response } from 'express';
-import { ERROR_TYPES } from '@constant/errorTypes.constant';
-import { RES_TYPES } from '@constant/message.constant';
-import { AppError } from '@utils/appError';
 import { verifyToken } from '@utils/jwt';
+import { validateSession } from '@modules/auth/auth.service';
 
-export const authenticate = (req: Request, _res: Response, next: NextFunction) => {
+const COOKIE_NAME = 'shayn_token';
+
+function extractToken(req: Request): string | null {
   const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) {
-    throw new AppError({
-      errorType: ERROR_TYPES.UNAUTHORIZED,
-      message: RES_TYPES.UNAUTHORIZED,
-      code: 'UNAUTHORIZED',
-    });
+  if (authHeader?.startsWith('Bearer ')) {
+    return authHeader.slice(7);
   }
+  return (req.cookies?.[COOKIE_NAME] as string | undefined) ?? null;
+}
+
+export const authenticate = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
   try {
-    const payload = verifyToken(authHeader.split(' ')[1]);
-    req.user = { id: payload.sub, email: payload.email, role: payload.role as string };
+    const token = extractToken(req);
+    if (!token) {
+      res.status(401).json({ success: false, message: 'Unauthorized', code: 'NO_TOKEN' });
+      return;
+    }
+
+    verifyToken(token);
+
+    const session = await validateSession(token);
+    if (!session) {
+      res.clearCookie(COOKIE_NAME, { path: '/' });
+      res.status(401).json({ success: false, message: 'Session expired', code: 'SESSION_EXPIRED' });
+      return;
+    }
+
+    req.user = { id: session.id, email: session.email, role: session.role };
     next();
   } catch {
-    throw new AppError({
-      errorType: ERROR_TYPES.UNAUTHORIZED,
-      message: RES_TYPES.UNAUTHORIZED,
-      code: 'INVALID_TOKEN',
-    });
+    res.clearCookie(COOKIE_NAME, { path: '/' });
+    res.status(401).json({ success: false, message: 'Unauthorized', code: 'INVALID_TOKEN' });
   }
 };
 
 export const authorizeByRole =
-  (role: string) => (req: Request, _res: Response, next: NextFunction) => {
-    if (!req.user)
-      throw new AppError({
-        errorType: ERROR_TYPES.UNAUTHORIZED,
-        message: RES_TYPES.UNAUTHORIZED,
-        code: 'UNAUTHORIZED',
-      });
-    if (req.user.role !== role)
-      throw new AppError({
-        errorType: ERROR_TYPES.FORBIDDEN,
-        message: RES_TYPES.FORBIDDEN,
-        code: 'FORBIDDEN',
-      });
+  (role: string) =>
+  (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user || req.user.role !== role) {
+      res.status(403).json({ success: false, message: 'Forbidden', code: 'FORBIDDEN' });
+      return;
+    }
     next();
   };
 
 export const authorizeByAnyRole =
-  (roles: string[]) => (req: Request, _res: Response, next: NextFunction) => {
-    if (!req.user)
-      throw new AppError({
-        errorType: ERROR_TYPES.UNAUTHORIZED,
-        message: RES_TYPES.UNAUTHORIZED,
-        code: 'UNAUTHORIZED',
-      });
-    if (!roles.includes(req.user.role))
-      throw new AppError({
-        errorType: ERROR_TYPES.FORBIDDEN,
-        message: RES_TYPES.FORBIDDEN,
-        code: 'FORBIDDEN',
-      });
+  (roles: string[]) =>
+  (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user || !roles.includes(req.user.role)) {
+      res.status(403).json({ success: false, message: 'Forbidden', code: 'FORBIDDEN' });
+      return;
+    }
     next();
   };

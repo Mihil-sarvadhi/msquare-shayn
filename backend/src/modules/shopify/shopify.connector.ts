@@ -71,7 +71,9 @@ export async function graphqlRequest<T>(
 }
 
 export async function fetchRecentOrders(updatedAtMin?: string): Promise<ShopifyOrder[]> {
-  const queryStr = updatedAtMin ? `updated_at:>='${updatedAtMin}'` : 'created_at:>=2025-04-01';
+  const queryStr = updatedAtMin
+    ? `updated_at:>='${updatedAtMin}'`
+    : `created_at:>=${environment.shopify.syncStartDate}`;
   let allOrders: ShopifyOrder[] = [];
   let cursor: string | null = null;
   let hasNextPage = true;
@@ -93,9 +95,11 @@ export async function fetchRecentOrders(updatedAtMin?: string): Promise<ShopifyO
   return allOrders;
 }
 
-const BULK_ORDERS_QUERY = `
+function buildBulkOrdersQuery(): string {
+  const since = environment.shopify.syncStartDate;
+  return `
   mutation {
-    bulkOperationRunQuery(query: """{ orders(query: "created_at:>=2025-04-01") { edges { node {
+    bulkOperationRunQuery(query: """{ orders(query: "created_at:>=${since}") { edges { node {
       id name createdAt displayFinancialStatus displayFulfillmentStatus paymentGatewayNames
       totalPriceSet { shopMoney { amount } } discountCodes
       customer { id email defaultAddress { city province } }
@@ -103,6 +107,7 @@ const BULK_ORDERS_QUERY = `
     }}}}""") { bulkOperation { id status } userErrors { field message } }
   }
 `;
+}
 
 export async function startBulkBackfill(): Promise<{ id: string; status: string }> {
   const data = await graphqlRequest<{
@@ -110,7 +115,7 @@ export async function startBulkBackfill(): Promise<{ id: string; status: string 
       bulkOperation: { id: string; status: string } | null;
       userErrors: Array<{ field: string; message: string }>;
     };
-  }>(BULK_ORDERS_QUERY);
+  }>(buildBulkOrdersQuery());
   const { bulkOperation, userErrors } = data.bulkOperationRunQuery;
   if (userErrors?.length)
     throw new Error(`Shopify bulk operation error: ${userErrors.map((e) => e.message).join(', ')}`);

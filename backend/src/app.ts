@@ -1,4 +1,5 @@
 import express from 'express';
+import cookieParser from 'cookie-parser';
 import type { Express } from 'express';
 import { END_POINTS } from '@constant';
 import { ErrorHandler, registerSecurityMiddlewares, responseHandler } from '@middleware';
@@ -9,6 +10,7 @@ export const createApp = (): Express => {
 
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+  app.use(cookieParser());
 
   registerSecurityMiddlewares(app);
   app.use(responseHandler);

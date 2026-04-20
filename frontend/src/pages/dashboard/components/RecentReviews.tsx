@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { RecentReview } from '@app/types/dashboard';
 
 interface Props {
@@ -61,6 +62,7 @@ function PhotoModal({ urls, onClose }: { urls: string[]; onClose: () => void }) 
 }
 
 export default function RecentReviews({ reviews, loading }: Props) {
+  const navigate = useNavigate();
   const [filter, setFilter] = useState<number | null>(null);
   const [photoUrls, setPhotoUrls] = useState<string[] | null>(null);
 
@@ -72,7 +74,7 @@ export default function RecentReviews({ reviews, loading }: Props) {
   if (!reviews || !reviews.length) return <p className="text-muted text-sm">No reviews yet</p>;
 
   const counts = [5,4,3,2,1].map((s) => ({ star: s, n: reviews.filter((r) => r.rating === s).length })).filter((c) => c.n > 0);
-  const filtered = filter ? reviews.filter((r) => r.rating === filter) : reviews;
+  const filtered = (filter ? reviews.filter((r) => r.rating === filter) : reviews).slice(0, 5);
 
   const openPhotos = (e: React.MouseEvent, urls: string) => {
     e.stopPropagation();
@@ -100,14 +102,14 @@ export default function RecentReviews({ reviews, loading }: Props) {
           ))}
         </div>
         <button
-          onClick={() => window.open(window.location.origin + window.location.pathname + '#/reviews', '_blank')}
+          onClick={() => { navigate('/reviews'); window.scrollTo(0, 0); }}
           className="text-xs px-3 py-1 rounded-full border border-gold text-gold hover:bg-gold/10 transition-colors font-medium shrink-0">
           View All →
         </button>
         </div>
 
-        {/* 5-column grid */}
-        <div className="grid grid-cols-5 gap-3">
+        {/* 5-column grid — exactly 5 reviews */}
+        <div className="grid grid-cols-5 gap-3 flex-1">
           {filtered.map((r) => {
             const c = ratingColor(r.rating);
             const urls = r.picture_urls?.split(',').map((u) => u.trim()).filter(Boolean) || [];

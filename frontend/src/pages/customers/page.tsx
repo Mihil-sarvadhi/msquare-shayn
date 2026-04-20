@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@store/hooks';
 import { fetchCustomersData } from '@store/slices/analyticsSlice';
-import { AnalyticsHeader }     from '../analytics/AnalyticsHeader';
 import { CustomerOverviewRow } from './components/CustomerOverviewRow';
 import { NewVsReturning }      from './components/NewVsReturning';
 import { CustomerSegments }    from './components/CustomerSegments';
@@ -10,10 +9,9 @@ import { DiscountAnalysis }    from './components/DiscountAnalysis';
 
 export function CustomersPage() {
   const dispatch = useAppDispatch();
-  const {
-    range, customerOverview, customerSegments,
-    topCustomers, discountAnalysis, loadingCustomers,
-  } = useAppSelector((s) => s.analytics);
+  const { customerOverview, customerSegments, topCustomers, discountAnalysis, loadingCustomers } =
+    useAppSelector((s) => s.analytics);
+  const range = useAppSelector((s) => s.range);
 
   useEffect(() => {
     dispatch(fetchCustomersData(range));
@@ -23,11 +21,7 @@ export function CustomersPage() {
 
   return (
     <div className="min-h-screen bg-ivory font-sans">
-      <AnalyticsHeader
-        title="Customers"
-        subtitle="New vs returning, LTV segments, and discount impact"
-      />
-      <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-4 sm:py-5 space-y-4">
+      <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 pt-4 sm:pt-5 pb-10 space-y-4">
 
         <CustomerOverviewRow data={customerOverview} loading={L} />
 

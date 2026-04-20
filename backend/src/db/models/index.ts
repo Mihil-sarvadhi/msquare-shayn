@@ -1,3 +1,5 @@
+export { User } from './User';
+export { UserSession } from './UserSession';
 export { ShopifyOrder } from './ShopifyOrder';
 export { ShopifyOrderLineitem } from './ShopifyOrderLineitem';
 export { ShopifyCustomer } from './ShopifyCustomer';

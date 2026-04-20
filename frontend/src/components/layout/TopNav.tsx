@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
-import { RefreshCw } from 'lucide-react';
-import { useAppSelector } from '@store/hooks';
+import { RefreshCw, CalendarDays } from 'lucide-react';
+import { useAppSelector, useAppDispatch } from '@store/hooks';
+import { setPreset, setCustomRange } from '@store/slices/rangeSlice';
+import type { RangePreset } from '@store/slices/rangeSlice';
 import { useSyncAll } from '@services/dashboard/dashboard.query';
+import { DateRangePicker } from '@components/ui/DateRangePicker';
 import { cn } from '@/lib/utils';
 
 const NAV = [
@@ -13,33 +16,56 @@ const NAV = [
   { label: 'Reviews',    to: '/reviews'    },
 ];
 
-const DOT_COLOR: Record<string, string> = {
-  green: 'bg-[#2D7D46]',
-  amber: 'bg-[#B45309]',
-  red:   'bg-[#9B2235]',
-};
-
 export function TopNav() {
-  const health = useAppSelector((s) => s.dashboard.health);
-  const [tooltip, setTooltip] = useState<string | null>(null);
-  const syncAll = useSyncAll();
+  const dispatch   = useAppDispatch();
+  const range      = useAppSelector((s) => s.range);
+  const syncAll    = useSyncAll();
+
+  const [showPicker, setShowPicker] = useState(false);
+
+  const handlePreset = useCallback((p: Exclude<RangePreset, 'custom'>) => {
+    dispatch(setPreset(p));
+    setShowPicker(false);
+  }, [dispatch]);
+
+  const handleApply = useCallback((start: string, end: string) => {
+    dispatch(setCustomRange({ startDate: start, endDate: end }));
+    setShowPicker(false);
+  }, [dispatch]);
+
+  const handleTogglePicker = useCallback(() => {
+    setShowPicker((v) => !v);
+  }, []);
+
+  const pickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showPicker) return;
+    function handleOutside(e: MouseEvent) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setShowPicker(false);
+      }
+    }
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [showPicker]);
+
+  const customLabel = range.preset === 'custom'
+    ? `${range.startDate} → ${range.endDate}`
+    : 'Custom';
 
   return (
-    <header className="bg-white border-b border-[#F0EBE0] px-4 sm:px-6 flex items-center gap-6 h-[52px] shrink-0">
+    <header className="bg-white border-b border-[#F0EBE0] px-4 sm:px-6 flex items-center gap-4 h-[52px] shrink-0">
       {/* Logo */}
       <div className="flex items-center gap-2 shrink-0">
-        <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-[#B8860B]">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-          </svg>
-        </div>
+        <img src="/favicon.svg" alt="SHAYN" className="h-10 w-10 rounded-xl" />
         <div className="flex items-baseline gap-1">
-          <span className="text-[#B8860B] font-bold text-[14px] tracking-wider">SHAYN</span>
-          <span className="text-[10px] text-[#8C7B64] uppercase tracking-widest">MIS</span>
+          <span className="text-[#1A1208] font-bold text-[14px] tracking-wider">SHAYN</span>
+          <span className="text-[10px] text-[#B8860B] uppercase tracking-widest font-semibold">MIS</span>
         </div>
       </div>
 
-      {/* Nav tabs — scrollable on mobile */}
+      {/* Nav tabs */}
       <nav className="flex items-stretch gap-1 flex-1 overflow-x-auto h-full">
         {NAV.map(({ label, to }) => (
           <NavLink
@@ -59,37 +85,66 @@ export function TopNav() {
         ))}
       </nav>
 
-      {/* Right — health dots + sync */}
+      {/* Right — range selector + health dots + sync */}
       <div className="flex items-center gap-3 ml-auto shrink-0">
-        <div className="hidden sm:flex items-center gap-3">
-          {health.map((h) => (
-            <div
-              key={h.connector_name}
-              className="relative flex items-center gap-1 cursor-pointer"
-              onMouseEnter={() => setTooltip(h.connector_name)}
-              onMouseLeave={() => setTooltip(null)}
-            >
-              <span className={cn('w-2 h-2 rounded-full', DOT_COLOR[h.status] ?? 'bg-gray-400')} />
-              <span className="text-xs text-[#8C7B64] capitalize">{h.connector_name.replace(/_/g, ' ')}</span>
-              {tooltip === h.connector_name && (
-                <div className="absolute top-6 right-0 bg-[#1A1208] text-white text-xs rounded px-2 py-1 w-48 z-10">
-                  {h.error_message
-                    ? h.error_message
-                    : h.last_sync_at
-                    ? `Last sync: ${new Date(h.last_sync_at).toLocaleTimeString()}`
-                    : 'Never synced'}
-                </div>
+
+        {/* Range selector */}
+        <div className="flex gap-1 bg-[#F5F0E8] rounded-lg p-1">
+          {([
+            { key: '7d',  label: '7 Days'    },
+            { key: '30d', label: '30 Days'   },
+            { key: 'all', label: 'All Time'  },
+          ] as { key: Exclude<RangePreset, 'custom'>; label: string }[]).map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => handlePreset(key)}
+              className={cn(
+                'px-2.5 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap',
+                range.preset === key
+                  ? 'bg-white text-[#1A1208] shadow-sm font-semibold'
+                  : 'text-[#8C7B64] hover:text-[#1A1208]'
               )}
-            </div>
+            >
+              {label}
+            </button>
           ))}
+
+          {/* Custom date button + popover */}
+          <div className="relative" ref={pickerRef}>
+            <button
+              onClick={handleTogglePicker}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
+                range.preset === 'custom'
+                  ? 'bg-[#B8860B] text-white font-semibold'
+                  : 'text-[#8C7B64] hover:text-[#1A1208]'
+              )}
+            >
+              <CalendarDays size={11} strokeWidth={1.5} />
+              {customLabel}
+            </button>
+
+            {showPicker && (
+              <div className="absolute top-full right-0 mt-2 z-50">
+                <DateRangePicker
+                  startDate={range.startDate}
+                  endDate={range.endDate}
+                  onApply={handleApply}
+                  onClose={() => setShowPicker(false)}
+                />
+              </div>
+            )}
+          </div>
         </div>
 
+
+        {/* Sync All */}
         <button
           onClick={() => syncAll.mutate()}
           disabled={syncAll.isPending}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#B8860B] text-white hover:bg-[#B8860B]/90 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
         >
-          <RefreshCw size={12} strokeWidth={2} className={syncAll.isPending ? 'animate-spin' : ''} />
+          <RefreshCw size={12} strokeWidth={1.5} className={syncAll.isPending ? 'animate-spin' : ''} />
           {syncAll.isPending ? 'Syncing…' : 'Sync All'}
         </button>
       </div>

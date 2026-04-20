@@ -19,7 +19,7 @@ export function CtrTrend({ data, loading }: Props) {
 
   return (
     <ResponsiveContainer width="100%" height={200}>
-      <LineChart data={chartData} margin={{ top: 4, right: 56, bottom: 0, left: 0 }}>
+      <LineChart data={chartData} margin={{ top: 4, right: 64, bottom: 0, left: 0 }}>
         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F0EBE0" />
         <XAxis
           dataKey="ts" type="number" scale="time"

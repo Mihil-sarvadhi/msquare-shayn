@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@store/hooks';
 import { fetchOperationsData } from '@store/slices/analyticsSlice';
-import { AnalyticsHeader }    from '../analytics/AnalyticsHeader';
 import { NetRevenueRow }      from './components/NetRevenueRow';
 import { RtoByState }         from './components/RtoByState';
 import { CodVsPrepaidRto }    from './components/CodVsPrepaidRto';
@@ -12,10 +11,9 @@ import { MoneyStuck }         from './components/MoneyStuck';
 
 export function OperationsPage() {
   const dispatch = useAppDispatch();
-  const {
-    range, netRevenue, rtoByState, codVsPrepaidRto,
-    geoRevenue, logisticsCosts, codCashFlow, moneyStuck, loadingOperations,
-  } = useAppSelector((s) => s.analytics);
+  const { netRevenue, rtoByState, codVsPrepaidRto, geoRevenue, logisticsCosts, codCashFlow, moneyStuck, loadingOperations } =
+    useAppSelector((s) => s.analytics);
+  const range = useAppSelector((s) => s.range);
 
   useEffect(() => {
     dispatch(fetchOperationsData(range));
@@ -25,11 +23,7 @@ export function OperationsPage() {
 
   return (
     <div className="min-h-screen bg-ivory font-sans">
-      <AnalyticsHeader
-        title="Operations"
-        subtitle="Logistics costs, RTO analysis, and COD cash flow"
-      />
-      <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-4 sm:py-5 space-y-4">
+      <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 pt-4 sm:pt-5 pb-10 space-y-4">
 
         <NetRevenueRow data={netRevenue} loading={L} />
 
@@ -63,7 +57,9 @@ export function OperationsPage() {
         </div>
 
         <div className="bg-white rounded-xl border border-parch shadow-card p-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted mb-4">COD Cash Flow (Last 30 Days)</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted mb-4">
+            COD Cash Flow ({range.preset === '7d' ? 'Last 7 Days' : range.preset === '30d' ? 'Last 30 Days' : `${range.startDate} → ${range.endDate}`})
+          </h3>
           <CodCashFlow data={codCashFlow} loading={L} />
         </div>
 

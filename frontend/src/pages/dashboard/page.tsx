@@ -1,8 +1,7 @@
 import { useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@store/hooks';
-import { fetchDashboard, setRange } from '@store/slices/dashboardSlice';
+import { fetchDashboard } from '@store/slices/dashboardSlice';
 import { fetchOperationsData } from '@store/slices/analyticsSlice';
-import Header from './components/Header';
 import KPICard from './components/KPICard';
 import RevenueChart from './components/RevenueChart';
 import MetaFunnel from './components/MetaFunnel';
@@ -24,10 +23,11 @@ import { IndianRupee, ShoppingCart, Receipt, Megaphone, TrendingUp, PackageX } f
 
 export function DashboardPage() {
   const dispatch = useAppDispatch();
-  const { range, kpis, revenueTrend, metaFunnel, campaigns, topProducts,
+  const { kpis, revenueTrend, metaFunnel, campaigns, topProducts,
     abandonedCarts, health, reviewsSummary, topRatedProducts, recentReviews,
     loading, error } = useAppSelector((s) => s.dashboard);
   const { topSkus } = useAppSelector((s) => s.analytics);
+  const range = useAppSelector((s) => s.range);
 
   useEffect(() => {
     dispatch(fetchDashboard(range));
@@ -36,10 +36,6 @@ export function DashboardPage() {
   useEffect(() => {
     dispatch(fetchOperationsData(range));
   }, [dispatch, range]);
-
-  const handleRangeChange = (r: string) => {
-    dispatch(setRange(r));
-  };
 
   if (error) {
     return (
@@ -54,11 +50,10 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="min-h-full bg-ivory font-sans">
-      <Header range={range} setRange={handleRangeChange} />
+    <div className="min-h-screen bg-ivory font-sans">
+      <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 pt-4 sm:pt-5 pb-30 space-y-4">
 
-      <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-4 sm:py-5 space-y-4">
-
+        {/* Row 1 — KPI Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {loading ? (
             [...Array(6)].map((_, i) => (
@@ -76,8 +71,9 @@ export function DashboardPage() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="md:col-span-2 lg:col-span-2 bg-white rounded-xl border border-parch shadow-card p-4">
+        {/* Row 2 — Revenue Trend + Meta Funnel */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
+          <div className="md:col-span-2 bg-white rounded-xl border border-parch shadow-card p-4">
             <h3 className="font-semibold text-ink mb-3 text-sm uppercase tracking-wide text-muted">Revenue Trend</h3>
             <RevenueChart data={revenueTrend} loading={loading} />
           </div>
@@ -87,79 +83,84 @@ export function DashboardPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="flex flex-col gap-4">
-            <div className="flex-1 bg-white rounded-xl border border-parch shadow-card p-4">
+        {/* Row 3 — Campaigns (scrollable, capped) + Order Status + Connector Status */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Campaign table — flex col so inner scroll works; capped at 520px */}
+          <div className="lg:col-span-2 bg-white rounded-xl border border-parch shadow-card p-4 flex flex-col"
+            style={{ maxHeight: 390 }}>
+            <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3 shrink-0">
+              Meta Campaigns Performance
+            </h3>
+            <CampaignTable campaigns={campaigns} loading={loading} />
+          </div>
+
+          {/* Right column — Order Status on top, COD vs Prepaid fills remainder */}
+          <div className="flex flex-col gap-4" style={{ maxHeight: 380 }}>
+            <div className="bg-white rounded-xl border border-parch shadow-card p-4 shrink-0">
               <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3">Order Status</h3>
               <OrderStatus kpis={kpis} loading={loading} />
             </div>
-            <div className="flex-1 bg-white rounded-xl border border-parch shadow-card p-4">
+            <div className="bg-white rounded-xl border border-parch shadow-card p-4 flex-1 flex flex-col">
               <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3">COD vs Prepaid</h3>
               <CODSplit kpis={kpis} loading={loading} />
             </div>
           </div>
-          <div className="bg-white rounded-xl border border-parch shadow-card p-4 flex flex-col gap-4">
-            <div>
-              <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3">Orders by Platform</h3>
-              <PlatformOrders kpis={kpis} />
-            </div>
-            <div className="border-t border-parch pt-4">
-              <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3">Abandoned Carts</h3>
-              <AbandonedCart data={abandonedCarts} loading={loading} />
-            </div>
+        </div>
+
+        {/* Row 4 — Compact metric strip: Connector Status | Logistics | Abandoned Carts | Customer Metrics */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
+          <div className="bg-white rounded-xl border border-parch shadow-card p-4">
+            <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3">Connector Status</h3>
+            <ConnectorStatus health={health} />
           </div>
-          <div className="bg-white rounded-xl border border-parch shadow-card p-4 flex flex-col gap-4">
-            <div>
-              <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3">Logistics Overview</h3>
-              <LogisticsSummary kpis={kpis} loading={loading} />
-            </div>
-            <div className="border-t border-parch pt-4">
-              <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3">Customer Metrics</h3>
-              <CustomerMetrics kpis={kpis} />
-            </div>
+          <div className="bg-white rounded-xl border border-parch shadow-card p-4">
+            <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3">Logistics Overview</h3>
+            <LogisticsSummary kpis={kpis} loading={loading} />
+          </div>
+          <div className="bg-white rounded-xl border border-parch shadow-card p-4">
+            <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3">Abandoned Carts</h3>
+            <AbandonedCart data={abandonedCarts} loading={loading} />
+          </div>
+          <div className="bg-white rounded-xl border border-parch shadow-card p-4">
+            <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3">Customer Metrics</h3>
+            <CustomerMetrics kpis={kpis} />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
-          <div className="md:col-span-2 lg:col-span-3 bg-white rounded-xl border border-parch shadow-card p-4 flex flex-col">
-            <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3">Recent Reviews</h3>
-            <div className="flex-1">
-              <RecentReviews reviews={recentReviews} loading={loading} />
-            </div>
+        {/* Row 5 — Orders by Platform + Top Rated Products + Top 5 Products */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
+          <div className="bg-white rounded-xl border border-parch shadow-card p-4">
+            <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3">Orders by Platform</h3>
+            <PlatformOrders kpis={kpis} />
           </div>
-          <div className="flex flex-col gap-4 h-full">
-            <div className="bg-white rounded-xl border border-parch shadow-card p-4 shrink-0">
-              <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3">Connector Status</h3>
-              <ConnectorStatus health={health} />
-            </div>
-            <div className="bg-white rounded-xl border border-parch shadow-card p-4 flex-1 flex flex-col">
-              <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3">Top 5 Products</h3>
-              <div className="flex-1">
-                <TopProducts products={topProducts} loading={loading} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="bg-white rounded-xl border border-parch shadow-card p-4 flex flex-col overflow-hidden h-[420px] md:h-[480px]">
-            <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3 shrink-0">Review Summary</h3>
-            <ReviewsSummary data={reviewsSummary} loading={loading} />
-          </div>
-          <div className="bg-white rounded-xl border border-parch shadow-card p-4 flex flex-col overflow-hidden h-[420px] md:h-[480px]">
+          <div className="bg-white rounded-xl border border-parch shadow-card p-4 flex flex-col overflow-hidden">
             <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3 shrink-0">Top Rated Products</h3>
             <TopRatedProducts products={topRatedProducts} loading={loading} />
           </div>
-          <div className="bg-white rounded-xl border border-parch shadow-card p-4 flex flex-col overflow-hidden h-[420px] md:h-[480px]">
-            <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3 shrink-0">Meta Campaigns Performance</h3>
-            <CampaignTable campaigns={campaigns} loading={loading} />
+          <div className="bg-white rounded-xl border border-parch shadow-card p-4">
+            <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3">Top 5 Products</h3>
+            <TopProducts products={topProducts} loading={loading} />
           </div>
         </div>
 
+        {/* Row 6 — Top SKUs full width */}
         <div className="bg-white rounded-xl border border-parch shadow-card p-4">
           <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-4">Top 10 SKUs by Revenue</h3>
           <TopSkus data={topSkus} loading={loading} />
         </div>
+
+        {/* Row 7 — Review Summary + Recent Reviews */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
+          <div className="bg-white rounded-xl border border-parch shadow-card p-4 flex flex-col">
+            <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3 shrink-0">Review Summary</h3>
+            <ReviewsSummary data={reviewsSummary} loading={loading} />
+          </div>
+          <div className="md:col-span-2 bg-white rounded-xl border border-parch shadow-card p-4">
+            <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3">Recent Reviews</h3>
+            <RecentReviews reviews={recentReviews} loading={loading} />
+          </div>
+        </div>
+
 
       </main>
     </div>

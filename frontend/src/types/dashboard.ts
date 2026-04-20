@@ -45,7 +45,6 @@ export interface ConnectorHealth {
 }
 
 export interface DashboardState {
-  range: string;
   kpis: KPIs | null;
   revenueTrend: RevenueTrendItem[];
   metaFunnel: MetaFunnel | null;

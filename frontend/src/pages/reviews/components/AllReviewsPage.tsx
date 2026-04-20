@@ -124,7 +124,7 @@ export default function AllReviewsPage() {
   const totalPages = Math.ceil(total / LIMIT);
 
   return (
-    <div className="min-h-screen bg-ivory font-sans">
+    <div className="bg-ivory font-sans">
       {photoUrls && <PhotoModal urls={photoUrls} onClose={() => setPhotoUrls(null)} />}
 
       {/* Header */}
@@ -170,7 +170,7 @@ export default function AllReviewsPage() {
         </div>
       </div>
 
-      <main className="max-w-screen-xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+      <main className="max-w-screen-xl mx-auto px-4 sm:px-6 pt-4 sm:pt-5 pb-10">
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {[...Array(8)].map((_, i) => <div key={i} className="h-52 bg-parch animate-pulse rounded-xl" />)}

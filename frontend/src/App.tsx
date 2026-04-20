@@ -1,26 +1,50 @@
-import { lazy } from 'react';
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppShell } from '@components/layout/AppShell';
+import { ProtectedRoute } from '@components/shared/ProtectedRoute';
 
 const DashboardPage  = lazy(() => import('@pages/dashboard/page').then((m) => ({ default: m.DashboardPage })));
 const ReviewsPage    = lazy(() => import('@pages/reviews/page').then((m) => ({ default: m.ReviewsPage })));
 const OperationsPage = lazy(() => import('@pages/operations/page').then((m) => ({ default: m.OperationsPage })));
 const CustomersPage  = lazy(() => import('@pages/customers/page').then((m) => ({ default: m.CustomersPage })));
 const MarketingPage  = lazy(() => import('@pages/marketing/page').then((m) => ({ default: m.MarketingPage })));
+const AuthPage       = lazy(() => import('@pages/auth/page').then((m) => ({ default: m.AuthPage })));
 
 export function App() {
   return (
     <BrowserRouter>
-      <AppShell>
-        <Routes>
-          <Route path="/"           element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard"  element={<DashboardPage />} />
-          <Route path="/reviews"    element={<ReviewsPage />} />
-          <Route path="/operations" element={<OperationsPage />} />
-          <Route path="/customers"  element={<CustomersPage />} />
-          <Route path="/marketing"  element={<MarketingPage />} />
-        </Routes>
-      </AppShell>
+      <Routes>
+        {/* Public */}
+        <Route
+          path="/login"
+          element={
+            <Suspense fallback={null}>
+              <AuthPage />
+            </Suspense>
+          }
+        />
+
+        {/* Protected — wrapped in AppShell */}
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <Suspense fallback={null}>
+                  <Routes>
+                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                    <Route path="/dashboard"  element={<DashboardPage />} />
+                    <Route path="/reviews"    element={<ReviewsPage />} />
+                    <Route path="/operations" element={<OperationsPage />} />
+                    <Route path="/customers"  element={<CustomersPage />} />
+                    <Route path="/marketing"  element={<MarketingPage />} />
+                  </Routes>
+                </Suspense>
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
     </BrowserRouter>
   );
 }

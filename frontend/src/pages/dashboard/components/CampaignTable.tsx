@@ -23,15 +23,17 @@ export default function CampaignTable({ campaigns, loading }: CampaignTableProps
     { key: 'roas',        label: 'ROAS',         fmt: (v) => `${parseFloat(String(v)).toFixed(2)}x` },
   ];
 
+  const COLS = '1fr 76px 88px 68px 56px 60px';
+
   return (
     <div className="flex-1 min-h-0 overflow-y-auto">
       {/* Sticky header */}
-      <div className="grid gap-2 sticky top-0 bg-white pb-1 mb-1 border-b border-parch z-10"
-        style={{ gridTemplateColumns: '1fr repeat(5, auto)' }}>
+      <div className="grid sticky top-0 bg-white pb-1 mb-1 border-b border-parch z-10"
+        style={{ gridTemplateColumns: COLS }}>
         <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Campaign</span>
         {cols.map((c) => (
           <button key={c.key} onClick={() => setSortBy(c.key)}
-            className={`text-[10px] font-semibold uppercase tracking-wide text-right transition-colors ${sortBy === c.key ? 'text-gold' : 'text-muted hover:text-ink'}`}>
+            className={`text-[10px] font-semibold uppercase tracking-wide text-right pl-2 transition-colors ${sortBy === c.key ? 'text-gold' : 'text-muted hover:text-ink'}`}>
             {c.label} {sortBy === c.key ? '↓' : ''}
           </button>
         ))}
@@ -41,19 +43,17 @@ export default function CampaignTable({ campaigns, loading }: CampaignTableProps
       <div className="space-y-0">
         {sorted.map((camp) => (
           <div key={camp.campaign_id}
-            className="grid gap-2 items-center py-2 border-b border-parch last:border-0 hover:bg-ivory/60 transition-colors rounded"
-            style={{ gridTemplateColumns: '1fr repeat(5, auto)' }}>
-            {/* Name */}
+            className="grid items-center py-2 border-b border-parch last:border-0 hover:bg-ivory/60 transition-colors rounded"
+            style={{ gridTemplateColumns: COLS }}>
             <div className="min-w-0 pr-2">
               <p className="text-xs font-medium text-ink truncate">{camp.campaign_name}</p>
               <p className="text-[10px] text-muted">{camp.objective?.replace('OUTCOME_', '')}</p>
             </div>
-            {/* Metrics */}
-            <span className="text-xs text-right font-medium text-ink tabular-nums border-l border-parch pl-2">{formatINR(camp.spend)}</span>
-            <span className="text-xs text-right text-muted tabular-nums border-l border-parch pl-2">{formatNum(camp.impressions)}</span>
-            <span className="text-xs text-right text-muted tabular-nums border-l border-parch pl-2">{formatNum(camp.clicks)}</span>
-            <span className="text-xs text-right text-muted tabular-nums border-l border-parch pl-2">{formatNum(camp.purchases)}</span>
-            <span className={`text-xs text-right font-bold tabular-nums border-l border-parch pl-2 ${parseFloat(String(camp.roas)) >= 2 ? 'text-emerald' : parseFloat(String(camp.roas)) >= 1 ? 'text-gold' : 'text-ruby'}`}>
+            <span className="text-xs text-right font-medium text-ink tabular-nums pl-2">{formatINR(camp.spend)}</span>
+            <span className="text-xs text-right text-muted tabular-nums pl-2">{formatNum(camp.impressions)}</span>
+            <span className="text-xs text-right text-muted tabular-nums pl-2">{formatNum(camp.clicks)}</span>
+            <span className="text-xs text-right text-muted tabular-nums pl-2">{formatNum(camp.purchases)}</span>
+            <span className={`text-xs text-right font-bold tabular-nums pl-2 ${parseFloat(String(camp.roas)) >= 2 ? 'text-emerald' : parseFloat(String(camp.roas)) >= 1 ? 'text-gold' : 'text-ruby'}`}>
               {parseFloat(String(camp.roas)).toFixed(2)}x
             </span>
           </div>

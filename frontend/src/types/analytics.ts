@@ -110,7 +110,6 @@ export interface ChannelRevenue {
 }
 
 export interface AnalyticsState {
-  range: string;
   netRevenue: NetRevenue | null;
   rtoByState: RtoByStateItem[];
   codVsPrepaidRto: CodVsPrepaidItem[];

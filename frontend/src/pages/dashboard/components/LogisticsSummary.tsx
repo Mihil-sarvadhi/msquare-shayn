@@ -1,4 +1,4 @@
-import { KPIs } from '@app/types/dashboard';
+import type { KPIs } from '@app/types/dashboard';
 import { formatNum, formatPct } from '@utils/formatters';
 
 interface Props {
@@ -22,13 +22,13 @@ export default function LogisticsSummary({ kpis, loading }: Props) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between gap-2">
+      <div className="grid grid-cols-5 gap-1">
         {stats.map((s) => (
-          <div key={s.label} className="flex-1 flex flex-col items-center">
+          <div key={s.label} className="flex flex-col items-center">
             <span className={`text-xl font-bold ${s.color}`}>{formatNum(s.value)}</span>
             <div className="flex items-center gap-1 mt-0.5">
-              <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-              <span className="text-[11px] text-muted">{s.label}</span>
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${s.dot}`} />
+              <span className="text-[11px] text-muted whitespace-nowrap">{s.label}</span>
             </div>
           </div>
         ))}

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import express from 'express';
+import authRoutes from '@modules/auth/auth.routes';
 import dashboardRoutes from '@modules/dashboard/dashboard.routes';
 import healthRoutes from '@modules/health/health.routes';
 import syncRoutes from '@modules/sync/sync.routes';
@@ -8,6 +9,7 @@ import analyticsRoutes from '@modules/analytics/analytics.routes';
 
 export const router = Router();
 
+router.use('/auth', authRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/health', healthRoutes);
 router.use('/sync', syncRoutes);

@@ -111,11 +111,13 @@ export async function getCodCashFlow(since: string, until: string): Promise<CodC
 export async function getCustomerOverview(
   since: string,
   until: string,
+  isAllTime = false,
 ): Promise<CustomerOverviewRow> {
   const [row] = await sequelize.query<CustomerOverviewRow>(
     `WITH period_customers AS (
        SELECT o.customer_id,
-              MIN(fo.min_date) AS first_ever_date
+              MIN(fo.min_date) AS first_ever_date,
+              COUNT(*)         AS order_count
        FROM shopify_orders o
        JOIN (
          SELECT customer_id, MIN(created_at::date) AS min_date
@@ -128,14 +130,24 @@ export async function getCustomerOverview(
        GROUP BY o.customer_id
      )
      SELECT
-       COUNT(*)::int                                                              AS total_customers,
-       COUNT(CASE WHEN first_ever_date BETWEEN :since AND :until THEN 1 END)::int AS new_customers,
-       COUNT(CASE WHEN first_ever_date < :since THEN 1 END)::int                  AS returning_customers,
+       COUNT(*)::int AS total_customers,
+       COUNT(CASE WHEN :isAllTime
+                  THEN (CASE WHEN order_count = 1 THEN 1 END)
+                  ELSE (CASE WHEN first_ever_date BETWEEN :since AND :until THEN 1 END)
+             END)::int AS new_customers,
+       COUNT(CASE WHEN :isAllTime
+                  THEN (CASE WHEN order_count > 1 THEN 1 END)
+                  ELSE (CASE WHEN first_ever_date < :since THEN 1 END)
+             END)::int AS returning_customers,
        CASE WHEN COUNT(*) > 0
-            THEN ROUND(COUNT(CASE WHEN first_ever_date < :since THEN 1 END)::numeric / COUNT(*)::numeric * 100, 1)
-            ELSE 0 END                                                             AS repeat_rate
+            THEN ROUND(
+              COUNT(CASE WHEN :isAllTime
+                         THEN (CASE WHEN order_count > 1 THEN 1 END)
+                         ELSE (CASE WHEN first_ever_date < :since THEN 1 END)
+                    END)::numeric / COUNT(*)::numeric * 100, 1)
+            ELSE 0 END AS repeat_rate
      FROM period_customers`,
-    { type: QueryTypes.SELECT, replacements: { since, until } },
+    { type: QueryTypes.SELECT, replacements: { since, until, isAllTime } },
   );
   return row;
 }
