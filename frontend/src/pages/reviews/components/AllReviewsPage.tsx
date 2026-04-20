@@ -45,7 +45,7 @@ function PhotoModal({ urls, onClose }: { urls: string[]; onClose: () => void }) 
           )}
         </div>
         {urls.length > 1 && (
-          <div className="flex gap-2 p-3 overflow-x-auto bg-surface">
+          <div className="flex gap-2 p-3 overflow-x-auto bg-ivory">
             {urls.map((u, i) => (
               <img key={i} src={u} alt="" onClick={() => setActive(i)}
                 className={`h-16 w-16 object-cover rounded-lg cursor-pointer shrink-0 border-2 transition-colors ${i === active ? 'border-gold' : 'border-transparent'}`} />
@@ -61,7 +61,7 @@ function ReviewCard({ r, onPhotoClick }: { r: RecentReview; onPhotoClick: (urls:
   const c = ratingColor(r.rating);
   const urls = r.picture_urls?.split(',').map((u) => u.trim()).filter(Boolean) || [];
   return (
-    <div className="bg-white border border-parch rounded-card p-4 flex flex-col gap-2.5 hover:shadow-md transition-shadow">
+    <div className="bg-white border border-parch rounded-xl p-4 flex flex-col gap-2.5 hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between">
         <Stars rating={r.rating} />
         <span className="text-xs font-bold px-2 py-0.5 rounded-full"
@@ -124,7 +124,7 @@ export default function AllReviewsPage() {
   const totalPages = Math.ceil(total / LIMIT);
 
   return (
-    <div className="min-h-screen bg-surface font-sans">
+    <div className="min-h-screen bg-ivory font-sans">
       {photoUrls && <PhotoModal urls={photoUrls} onClose={() => setPhotoUrls(null)} />}
 
       {/* Header */}
@@ -142,7 +142,7 @@ export default function AllReviewsPage() {
                 onChange={(e) => setInputVal(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 placeholder="Search reviews…"
-                className="text-xs border border-parch rounded-lg px-3 py-1.5 outline-none focus:border-gold transition-colors w-48 bg-surface"
+                className="text-xs border border-parch rounded-lg px-3 py-1.5 outline-none focus:border-gold transition-colors w-48 bg-ivory"
               />
               <button onClick={handleSearch}
                 className="text-xs px-3 py-1.5 rounded-lg bg-gold text-white font-medium hover:bg-gold/90 transition-colors">
@@ -173,7 +173,7 @@ export default function AllReviewsPage() {
       <main className="max-w-screen-xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {[...Array(8)].map((_, i) => <div key={i} className="h-52 bg-parch animate-pulse rounded-card" />)}
+            {[...Array(8)].map((_, i) => <div key={i} className="h-52 bg-parch animate-pulse rounded-xl" />)}
           </div>
         ) : reviews.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-muted">

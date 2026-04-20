@@ -10,13 +10,6 @@ interface HeaderProps {
   isSyncing: boolean;
 }
 
-function greeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return 'Good morning';
-  if (h < 17) return 'Good afternoon';
-  return 'Good evening';
-}
-
 export default function Header({ range, setRange, health, onSyncAll, isSyncing }: HeaderProps) {
   const [tooltip, setTooltip] = useState<string | null>(null);
 
@@ -26,22 +19,17 @@ export default function Header({ range, setRange, health, onSyncAll, isSyncing }
     return 'bg-ruby';
   };
 
-  const lastSync = health.find((h) => h.last_sync_at)?.last_sync_at;
-  const lastSyncLabel = lastSync
-    ? `Last synced ${new Date(lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-    : 'Never synced';
-
   return (
     <header className="bg-white border-b border-parch px-4 sm:px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
-      {/* Brand + greeting */}
-      <div className="hidden sm:flex flex-col shrink-0">
-        <span className="text-ink font-semibold text-[15px]">{greeting()}, Shayn 👋</span>
-        <span className="text-xs text-stone">{lastSyncLabel}</span>
+      {/* Brand — hidden on mobile since sidebar/mobile-nav shows it */}
+      <div className="hidden sm:flex items-center gap-2 shrink-0">
+        <span className="text-gold text-xl font-bold tracking-wider">SHAYN</span>
+        <span className="text-xs text-muted uppercase tracking-widest mt-0.5">MIS</span>
       </div>
 
       {/* Range selector */}
-      <div className="flex gap-1 bg-surface rounded-lg p-1 shrink-0">
-        {([['7d','Last 7 Days'],['30d','Last 30 Days'],['all','All Time']] as const).map(([r, label]) => (
+      <div className="flex gap-1 bg-[#F5F0E8] rounded-lg p-1 shrink-0">
+        {([['7d','7 Days'],['30d','30 Days'],['all','All Time']] as const).map(([r, label]) => (
           <button
             key={r}
             onClick={() => setRange(r)}
@@ -54,7 +42,7 @@ export default function Header({ range, setRange, health, onSyncAll, isSyncing }
         ))}
       </div>
 
-      {/* Right side — health dots + refresh */}
+      {/* Right side — health dots + sync */}
       <div className="flex items-center gap-3 ml-auto shrink-0">
         <div className="hidden sm:flex items-center gap-3">
           {health.map((h) => (
@@ -85,7 +73,7 @@ export default function Header({ range, setRange, health, onSyncAll, isSyncing }
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gold text-white hover:bg-gold/90 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
         >
           <RefreshCw size={12} strokeWidth={2} className={isSyncing ? 'animate-spin' : ''} />
-          {isSyncing ? 'Refreshing…' : 'Refresh'}
+          {isSyncing ? 'Syncing…' : 'Sync All'}
         </button>
       </div>
     </header>

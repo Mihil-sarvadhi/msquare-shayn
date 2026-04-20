@@ -3,9 +3,9 @@ import { setAnalyticsRange } from '@store/slices/analyticsSlice';
 import { cn } from '@/lib/utils';
 
 const RANGES = [
-  { label: 'Last 7 Days',   value: '7d'  },
-  { label: 'Last 30 Days',  value: '30d' },
-  { label: 'All Time',      value: 'all' },
+  { label: '7 Days',   value: '7d'  },
+  { label: '30 Days',  value: '30d' },
+  { label: 'All Time', value: 'all' },
 ];
 
 interface AnalyticsHeaderProps {
@@ -23,7 +23,7 @@ export function AnalyticsHeader({ title, subtitle }: AnalyticsHeaderProps) {
         <h1 className="text-lg font-bold text-ink">{title}</h1>
         <p className="text-xs text-muted mt-0.5">{subtitle}</p>
       </div>
-      <div className="flex gap-1 bg-surface rounded-lg p-1 self-start sm:self-auto">
+      <div className="flex gap-1 bg-[#F5F0E8] rounded-lg p-1 self-start sm:self-auto">
         {RANGES.map((r) => (
           <button
             key={r.value}

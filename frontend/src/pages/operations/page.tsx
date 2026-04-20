@@ -24,7 +24,7 @@ export function OperationsPage() {
   const L = loadingOperations;
 
   return (
-    <div className="min-h-screen bg-surface font-sans">
+    <div className="min-h-screen bg-ivory font-sans">
       <AnalyticsHeader
         title="Operations"
         subtitle="Logistics costs, RTO analysis, and COD cash flow"
@@ -33,37 +33,37 @@ export function OperationsPage() {
 
         <NetRevenueRow data={netRevenue} loading={L} />
 
-        <div className="bg-white rounded-card border border-ruby/20 shadow-card p-4">
-          <h3 className="font-semibold text-sm text-ruby mb-4 flex items-center gap-1.5">
+        <div className="bg-white rounded-xl border border-ruby/20 shadow-card p-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-ruby mb-4 flex items-center gap-1.5">
             <span>⚠</span> Where Your Money Is Getting Stuck
           </h3>
           <MoneyStuck data={moneyStuck} loading={L} />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white rounded-card border border-parch shadow-card p-4">
-            <h3 className="font-semibold text-sm text-ink mb-4">RTO by State</h3>
+          <div className="bg-white rounded-xl border border-parch shadow-card p-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted mb-4">RTO by State</h3>
             <RtoByState data={rtoByState} loading={L} />
           </div>
-          <div className="bg-white rounded-card border border-parch shadow-card p-4">
-            <h3 className="font-semibold text-sm text-ink mb-4">COD vs Prepaid RTO</h3>
+          <div className="bg-white rounded-xl border border-parch shadow-card p-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted mb-4">COD vs Prepaid RTO</h3>
             <CodVsPrepaidRto data={codVsPrepaidRto} loading={L} />
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white rounded-card border border-parch shadow-card p-4">
-            <h3 className="font-semibold text-sm text-ink mb-4">Revenue by State (Top 10)</h3>
+          <div className="bg-white rounded-xl border border-parch shadow-card p-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted mb-4">Revenue by State (Top 10)</h3>
             <GeoRevenue data={geoRevenue} loading={L} />
           </div>
-          <div className="bg-white rounded-card border border-parch shadow-card p-4">
-            <h3 className="font-semibold text-sm text-ink mb-4">Logistics Cost Breakdown</h3>
+          <div className="bg-white rounded-xl border border-parch shadow-card p-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted mb-4">Logistics Cost Breakdown</h3>
             <LogisticsCostDonut data={logisticsCosts} loading={L} />
           </div>
         </div>
 
-        <div className="bg-white rounded-card border border-parch shadow-card p-4">
-          <h3 className="font-semibold text-sm text-ink mb-4">COD Cash Flow (Last 30 Days)</h3>
+        <div className="bg-white rounded-xl border border-parch shadow-card p-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted mb-4">COD Cash Flow (Last 30 Days)</h3>
           <CodCashFlow data={codCashFlow} loading={L} />
         </div>
 

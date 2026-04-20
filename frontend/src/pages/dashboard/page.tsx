@@ -46,8 +46,8 @@ export function DashboardPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-surface flex items-center justify-center">
-        <div className="bg-white rounded-card border border-ruby/30 p-8 text-center max-w-md">
+      <div className="min-h-screen bg-ivory flex items-center justify-center">
+        <div className="bg-white rounded-xl border border-ruby/30 p-8 text-center max-w-md">
           <p className="text-ruby font-semibold mb-2">Connection Error</p>
           <p className="text-muted text-sm">{error}</p>
           <p className="text-xs text-muted mt-3">Make sure the backend is running on port 4000</p>
@@ -57,7 +57,7 @@ export function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-surface font-sans">
+    <div className="min-h-screen bg-ivory font-sans">
       <Header range={range} setRange={handleRangeChange} health={health} onSyncAll={() => syncAll.mutate()} isSyncing={syncAll.isPending} />
 
       <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-4 sm:py-5 space-y-4">
@@ -65,78 +65,78 @@ export function DashboardPage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {loading ? (
             [...Array(6)].map((_, i) => (
-              <div key={i} className="bg-white rounded-card h-20 animate-pulse border border-parch" />
+              <div key={i} className="bg-white rounded-xl h-20 animate-pulse border border-parch" />
             ))
           ) : (
             <>
-              <KPICard label="Total Revenue"   value={formatINR(kpis?.revenue)}  subLabel="Gross sales" accent="#B8860B" icon={IndianRupee} />
-              <KPICard label="Total Orders"    value={formatNum(kpis?.orders)}   subLabel="All channels" accent="#2D7D46" icon={ShoppingCart} />
-              <KPICard label="Avg Order Value" value={formatINR(kpis?.aov)}      subLabel="Per order" accent="#B8860B" icon={Receipt} />
-              <KPICard label="Ad Spend"        value={formatINR(kpis?.adSpend)}  subLabel="Meta campaigns" accent="#C62828" icon={Megaphone} />
-              <KPICard label="ROAS"            value={`${parseFloat(String(kpis?.roas || 0)).toFixed(2)}x`} subLabel="Return on ad spend" accent="#2D7D46" icon={TrendingUp} />
-              <KPICard label="RTO Rate"        value={formatPct(kpis?.rtoRate)}  subLabel="Return to origin" accent={(kpis?.rtoRate ?? 0) > 20 ? '#C62828' : '#2D7D46'} icon={PackageX} />
+              <KPICard label="Total Revenue"   value={formatINR(kpis?.revenue)}  accent="#B8860B" icon={IndianRupee} />
+              <KPICard label="Total Orders"    value={formatNum(kpis?.orders)}   accent="#2D7D46" icon={ShoppingCart} />
+              <KPICard label="Avg Order Value" value={formatINR(kpis?.aov)}      accent="#B8860B" icon={Receipt} />
+              <KPICard label="Ad Spend"        value={formatINR(kpis?.adSpend)}  accent="#9B2235" icon={Megaphone} />
+              <KPICard label="ROAS"            value={`${parseFloat(String(kpis?.roas || 0)).toFixed(2)}x`} accent="#2D7D46" icon={TrendingUp} />
+              <KPICard label="RTO Rate"        value={formatPct(kpis?.rtoRate)}  accent={(kpis?.rtoRate ?? 0) > 20 ? '#9B2235' : '#2D7D46'} icon={PackageX} />
             </>
           )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="md:col-span-2 lg:col-span-2 bg-white rounded-card border border-parch shadow-card p-4">
-            <h3 className="font-semibold text-ink mb-3 text-sm">Revenue Trend</h3>
+          <div className="md:col-span-2 lg:col-span-2 bg-white rounded-xl border border-parch shadow-card p-4">
+            <h3 className="font-semibold text-ink mb-3 text-sm uppercase tracking-wide text-muted">Revenue Trend</h3>
             <RevenueChart data={revenueTrend} loading={loading} />
           </div>
-          <div className="bg-white rounded-card border border-parch shadow-card p-4">
-            <h3 className="font-semibold text-ink mb-3 text-sm">Meta Ads Funnel</h3>
+          <div className="bg-white rounded-xl border border-parch shadow-card p-4">
+            <h3 className="font-semibold text-ink mb-3 text-sm uppercase tracking-wide text-muted">Meta Ads Funnel</h3>
             <MetaFunnel data={metaFunnel} loading={loading} />
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="flex flex-col gap-4">
-            <div className="flex-1 bg-white rounded-card border border-parch shadow-card p-4">
-              <h3 className="font-semibold text-sm text-ink mb-3">Order Status</h3>
+            <div className="flex-1 bg-white rounded-xl border border-parch shadow-card p-4">
+              <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3">Order Status</h3>
               <OrderStatus kpis={kpis} loading={loading} />
             </div>
-            <div className="flex-1 bg-white rounded-card border border-parch shadow-card p-4">
-              <h3 className="font-semibold text-sm text-ink mb-3">COD vs Prepaid</h3>
+            <div className="flex-1 bg-white rounded-xl border border-parch shadow-card p-4">
+              <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3">COD vs Prepaid</h3>
               <CODSplit kpis={kpis} loading={loading} />
             </div>
           </div>
-          <div className="bg-white rounded-card border border-parch shadow-card p-4 flex flex-col gap-4">
+          <div className="bg-white rounded-xl border border-parch shadow-card p-4 flex flex-col gap-4">
             <div>
-              <h3 className="font-semibold text-sm text-ink mb-3">Orders by Platform</h3>
+              <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3">Orders by Platform</h3>
               <PlatformOrders kpis={kpis} />
             </div>
             <div className="border-t border-parch pt-4">
-              <h3 className="font-semibold text-sm text-ink mb-3">Abandoned Carts</h3>
+              <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3">Abandoned Carts</h3>
               <AbandonedCart data={abandonedCarts} loading={loading} />
             </div>
           </div>
-          <div className="bg-white rounded-card border border-parch shadow-card p-4 flex flex-col gap-4">
+          <div className="bg-white rounded-xl border border-parch shadow-card p-4 flex flex-col gap-4">
             <div>
-              <h3 className="font-semibold text-sm text-ink mb-3">Logistics Overview</h3>
+              <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3">Logistics Overview</h3>
               <LogisticsSummary kpis={kpis} loading={loading} />
             </div>
             <div className="border-t border-parch pt-4">
-              <h3 className="font-semibold text-sm text-ink mb-3">Customer Metrics</h3>
+              <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3">Customer Metrics</h3>
               <CustomerMetrics kpis={kpis} />
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
-          <div className="md:col-span-2 lg:col-span-3 bg-white rounded-card border border-parch shadow-card p-4 flex flex-col">
-            <h3 className="font-semibold text-sm text-ink mb-3">Recent Reviews</h3>
+          <div className="md:col-span-2 lg:col-span-3 bg-white rounded-xl border border-parch shadow-card p-4 flex flex-col">
+            <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3">Recent Reviews</h3>
             <div className="flex-1">
               <RecentReviews reviews={recentReviews} loading={loading} />
             </div>
           </div>
           <div className="flex flex-col gap-4 h-full">
-            <div className="bg-white rounded-card border border-parch shadow-card p-4 shrink-0">
-              <h3 className="font-semibold text-sm text-ink mb-3">Connector Status</h3>
+            <div className="bg-white rounded-xl border border-parch shadow-card p-4 shrink-0">
+              <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3">Connector Status</h3>
               <ConnectorStatus health={health} />
             </div>
-            <div className="bg-white rounded-card border border-parch shadow-card p-4 flex-1 flex flex-col">
-              <h3 className="font-semibold text-sm text-ink mb-3">Top 5 Products</h3>
+            <div className="bg-white rounded-xl border border-parch shadow-card p-4 flex-1 flex flex-col">
+              <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3">Top 5 Products</h3>
               <div className="flex-1">
                 <TopProducts products={topProducts} loading={loading} />
               </div>
@@ -145,22 +145,22 @@ export function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="bg-white rounded-card border border-parch shadow-card p-4 flex flex-col overflow-hidden h-[420px] md:h-[480px]">
-            <h3 className="font-semibold text-sm text-ink mb-3 shrink-0">Review Summary</h3>
+          <div className="bg-white rounded-xl border border-parch shadow-card p-4 flex flex-col overflow-hidden h-[420px] md:h-[480px]">
+            <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3 shrink-0">Review Summary</h3>
             <ReviewsSummary data={reviewsSummary} loading={loading} />
           </div>
-          <div className="bg-white rounded-card border border-parch shadow-card p-4 flex flex-col overflow-hidden h-[420px] md:h-[480px]">
-            <h3 className="font-semibold text-sm text-ink mb-3 shrink-0">Top Rated Products</h3>
+          <div className="bg-white rounded-xl border border-parch shadow-card p-4 flex flex-col overflow-hidden h-[420px] md:h-[480px]">
+            <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3 shrink-0">Top Rated Products</h3>
             <TopRatedProducts products={topRatedProducts} loading={loading} />
           </div>
-          <div className="bg-white rounded-card border border-parch shadow-card p-4 flex flex-col overflow-hidden h-[420px] md:h-[480px]">
-            <h3 className="font-semibold text-sm text-ink mb-3 shrink-0">Campaign Performance</h3>
+          <div className="bg-white rounded-xl border border-parch shadow-card p-4 flex flex-col overflow-hidden h-[420px] md:h-[480px]">
+            <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3 shrink-0">Meta Campaigns Performance</h3>
             <CampaignTable campaigns={campaigns} loading={loading} />
           </div>
         </div>
 
-        <div className="bg-white rounded-card border border-parch shadow-card p-4">
-          <h3 className="font-semibold text-sm text-ink mb-4">Top 10 SKUs by Revenue</h3>
+        <div className="bg-white rounded-xl border border-parch shadow-card p-4">
+          <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-4">Top 10 SKUs by Revenue</h3>
           <TopSkus data={topSkus} loading={loading} />
         </div>
 

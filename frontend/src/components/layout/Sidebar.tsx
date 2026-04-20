@@ -50,6 +50,9 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 py-3 px-2 space-y-[2px] overflow-hidden">
+        {!collapsed && (
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8C7B64] px-3 pb-1 pt-1">Main</p>
+        )}
         {NAV.map(({ icon: Icon, label, to }) => (
           <NavLink
             key={to}
@@ -59,24 +62,24 @@ export function Sidebar() {
                 'relative flex items-center rounded-lg py-[9px] text-[13px] font-medium transition-all duration-150 group',
                 collapsed ? 'justify-center px-0 w-full' : 'px-3 gap-3',
                 isActive
-                  ? 'bg-gold/10 text-gold'
-                  : 'text-muted hover:bg-parch hover:text-ink'
+                  ? 'bg-[#B8860B]/10 text-[#B8860B]'
+                  : 'text-[#4B3E2E] hover:bg-[#F5F0E8] hover:text-[#1A1208]'
               )
             }
           >
             {({ isActive }) => (
               <>
                 {isActive && (
-                  <span className="absolute left-0 top-[6px] bottom-[6px] w-[3px] rounded-r-full bg-gold" />
+                  <span className="absolute left-0 top-[6px] bottom-[6px] w-[3px] rounded-r-full bg-[#B8860B]" />
                 )}
                 <Icon
                   size={17}
                   strokeWidth={1.6}
-                  className={cn('shrink-0', isActive ? 'text-gold' : 'text-stone')}
+                  className={cn('shrink-0', isActive ? 'text-[#B8860B]' : 'text-[#8C7B64]')}
                 />
                 {!collapsed && <span className="truncate">{label}</span>}
                 {collapsed && (
-                  <span className="pointer-events-none absolute left-[calc(100%+8px)] z-50 hidden group-hover:flex items-center rounded-md bg-ink px-2.5 py-1.5 text-xs text-white whitespace-nowrap shadow-xl">
+                  <span className="pointer-events-none absolute left-[calc(100%+8px)] z-50 hidden group-hover:flex items-center rounded-md bg-[#1A1208] px-2.5 py-1.5 text-xs text-white whitespace-nowrap shadow-xl">
                     {label}
                   </span>
                 )}
