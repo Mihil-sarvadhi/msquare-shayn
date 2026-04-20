@@ -77,24 +77,19 @@ function ConnectorRow({ h, onSynced }: ConnectorRowProps) {
   const syncIthink  = useSyncIthink();
   const syncJudgeme = useSyncJudgeme();
 
-  const syncMap: Record<string, () => void> = {
-    shopify:  () => syncShopify.mutate(undefined, { onSuccess: onSynced }),
-    meta_ads: () => syncMeta.mutate(undefined, { onSuccess: onSynced }),
-    ithink:   () => syncIthink.mutate(undefined, { onSuccess: onSynced }),
-    judgeme:  () => syncJudgeme.mutate(undefined, { onSuccess: onSynced }),
-  };
-
-  const pendingMap: Record<string, boolean> = {
-    shopify:  syncShopify.isPending,
-    meta_ads: syncMeta.isPending,
-    ithink:   syncIthink.isPending,
-    judgeme:  syncJudgeme.isPending,
-  };
-
   const key     = h.connector_name;
   const meta    = CONNECTOR_META[key] ?? { label: key };
   const dotCls  = STATUS_DOT[h.status] ?? STATUS_DOT.unknown;
-  const pending = pendingMap[key] ?? false;
+
+  const syncFnMap: Record<string, { trigger: () => void; pending: boolean }> = {
+    shopify:  { trigger: () => syncShopify.mutate(undefined, { onSuccess: onSynced }), pending: syncShopify.isPending },
+    meta_ads: { trigger: () => syncMeta.mutate(undefined, { onSuccess: onSynced }),    pending: syncMeta.isPending    },
+    ithink:   { trigger: () => syncIthink.mutate(undefined, { onSuccess: onSynced }),  pending: syncIthink.isPending  },
+    judgeme:  { trigger: () => syncJudgeme.mutate(undefined, { onSuccess: onSynced }), pending: syncJudgeme.isPending },
+  };
+
+  const entry   = syncFnMap[key];
+  const pending = entry?.pending ?? false;
 
   return (
     <div className="flex items-center justify-between gap-3 py-2 px-1 group rounded hover:bg-[#F5F0E8] transition-colors">
@@ -104,14 +99,17 @@ function ConnectorRow({ h, onSynced }: ConnectorRowProps) {
       </div>
       <div className="flex items-center gap-2">
         <span className="text-[11px] text-[#8C7B64] tabular-nums">{timeAgo(h.last_sync_at)}</span>
-        <button
-          onClick={syncMap[key]}
-          disabled={pending}
-          title={`Retry ${meta.label}`}
-          className="text-[#8C7B64] hover:text-[#B8860B] disabled:opacity-40 transition-colors"
-        >
-          <RefreshCw size={12} strokeWidth={1.5} className={pending ? 'animate-spin' : ''} />
-        </button>
+        {entry && (
+          <button
+            type="button"
+            onClick={entry.trigger}
+            disabled={pending}
+            title={`Sync ${meta.label}`}
+            className="text-[#8C7B64] hover:text-[#B8860B] disabled:opacity-40 transition-colors"
+          >
+            <RefreshCw size={12} strokeWidth={1.5} className={pending ? 'animate-spin' : ''} />
+          </button>
+        )}
       </div>
     </div>
   );
@@ -272,6 +270,7 @@ export function TopNav() {
               </div>
               <div className="mt-2 pt-2 border-t border-[#F0EBE0]">
                 <button
+                  type="button"
                   onClick={() => { syncAll.mutate(undefined, { onSuccess: refetch }); setShowSources(false); }}
                   disabled={syncAll.isPending}
                   className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#B8860B] text-white hover:bg-[#B8860B]/90 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
