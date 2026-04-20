@@ -35,6 +35,7 @@ const envSchema = z.object({
   ITHINK_ACCESS_TOKEN: z.string().min(1, 'ITHINK_ACCESS_TOKEN is required'),
   ITHINK_SECRET_KEY: z.string().min(1, 'ITHINK_SECRET_KEY is required'),
   ITHINK_BASE_URL: z.string().min(1, 'ITHINK_BASE_URL is required'),
+  ITHINK_PLATFORM_ID: z.string().default('2'),
   // Judge.me
   JUDGEME_API_TOKEN: z.string().optional(),
   JUDGEME_SHOP_DOMAIN: z.string().optional(),
@@ -75,6 +76,7 @@ export const environment = {
     accessToken: env.ITHINK_ACCESS_TOKEN,
     secretKey: env.ITHINK_SECRET_KEY,
     baseUrl: env.ITHINK_BASE_URL,
+    platformId: env.ITHINK_PLATFORM_ID,
   },
   judgeme: {
     apiToken: env.JUDGEME_API_TOKEN,
