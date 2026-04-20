@@ -31,14 +31,11 @@ export function MarketingPage() {
 
         <MarketingKPIs trend={marketingTrend} attribution={attributionGap} loading={L} />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white rounded-xl border border-parch shadow-card p-4">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted mb-4">Revenue by Channel</h3>
             <ChannelRevenue data={channelRevenue} loading={L} />
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white rounded-xl border border-parch shadow-card p-4">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted mb-4">ROAS Trend</h3>
             <RoasTrend data={marketingTrend} loading={L} />
