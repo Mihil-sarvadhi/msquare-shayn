@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
-import { RefreshCw, CalendarDays, ArrowLeftRight } from 'lucide-react';
+import { RefreshCw, CalendarDays, Cloud, RefreshCcw } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '@store/hooks';
 import { setPreset, setCustomRange } from '@store/slices/rangeSlice';
 import type { RangePreset } from '@store/slices/rangeSlice';
@@ -250,7 +250,11 @@ export function TopNav() {
                 : 'border-[#E8E0D0] text-[#8C7B64] hover:border-[#B8860B] hover:text-[#B8860B]'
             )}
           >
-            <ArrowLeftRight size={13} strokeWidth={1.5} />
+            {/* Cloud sync icon — cloud base + circular arrows overlay */}
+            <span className="relative inline-flex items-center justify-center w-4 h-4">
+              <Cloud size={16} strokeWidth={1.5} className="absolute" />
+              <RefreshCcw size={8} strokeWidth={2.5} className="absolute mt-1" />
+            </span>
             Sync Status
           </button>
 
