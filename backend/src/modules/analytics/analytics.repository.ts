@@ -13,6 +13,7 @@ import type {
   MarketingTrendRow,
   AttributionGapRow,
   TopSkuRow,
+  MoneyStuckRow,
 } from './analytics.types';
 
 export async function getNetRevenue(since: string, until: string) {
@@ -251,4 +252,21 @@ export async function getTopSkus(since: string, until: string): Promise<TopSkuRo
      LIMIT 10`,
     { type: QueryTypes.SELECT, replacements: { since, until } },
   );
+}
+
+export async function getMoneyStuck(since: string, until: string): Promise<MoneyStuckRow> {
+  const [row] = await sequelize.query<MoneyStuckRow>(
+    `SELECT
+       COUNT(s.awb) AS rto_count,
+       COALESCE(SUM(o.revenue), 0) AS rto_order_value,
+       0::numeric AS cod_pending,
+       COALESCE(SUM(o.revenue), 0) AS total_stuck
+     FROM ithink_shipments s
+     JOIN shopify_orders o ON o.order_id = s.shopify_order_gql_id
+     WHERE s.current_status_code LIKE 'RT%'
+       AND s.order_date BETWEEN :since AND :until
+       AND o.financial_status != 'voided'`,
+    { type: QueryTypes.SELECT, replacements: { since, until } },
+  );
+  return row;
 }

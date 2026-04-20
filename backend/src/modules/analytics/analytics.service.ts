@@ -25,3 +25,4 @@ export const getDiscountAnalysis = (s: string, u: string) => repo.getDiscountAna
 export const getMarketingTrend = (s: string, u: string) => repo.getMarketingTrend(s, u);
 export const getAttributionGap = (s: string, u: string) => repo.getAttributionGap(s, u);
 export const getTopSkus = (since: string, until: string) => repo.getTopSkus(since, until);
+export const getMoneyStuck = (since: string, until: string) => repo.getMoneyStuck(since, until);

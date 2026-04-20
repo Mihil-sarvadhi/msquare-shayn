@@ -86,3 +86,10 @@ export interface TopSkuRow {
   orders_count: string;
   revenue: string;
 }
+
+export interface MoneyStuckRow {
+  rto_count: string;
+  rto_order_value: string;
+  cod_pending: string;
+  total_stuck: string;
+}
