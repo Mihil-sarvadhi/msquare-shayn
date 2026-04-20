@@ -198,7 +198,9 @@ export async function syncRemittance(date: string): Promise<void> {
     }
 
     if (detailRes.status === 'success' && detailRes.data?.length) {
+      let saved = 0;
       for (const item of detailRes.data) {
+        if (!item.airway_bill_no) continue; // skip rows with no AWB — would violate NOT NULL
         await IthinkRemittanceDetail.upsert({
           remittance_date: date,
           awb: item.airway_bill_no,
@@ -206,8 +208,9 @@ export async function syncRemittance(date: string): Promise<void> {
           price: item.price ? parseFloat(item.price) : undefined,
           delivered_date: safeDate(item.delivered_date),
         });
+        saved++;
       }
-      logger.info(`[iThink] ${detailRes.data.length} remittance line items saved for ${date}`);
+      logger.info(`[iThink] ${saved} remittance line items saved for ${date}`);
     }
   } catch (err) {
     logger.error(`[iThink] Remittance sync error for ${date}: ${(err as Error).message}`);
