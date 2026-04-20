@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -9,7 +9,7 @@
     zoom: 1.1;
   }
   body {
-    @apply bg-ivory text-ink antialiased;
-    font-family: 'DM Sans', sans-serif;
+    @apply bg-surface text-ink antialiased;
+    font-family: 'Inter', sans-serif;
   }
 }

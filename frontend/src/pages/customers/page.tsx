@@ -22,7 +22,7 @@ export function CustomersPage() {
   const L = loadingCustomers;
 
   return (
-    <div className="min-h-screen bg-ivory font-sans">
+    <div className="min-h-screen bg-surface font-sans">
       <AnalyticsHeader
         title="Customers"
         subtitle="New vs returning, LTV segments, and discount impact"
@@ -32,23 +32,23 @@ export function CustomersPage() {
         <CustomerOverviewRow data={customerOverview} loading={L} />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white rounded-xl border border-parch shadow-card p-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted mb-4">New vs Returning</h3>
+          <div className="bg-white rounded-card border border-parch shadow-card p-4">
+            <h3 className="font-semibold text-sm text-ink mb-4">New vs Returning</h3>
             <NewVsReturning data={customerOverview} loading={L} />
           </div>
-          <div className="bg-white rounded-xl border border-parch shadow-card p-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted mb-4">Customer LTV Segments</h3>
+          <div className="bg-white rounded-card border border-parch shadow-card p-4">
+            <h3 className="font-semibold text-sm text-ink mb-4">Customer LTV Segments</h3>
             <CustomerSegments data={customerSegments} loading={L} />
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-parch shadow-card p-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted mb-4">Top 10 Customers</h3>
+        <div className="bg-white rounded-card border border-parch shadow-card p-4">
+          <h3 className="font-semibold text-sm text-ink mb-4">Top 10 Customers</h3>
           <TopCustomers data={topCustomers} loading={L} />
         </div>
 
-        <div className="bg-white rounded-xl border border-parch shadow-card p-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted mb-4">Discount Code Analysis</h3>
+        <div className="bg-white rounded-card border border-parch shadow-card p-4">
+          <h3 className="font-semibold text-sm text-ink mb-4">Discount Code Analysis</h3>
           <DiscountAnalysis data={discountAnalysis} loading={L} />
         </div>
 

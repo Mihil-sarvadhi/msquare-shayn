@@ -22,7 +22,7 @@ export function MarketingPage() {
   const L = loadingMarketing;
 
   return (
-    <div className="min-h-screen bg-ivory font-sans">
+    <div className="min-h-screen bg-surface font-sans">
       <AnalyticsHeader
         title="Marketing"
         subtitle="ROAS trends, attribution gap, and campaign efficiency"
@@ -32,27 +32,27 @@ export function MarketingPage() {
         <MarketingKPIs trend={marketingTrend} attribution={attributionGap} loading={L} />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white rounded-xl border border-parch shadow-card p-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted mb-4">Revenue by Channel</h3>
+          <div className="bg-white rounded-card border border-parch shadow-card p-4">
+            <h3 className="font-semibold text-sm text-ink mb-4">Revenue by Channel</h3>
             <ChannelRevenue data={channelRevenue} loading={L} />
           </div>
-          <div className="bg-white rounded-xl border border-parch shadow-card p-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted mb-4">ROAS Trend</h3>
+          <div className="bg-white rounded-card border border-parch shadow-card p-4">
+            <h3 className="font-semibold text-sm text-ink mb-4">ROAS Trend</h3>
             <RoasTrend data={marketingTrend} loading={L} />
           </div>
-          <div className="bg-white rounded-xl border border-parch shadow-card p-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted mb-4">Cost Per Purchase Trend</h3>
+          <div className="bg-white rounded-card border border-parch shadow-card p-4">
+            <h3 className="font-semibold text-sm text-ink mb-4">Cost Per Purchase Trend</h3>
             <CppTrend data={marketingTrend} loading={L} />
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white rounded-xl border border-parch shadow-card p-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted mb-4">Meta vs Shopify Attribution</h3>
+          <div className="bg-white rounded-card border border-parch shadow-card p-4">
+            <h3 className="font-semibold text-sm text-ink mb-4">Meta vs Shopify Attribution</h3>
             <AttributionGap data={attributionGap} loading={L} />
           </div>
-          <div className="bg-white rounded-xl border border-parch shadow-card p-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted mb-4">CTR Trend</h3>
+          <div className="bg-white rounded-card border border-parch shadow-card p-4">
+            <h3 className="font-semibold text-sm text-ink mb-4">CTR Trend</h3>
             <CtrTrend data={marketingTrend} loading={L} />
           </div>
         </div>
