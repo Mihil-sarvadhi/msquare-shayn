@@ -1,13 +1,29 @@
 import { QueryTypes } from 'sequelize';
 import { sequelize } from '@db/sequelize';
-import { ConnectorHealth, IthinkShipment, IthinkRemittance, IthinkRemittanceDetail } from '@db/models';
 import {
-  getStoreOrderDetails, trackAWBs, getRemittanceSummary, getRemittanceDetails,
+  ConnectorHealth,
+  IthinkShipment,
+  IthinkRemittance,
+  IthinkRemittanceDetail,
+} from '@db/models';
+import {
+  getStoreOrderDetails,
+  trackAWBs,
+  getRemittanceSummary,
+  getRemittanceDetails,
 } from './ithink.connector';
 import { logger } from '@logger/logger';
 
 function extractNumericId(gqlId: string): string {
   return gqlId.includes('/') ? gqlId.split('/').pop()! : gqlId;
+}
+
+/** Return undefined for empty, null, or clearly-invalid date strings (e.g. "0000-00-00") */
+function safeDate(value: string | null | undefined): string | undefined {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.startsWith('0000')) return undefined;
+  return trimmed;
 }
 
 async function sleep(ms: number): Promise<void> {
@@ -70,17 +86,25 @@ export async function backfillShipments(since: string, until: string): Promise<v
         awb: item.awb_no,
         shopify_order_gql_id: gqlById[numericId],
         order_id: numericId,
-        order_date: item.order_date || undefined,
+        order_date: safeDate(item.order_date),
         courier: item.logistic || undefined,
         payment_mode: item.payment_mode || undefined,
         customer_city: item.customer_city || undefined,
         customer_state: item.customer_state || undefined,
         customer_pincode: item.customer_pincode || undefined,
         weight: item.weight ? parseFloat(item.weight) : undefined,
-        billed_fwd_charges: item.billing_fwd_charges ? parseFloat(item.billing_fwd_charges) : undefined,
-        billed_rto_charges: item.billing_rto_charges ? parseFloat(item.billing_rto_charges) : undefined,
-        billed_cod_charges: item.billing_cod_charges ? parseFloat(item.billing_cod_charges) : undefined,
-        billed_gst_charges: item.billing_gst_charges ? parseFloat(item.billing_gst_charges) : undefined,
+        billed_fwd_charges: item.billing_fwd_charges
+          ? parseFloat(item.billing_fwd_charges)
+          : undefined,
+        billed_rto_charges: item.billing_rto_charges
+          ? parseFloat(item.billing_rto_charges)
+          : undefined,
+        billed_cod_charges: item.billing_cod_charges
+          ? parseFloat(item.billing_cod_charges)
+          : undefined,
+        billed_gst_charges: item.billing_gst_charges
+          ? parseFloat(item.billing_gst_charges)
+          : undefined,
         billed_total: item.billed_total_charges ? parseFloat(item.billed_total_charges) : undefined,
         raw_response: item as unknown as Record<string, unknown>,
       });
@@ -98,7 +122,7 @@ export async function backfillShipments(since: string, until: string): Promise<v
 export async function syncShipmentStatus(): Promise<void> {
   const inFlight = await sequelize.query<{ awb: string }>(
     `SELECT awb FROM ithink_shipments
-     WHERE current_status_code NOT IN ('DL', 'CN')
+     WHERE (current_status_code IS NULL OR current_status_code NOT IN ('DL', 'CN'))
        AND (order_date >= NOW() - INTERVAL '60 days' OR order_date IS NULL)`,
     { type: QueryTypes.SELECT },
   );
@@ -116,15 +140,22 @@ export async function syncShipmentStatus(): Promise<void> {
     const tracking = await trackAWBs(awbList);
 
     for (const [awb, data] of Object.entries(tracking)) {
+      const lastScanRaw = data.last_scan_details;
+      const lastScan = lastScanRaw
+        ? typeof lastScanRaw === 'string'
+          ? lastScanRaw
+          : JSON.stringify(lastScanRaw)
+        : undefined;
+
       await IthinkShipment.update(
         {
           current_status: data.current_status,
           current_status_code: data.current_status_code,
           ofd_count: parseInt(data.ofd_count || '0', 10),
-          expected_delivery: data.expected_delivery_date || undefined,
-          last_scan: data.last_scan_details || undefined,
-          delivered_date: data.order_date_time?.delivery_date || undefined,
-          rto_date: data.order_date_time?.rto_delivered_date || undefined,
+          expected_delivery: safeDate(data.expected_delivery_date),
+          last_scan: lastScan,
+          delivered_date: safeDate(data.order_date_time?.delivery_date),
+          rto_date: safeDate(data.order_date_time?.rto_delivered_date),
         },
         { where: { awb } },
       );
@@ -173,7 +204,7 @@ export async function syncRemittance(date: string): Promise<void> {
           awb: item.airway_bill_no,
           order_no: item.order_no || undefined,
           price: item.price ? parseFloat(item.price) : undefined,
-          delivered_date: item.delivered_date || undefined,
+          delivered_date: safeDate(item.delivered_date),
         });
       }
       logger.info(`[iThink] ${detailRes.data.length} remittance line items saved for ${date}`);
@@ -206,4 +237,3 @@ export async function syncDailyRemittance(): Promise<void> {
   const today = new Date().toISOString().split('T')[0];
   await syncRemittance(today);
 }
-

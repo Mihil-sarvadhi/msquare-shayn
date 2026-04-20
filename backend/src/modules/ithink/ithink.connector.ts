@@ -72,13 +72,24 @@ export interface TrackScanDetail {
   location: string;
 }
 
+export interface LastScanDetails {
+  status: string;
+  status_code: string;
+  status_date_time: string;
+  scan_location: string;
+  remark: string;
+  reason: string;
+}
+
 export interface TrackResult {
+  message?: string;
+  awb_no?: string;
   current_status: string;
   current_status_code: string;
   logistic: string;
   ofd_count: string;
   expected_delivery_date?: string;
-  last_scan_details?: string;
+  last_scan_details?: string | LastScanDetails;
   order_date_time?: { delivery_date?: string; rto_delivered_date?: string };
   scan_details?: TrackScanDetail[];
 }
@@ -145,7 +156,7 @@ export async function trackAWBs(awbList: string[]): Promise<Record<string, Track
       awb_number_list: chunk.join(','),
     });
     for (const [awb, data] of Object.entries(res.data ?? {})) {
-      if (data && !('message' in data)) {
+      if (data && 'current_status_code' in data) {
         results[awb] = data as TrackResult;
       }
     }
