@@ -28,7 +28,7 @@ export default function LogisticsSummary({ kpis, loading }: Props) {
             <span className={`text-xl font-bold ${s.color}`}>{formatNum(s.value)}</span>
             <div className="flex items-center gap-1 mt-0.5 max-w-full">
               <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${s.dot}`} />
-              <span className="text-[11px] text-muted truncate">{s.label}</span>
+              <span className="text-[11px] text-muted truncate" title={s.label}>{s.label}</span>
             </div>
           </div>
         ))}
