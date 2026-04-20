@@ -8,12 +8,13 @@ import { CodVsPrepaidRto }    from './components/CodVsPrepaidRto';
 import { GeoRevenue }         from './components/GeoRevenue';
 import { LogisticsCostDonut } from './components/LogisticsCostDonut';
 import { CodCashFlow }        from './components/CodCashFlow';
+import { MoneyStuck }         from './components/MoneyStuck';
 
 export function OperationsPage() {
   const dispatch = useAppDispatch();
   const {
     range, netRevenue, rtoByState, codVsPrepaidRto,
-    geoRevenue, logisticsCosts, codCashFlow, loadingOperations,
+    geoRevenue, logisticsCosts, codCashFlow, moneyStuck, loadingOperations,
   } = useAppSelector((s) => s.analytics);
 
   useEffect(() => {
@@ -31,6 +32,13 @@ export function OperationsPage() {
       <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-4 sm:py-5 space-y-4">
 
         <NetRevenueRow data={netRevenue} loading={L} />
+
+        <div className="bg-white rounded-xl border border-ruby/20 shadow-card p-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-ruby mb-4 flex items-center gap-1.5">
+            <span>⚠</span> Where Your Money Is Getting Stuck
+          </h3>
+          <MoneyStuck data={moneyStuck} loading={L} />
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white rounded-xl border border-parch shadow-card p-4">

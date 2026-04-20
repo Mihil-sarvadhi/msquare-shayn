@@ -4,6 +4,7 @@ import type {
   NetRevenue, RtoByStateItem, CodVsPrepaidItem, GeoRevenueItem,
   LogisticsCosts, CodCashFlow, CustomerOverview, CustomerSegmentItem,
   TopCustomerItem, DiscountItem, MarketingTrendItem, AttributionGap, TopSkuItem,
+  MoneyStuck,
 } from '@app/types/analytics';
 
 const get = <T>(url: string, range: string) =>
@@ -11,7 +12,7 @@ const get = <T>(url: string, range: string) =>
 
 export async function fetchOperations(range: string) {
   const e = API_ENDPOINTS.analytics;
-  const [netRevenue, rtoByState, codVsPrepaidRto, geoRevenue, logisticsCosts, codCashFlow, topSkus] =
+  const [netRevenue, rtoByState, codVsPrepaidRto, geoRevenue, logisticsCosts, codCashFlow, topSkus, moneyStuck] =
     await Promise.all([
       get<NetRevenue>(e.netRevenue, range),
       get<RtoByStateItem[]>(e.rtoByState, range),
@@ -20,8 +21,9 @@ export async function fetchOperations(range: string) {
       get<LogisticsCosts>(e.logisticsCosts, range),
       get<CodCashFlow>(e.codCashFlow, range),
       get<TopSkuItem[]>(e.topSkus, range),
+      get<MoneyStuck>(e.moneyStuck, range),
     ]);
-  return { netRevenue, rtoByState, codVsPrepaidRto, geoRevenue, logisticsCosts, codCashFlow, topSkus };
+  return { netRevenue, rtoByState, codVsPrepaidRto, geoRevenue, logisticsCosts, codCashFlow, topSkus, moneyStuck };
 }
 
 export async function fetchCustomers(range: string) {

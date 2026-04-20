@@ -96,6 +96,13 @@ export interface TopSkuItem {
   revenue: number;
 }
 
+export interface MoneyStuck {
+  rto_count: number;
+  rto_order_value: number;
+  cod_pending: number;
+  total_stuck: number;
+}
+
 export interface AnalyticsState {
   range: string;
   netRevenue: NetRevenue | null;
@@ -111,6 +118,7 @@ export interface AnalyticsState {
   marketingTrend: MarketingTrendItem[];
   attributionGap: AttributionGap | null;
   topSkus: TopSkuItem[];
+  moneyStuck: MoneyStuck | null;
   loadingOperations: boolean;
   loadingCustomers: boolean;
   loadingMarketing: boolean;
