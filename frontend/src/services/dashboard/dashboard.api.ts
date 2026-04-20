@@ -22,9 +22,9 @@ export async function fetchAllDashboard(range: string) {
     get<LogisticsItem[]>('/dashboard/logistics', params),
     get<AbandonedCarts>('/dashboard/abandoned-carts', params),
     get<ConnectorHealth[]>('/health'),
-    safe(get<ReviewsSummary>('/dashboard/reviews-summary'), null as unknown as ReviewsSummary),
-    safe(get<TopRatedProduct[]>('/dashboard/top-rated-products'), []),
-    safe(get<RecentReview[]>('/dashboard/recent-reviews'), []),
+    safe(get<ReviewsSummary>('/dashboard/reviews-summary', params), null as unknown as ReviewsSummary),
+    safe(get<TopRatedProduct[]>('/dashboard/top-rated-products', params), []),
+    safe(get<RecentReview[]>('/dashboard/recent-reviews', params), []),
   ]);
   return {
     kpis, revenueTrend, metaFunnel, campaigns, topProducts, logistics,

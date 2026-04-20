@@ -20,28 +20,31 @@ export default function Header({ range, setRange, health, onSyncAll, isSyncing }
   };
 
   return (
-    <header className="bg-white border-b border-parch px-6 py-3 flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <span className="text-gold text-2xl font-bold tracking-wider">SHAYN</span>
-        <span className="text-xs text-muted uppercase tracking-widest mt-1">MIS Dashboard</span>
+    <header className="bg-white border-b border-parch px-4 sm:px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
+      {/* Brand — hidden on mobile since sidebar/mobile-nav shows it */}
+      <div className="hidden sm:flex items-center gap-2 shrink-0">
+        <span className="text-gold text-xl font-bold tracking-wider">SHAYN</span>
+        <span className="text-xs text-muted uppercase tracking-widest mt-0.5">MIS</span>
       </div>
 
-      <div className="flex items-center gap-2">
-        {(['7d', '30d'] as const).map((r) => (
+      {/* Range selector */}
+      <div className="flex gap-1 bg-[#F5F0E8] rounded-lg p-1 shrink-0">
+        {([['7d','7 Days'],['30d','30 Days'],['all','All Time']] as const).map(([r, label]) => (
           <button
             key={r}
             onClick={() => setRange(r)}
-            className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-              range === r ? 'bg-gold text-white' : 'bg-parch text-muted hover:text-ink'
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+              range === r ? 'bg-white text-ink shadow-sm' : 'text-muted hover:text-ink'
             }`}
           >
-            {r === '7d' ? '7D' : '30D'}
+            {label}
           </button>
         ))}
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-3">
+      {/* Right side — health dots + sync */}
+      <div className="flex items-center gap-3 ml-auto shrink-0">
+        <div className="hidden sm:flex items-center gap-3">
           {health.map((h) => (
             <div
               key={h.connector_name}
@@ -49,7 +52,7 @@ export default function Header({ range, setRange, health, onSyncAll, isSyncing }
               onMouseEnter={() => setTooltip(h.connector_name)}
               onMouseLeave={() => setTooltip(null)}
             >
-              <span className={`w-2.5 h-2.5 rounded-full ${dotColor(h.status)}`} />
+              <span className={`w-2 h-2 rounded-full ${dotColor(h.status)}`} />
               <span className="text-xs text-muted capitalize">{h.connector_name.replace('_', ' ')}</span>
               {tooltip === h.connector_name && (
                 <div className="absolute top-6 right-0 bg-ink text-white text-xs rounded px-2 py-1 w-48 z-10">

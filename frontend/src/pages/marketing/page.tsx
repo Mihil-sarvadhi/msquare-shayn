@@ -26,11 +26,11 @@ export function MarketingPage() {
         title="Marketing"
         subtitle="ROAS trends, attribution gap, and campaign efficiency"
       />
-      <main className="max-w-screen-2xl mx-auto px-6 py-5 space-y-4">
+      <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-4 sm:py-5 space-y-4">
 
         <MarketingKPIs trend={marketingTrend} attribution={attributionGap} loading={L} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white rounded-xl border border-parch shadow-card p-4">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted mb-4">ROAS Trend</h3>
             <RoasTrend data={marketingTrend} loading={L} />
@@ -41,7 +41,7 @@ export function MarketingPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white rounded-xl border border-parch shadow-card p-4">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted mb-4">Meta vs Shopify Attribution</h3>
             <AttributionGap data={attributionGap} loading={L} />

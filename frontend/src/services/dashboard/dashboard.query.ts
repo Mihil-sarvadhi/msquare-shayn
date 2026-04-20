@@ -53,24 +53,17 @@ export function useSyncJudgeme() {
 export function useSyncAll() {
   const refetch = useRefetchDashboard();
   return useMutation({
-    mutationFn: () =>
-      Promise.allSettled([
-        triggerSync('shopify'),
-        triggerSync('meta'),
-        triggerSync('ithink'),
-        triggerSync('judgeme'),
-      ]),
-    onSuccess: (results) => {
-      const failed = results.filter((r) => r.status === 'rejected').length;
+    mutationFn: () => triggerSync('all'),
+    onSuccess: (res: unknown) => {
+      const data = res as { results?: Record<string, string> } | undefined;
+      const failed = Object.values(data?.results ?? {}).filter((v) => v !== 'ok').length;
       if (failed === 0) {
         toast.success('All connectors synced successfully');
-      } else if (failed < results.length) {
-        toast.warning(`Sync done — ${failed} connector(s) failed`);
       } else {
-        toast.error('All syncs failed — check connector credentials');
+        toast.warning(`Sync done — ${failed} connector(s) had errors`);
       }
       refetch();
     },
-    onError: () => { toast.error('Sync failed'); },
+    onError: () => { toast.error('Full sync failed'); },
   });
 }

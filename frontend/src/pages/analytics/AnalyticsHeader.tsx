@@ -3,9 +3,9 @@ import { setAnalyticsRange } from '@store/slices/analyticsSlice';
 import { cn } from '@/lib/utils';
 
 const RANGES = [
-  { label: '7 Days',     value: '7d'  },
-  { label: '30 Days',    value: '30d' },
-  { label: 'This Month', value: 'mtd' },
+  { label: '7 Days',   value: '7d'  },
+  { label: '30 Days',  value: '30d' },
+  { label: 'All Time', value: 'all' },
 ];
 
 interface AnalyticsHeaderProps {
@@ -18,12 +18,12 @@ export function AnalyticsHeader({ title, subtitle }: AnalyticsHeaderProps) {
   const range = useAppSelector((s) => s.analytics.range);
 
   return (
-    <div className="flex items-center justify-between px-6 py-4 border-b border-parch bg-white sticky top-0 z-10">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 sm:px-6 py-4 border-b border-parch bg-white sticky top-0 md:top-0 z-10">
       <div>
         <h1 className="text-lg font-bold text-ink">{title}</h1>
         <p className="text-xs text-muted mt-0.5">{subtitle}</p>
       </div>
-      <div className="flex gap-1 bg-[#F5F0E8] rounded-lg p-1">
+      <div className="flex gap-1 bg-[#F5F0E8] rounded-lg p-1 self-start sm:self-auto">
         {RANGES.map((r) => (
           <button
             key={r.value}

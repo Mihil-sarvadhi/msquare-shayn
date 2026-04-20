@@ -54,6 +54,7 @@ export interface CustomerSegmentItem {
 export interface TopCustomerItem {
   customer_id: string;
   email: string;
+  name: string | null;
   city: string;
   state: string;
   orders_count: number;
@@ -86,6 +87,15 @@ export interface AttributionGap {
   gap: number;
 }
 
+export interface TopSkuItem {
+  sku: string;
+  title: string;
+  variant: string;
+  units_sold: number;
+  orders_count: number;
+  revenue: number;
+}
+
 export interface AnalyticsState {
   range: string;
   netRevenue: NetRevenue | null;
@@ -100,6 +110,7 @@ export interface AnalyticsState {
   discountAnalysis: DiscountItem[];
   marketingTrend: MarketingTrendItem[];
   attributionGap: AttributionGap | null;
+  topSkus: TopSkuItem[];
   loadingOperations: boolean;
   loadingCustomers: boolean;
   loadingMarketing: boolean;

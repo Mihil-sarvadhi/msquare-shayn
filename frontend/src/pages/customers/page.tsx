@@ -27,11 +27,11 @@ export function CustomersPage() {
         title="Customers"
         subtitle="New vs returning, LTV segments, and discount impact"
       />
-      <main className="max-w-screen-2xl mx-auto px-6 py-5 space-y-4">
+      <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-4 sm:py-5 space-y-4">
 
         <CustomerOverviewRow data={customerOverview} loading={L} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white rounded-xl border border-parch shadow-card p-4">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted mb-4">New vs Returning</h3>
             <NewVsReturning data={customerOverview} loading={L} />

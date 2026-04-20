@@ -109,8 +109,8 @@ export default function AllReviewsPage() {
     setLoading(true);
     try {
       const { data } = await baseService.get('/dashboard/all-reviews', { params: { page: pg, limit: LIMIT, rating: rt || '', search: sq } });
-      setReviews(data.reviews);
-      setTotal(data.total);
+      setReviews(data.data.reviews ?? []);
+      setTotal(data.data.total ?? 0);
     } finally {
       setLoading(false);
     }
@@ -128,8 +128,8 @@ export default function AllReviewsPage() {
       {photoUrls && <PhotoModal urls={photoUrls} onClose={() => setPhotoUrls(null)} />}
 
       {/* Header */}
-      <div className="bg-white border-b border-parch sticky top-0 z-40 shadow-sm">
-        <div className="max-w-screen-xl mx-auto px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
+      <div className="bg-white border-b border-parch sticky top-0 z-30 shadow-sm">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-lg font-bold text-ink">All Reviews</h1>
             <p className="text-xs text-muted">{total.toLocaleString()} reviews total</p>
@@ -170,7 +170,7 @@ export default function AllReviewsPage() {
         </div>
       </div>
 
-      <main className="max-w-screen-xl mx-auto px-6 py-6">
+      <main className="max-w-screen-xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {[...Array(8)].map((_, i) => <div key={i} className="h-52 bg-parch animate-pulse rounded-xl" />)}

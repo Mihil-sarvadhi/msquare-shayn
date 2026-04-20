@@ -20,7 +20,7 @@ export function TopCustomers({ data, loading }: Props) {
         <thead>
           <tr className="border-b border-parch">
             <th className="text-left text-xs font-medium text-muted pb-2 pr-4 w-8">#</th>
-            <th className="text-left text-xs font-medium text-muted pb-2 pr-4">Email</th>
+            <th className="text-left text-xs font-medium text-muted pb-2 pr-4">Customer</th>
             <th className="text-left text-xs font-medium text-muted pb-2 pr-4">Location</th>
             <th className="text-right text-xs font-medium text-muted pb-2 pr-4">Orders</th>
             <th className="text-right text-xs font-medium text-muted pb-2">Total Spent</th>
@@ -30,7 +30,12 @@ export function TopCustomers({ data, loading }: Props) {
           {data.map((c, i) => (
             <tr key={c.customer_id} className="border-b border-parch/50 hover:bg-[#FDFAF4] transition-colors">
               <td className="py-2.5 pr-4 text-muted font-medium">{i + 1}</td>
-              <td className="py-2.5 pr-4 text-ink font-medium">{maskEmail(c.email)}</td>
+              <td className="py-2.5 pr-4">
+                {c.name && (
+                  <p className="text-ink font-medium text-xs leading-tight">{c.name}</p>
+                )}
+                <p className="text-muted text-xs">{maskEmail(c.email)}</p>
+              </td>
               <td className="py-2.5 pr-4 text-muted text-xs">{[c.city, c.state].filter(Boolean).join(', ') || '—'}</td>
               <td className="py-2.5 pr-4 text-right text-ink">{c.orders_count}</td>
               <td className="py-2.5 text-right font-semibold text-ink">{formatINR(c.total_spent)}</td>

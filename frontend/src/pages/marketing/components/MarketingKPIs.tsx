@@ -11,7 +11,7 @@ interface Props {
 export function MarketingKPIs({ trend, attribution, loading }: Props) {
   if (loading) {
     return (
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[...Array(4)].map((_, i) => (
           <div key={i} className="bg-white rounded-xl h-24 animate-pulse border border-parch" />
         ))}
@@ -32,7 +32,7 @@ export function MarketingKPIs({ trend, attribution, loading }: Props) {
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
       {cards.map((c) => (
         <div key={c.label} className="bg-white rounded-xl border border-parch shadow-card overflow-hidden">
           <div className="h-1 w-full" style={{ backgroundColor: c.accent }} />

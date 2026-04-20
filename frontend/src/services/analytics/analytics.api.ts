@@ -3,7 +3,7 @@ import { API_ENDPOINTS } from '@utils/constants/api.constant';
 import type {
   NetRevenue, RtoByStateItem, CodVsPrepaidItem, GeoRevenueItem,
   LogisticsCosts, CodCashFlow, CustomerOverview, CustomerSegmentItem,
-  TopCustomerItem, DiscountItem, MarketingTrendItem, AttributionGap,
+  TopCustomerItem, DiscountItem, MarketingTrendItem, AttributionGap, TopSkuItem,
 } from '@app/types/analytics';
 
 const get = <T>(url: string, range: string) =>
@@ -11,7 +11,7 @@ const get = <T>(url: string, range: string) =>
 
 export async function fetchOperations(range: string) {
   const e = API_ENDPOINTS.analytics;
-  const [netRevenue, rtoByState, codVsPrepaidRto, geoRevenue, logisticsCosts, codCashFlow] =
+  const [netRevenue, rtoByState, codVsPrepaidRto, geoRevenue, logisticsCosts, codCashFlow, topSkus] =
     await Promise.all([
       get<NetRevenue>(e.netRevenue, range),
       get<RtoByStateItem[]>(e.rtoByState, range),
@@ -19,26 +19,24 @@ export async function fetchOperations(range: string) {
       get<GeoRevenueItem[]>(e.geoRevenue, range),
       get<LogisticsCosts>(e.logisticsCosts, range),
       get<CodCashFlow>(e.codCashFlow, range),
+      get<TopSkuItem[]>(e.topSkus, range),
     ]);
-  return { netRevenue, rtoByState, codVsPrepaidRto, geoRevenue, logisticsCosts, codCashFlow };
+  return { netRevenue, rtoByState, codVsPrepaidRto, geoRevenue, logisticsCosts, codCashFlow, topSkus };
 }
 
 export async function fetchCustomers(range: string) {
   const e = API_ENDPOINTS.analytics;
   const [customerOverviewRaw, customerSegments, topCustomers, discountAnalysis] = await Promise.all([
-    get<{ total_customers: number; new_customers: number }>(e.customerOverview, range),
+    get<CustomerOverview>(e.customerOverview, range),
     get<CustomerSegmentItem[]>(e.customerSegments, range),
     get<TopCustomerItem[]>(e.topCustomers, range),
     get<DiscountItem[]>(e.discountAnalysis, range),
   ]);
-  const total = customerOverviewRaw.total_customers ?? 0;
-  const newC  = customerOverviewRaw.new_customers ?? 0;
-  const returning = total - newC;
   const customerOverview: CustomerOverview = {
-    total_customers: total,
-    new_customers: newC,
-    returning_customers: returning,
-    repeat_rate: total > 0 ? Math.round((returning / total) * 100 * 10) / 10 : 0,
+    total_customers:     Number(customerOverviewRaw.total_customers ?? 0),
+    new_customers:       Number(customerOverviewRaw.new_customers ?? 0),
+    returning_customers: Number(customerOverviewRaw.returning_customers ?? 0),
+    repeat_rate:         Number(customerOverviewRaw.repeat_rate ?? 0),
   };
   return { customerOverview, customerSegments, topCustomers, discountAnalysis };
 }

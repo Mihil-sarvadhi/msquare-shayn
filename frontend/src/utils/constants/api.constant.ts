@@ -25,6 +25,7 @@ export const API_ENDPOINTS = {
     discountAnalysis: '/analytics/discount-analysis',
     marketingTrend: '/analytics/marketing-trend',
     attributionGap: '/analytics/attribution-gap',
+    topSkus: '/analytics/top-skus',
   },
   health: '/health',
   sync: {
