@@ -1,7 +1,7 @@
 import { QueryTypes } from 'sequelize';
 import { sequelize } from '@db/sequelize';
 import { ConnectorHealth, IthinkShipment, IthinkRemittance } from '@db/models';
-import { trackOrders, getRemittance } from './ithink.connector';
+import { trackAWBs, getRemittanceSummary } from './ithink.connector';
 import { logger } from '@logger/logger';
 
 export async function syncIthinkShipments(): Promise<void> {
@@ -19,11 +19,10 @@ export async function syncIthinkShipments(): Promise<void> {
       return;
     }
 
-    const tracking = await trackOrders(awbList);
+    const tracking = await trackAWBs(awbList);
     let count = 0;
 
     for (const [awb, data] of Object.entries(tracking)) {
-      if (data.message !== 'success') continue;
       await IthinkShipment.update(
         {
           current_status: data.current_status,
@@ -55,7 +54,7 @@ export async function syncIthinkShipments(): Promise<void> {
 export async function syncDailyRemittance(): Promise<void> {
   try {
     const today = new Date().toISOString().split('T')[0];
-    const res = await getRemittance(today);
+    const res = await getRemittanceSummary(today);
     if (res.status !== 'success' || !res.data?.length) return;
 
     const r = res.data[0];
