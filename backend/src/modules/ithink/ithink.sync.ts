@@ -19,11 +19,12 @@ function extractNumericId(gqlId: string): string {
 }
 
 /** Return undefined for empty, null, or clearly-invalid date strings (e.g. "0000-00-00") */
-function safeDate(value: string | null | undefined): string | undefined {
-  if (!value) return undefined;
-  const trimmed = value.trim();
-  if (!trimmed || trimmed.startsWith('0000')) return undefined;
-  return trimmed;
+function safeDate(val: string | undefined): string | undefined {
+  if (!val) return undefined;
+  const trimmed = val.trim();
+  if (!/^\d{4}-\d{2}-\d{2}/.test(trimmed)) return undefined;
+  if (trimmed.startsWith('0000')) return undefined;
+  return trimmed.split(' ')[0];
 }
 
 async function sleep(ms: number): Promise<void> {
@@ -136,17 +137,17 @@ export async function syncShipmentStatus(): Promise<void> {
   logger.info(`[iThink] Tracking ${awbList.length} in-flight AWBs`);
 
   let updated = 0;
-  try {
-    const tracking = await trackAWBs(awbList);
+  const tracking = await trackAWBs(awbList);
 
-    for (const [awb, data] of Object.entries(tracking)) {
-      const lastScanRaw = data.last_scan_details;
-      const lastScan = lastScanRaw
-        ? typeof lastScanRaw === 'string'
-          ? lastScanRaw
-          : JSON.stringify(lastScanRaw)
-        : undefined;
+  for (const [awb, data] of Object.entries(tracking)) {
+    const lastScanRaw = data.last_scan_details;
+    const lastScan = lastScanRaw
+      ? typeof lastScanRaw === 'string'
+        ? lastScanRaw
+        : JSON.stringify(lastScanRaw)
+      : undefined;
 
+    try {
       await IthinkShipment.update(
         {
           current_status: data.current_status,
@@ -160,10 +161,9 @@ export async function syncShipmentStatus(): Promise<void> {
         { where: { awb } },
       );
       updated++;
+    } catch (updateErr) {
+      logger.warn(`[iThink] Failed to update AWB ${awb}: ${(updateErr as Error).message}`);
     }
-  } catch (err) {
-    logger.error(`[iThink] Status update failed: ${(err as Error).message}`);
-    throw err;
   }
 
   logger.info(`[iThink] Tracking updated ${updated} shipments`);

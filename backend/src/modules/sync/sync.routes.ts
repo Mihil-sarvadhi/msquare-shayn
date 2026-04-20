@@ -1,5 +1,12 @@
 import { Router } from 'express';
-import { syncShopifyHandler, syncMetaHandler, syncIthinkHandler, syncIthinkBackfillHandler, syncJudgeMeHandler, syncAllHandler } from './sync.controller';
+import {
+  syncShopifyHandler,
+  syncMetaHandler,
+  syncIthinkHandler,
+  syncIthinkBackfillHandler,
+  syncJudgeMeHandler,
+  syncAllHandler,
+} from './sync.controller';
 
 const router = Router();
 

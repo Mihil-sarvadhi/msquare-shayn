@@ -4,17 +4,19 @@ async function main(): Promise<void> {
   const gqlOrderId = process.argv[2];
   if (!gqlOrderId) {
     console.error('Usage: npx tsx src/scripts/ithink-test-order.ts <shopify_order_id>');
-    console.error('Example: npx tsx src/scripts/ithink-test-order.ts gid://shopify/Order/6515526664471');
+    console.error(
+      'Example: npx tsx src/scripts/ithink-test-order.ts gid://shopify/Order/6515526664471',
+    );
     process.exit(1);
   }
 
   // Extract numeric part from GQL ID
   const numericId = gqlOrderId.includes('/') ? gqlOrderId.split('/').pop()! : gqlOrderId;
-  console.log(`\n── Step 1: Store Order Details for order ${numericId} ──`);
+  console.error(`\n── Step 1: Store Order Details for order ${numericId} ──`);
 
   const storeRes = await getStoreOrderDetails([numericId]);
-  console.log('Status:', storeRes.status);
-  console.log('Data:', JSON.stringify(storeRes.data, null, 2));
+  console.error('Status:', storeRes.status);
+  console.error('Data:', JSON.stringify(storeRes.data, null, 2));
 
   if (storeRes.status !== 'success' || !storeRes.data) {
     console.error('❌ Store order details failed. Stopping.');
@@ -28,13 +30,13 @@ async function main(): Promise<void> {
   }
 
   const awb = orderData.awb_no;
-  console.log(`\n── Step 2: Track AWB ${awb} ──`);
+  console.error(`\n── Step 2: Track AWB ${awb} ──`);
 
   const trackRes = await trackAWBs([awb]);
-  console.log('Tracking result:', JSON.stringify(trackRes, null, 2));
+  console.error('Tracking result:', JSON.stringify(trackRes, null, 2));
 
-  console.log('\n── Merged result ──');
-  console.log({
+  console.error('\n── Merged result ──');
+  console.error({
     shopify_order_gql_id: gqlOrderId,
     numeric_order_id: numericId,
     awb,
@@ -47,4 +49,7 @@ async function main(): Promise<void> {
   });
 }
 
-main().catch((err) => { console.error('Fatal:', err); process.exit(1); });
+main().catch((err) => {
+  console.error('Fatal:', err);
+  process.exit(1);
+});
