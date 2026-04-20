@@ -26,3 +26,4 @@ export const getMarketingTrend = (s: string, u: string) => repo.getMarketingTren
 export const getAttributionGap = (s: string, u: string) => repo.getAttributionGap(s, u);
 export const getTopSkus = (since: string, until: string) => repo.getTopSkus(since, until);
 export const getMoneyStuck = (since: string, until: string) => repo.getMoneyStuck(since, until);
+export const getChannelRevenue = (since: string, until: string) => repo.getChannelRevenue(since, until);

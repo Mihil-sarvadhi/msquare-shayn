@@ -14,6 +14,7 @@ import type {
   AttributionGapRow,
   TopSkuRow,
   MoneyStuckRow,
+  ChannelRevenueRow,
 } from './analytics.types';
 
 export async function getNetRevenue(since: string, until: string) {
@@ -269,4 +270,27 @@ export async function getMoneyStuck(since: string, until: string): Promise<Money
     { type: QueryTypes.SELECT, replacements: { since, until } },
   );
   return row;
+}
+
+export async function getChannelRevenue(since: string, until: string): Promise<ChannelRevenueRow> {
+  const [shopifyRow] = await sequelize.query<{ shopify_revenue: string }>(
+    `SELECT COALESCE(SUM(revenue), 0) AS shopify_revenue
+     FROM shopify_orders
+     WHERE created_at::date BETWEEN :since AND :until
+       AND financial_status != 'voided'`,
+    { type: QueryTypes.SELECT, replacements: { since, until } },
+  );
+  const [metaRow] = await sequelize.query<{ meta_revenue: string }>(
+    `SELECT COALESCE(SUM(purchase_value), 0) AS meta_revenue
+     FROM meta_daily_insights
+     WHERE date BETWEEN :since AND :until`,
+    { type: QueryTypes.SELECT, replacements: { since, until } },
+  );
+  const shopify = parseFloat(shopifyRow?.shopify_revenue ?? '0');
+  const meta = parseFloat(metaRow?.meta_revenue ?? '0');
+  return {
+    shopify_revenue: String(shopify),
+    meta_revenue: String(meta),
+    organic_revenue: String(Math.max(0, shopify - meta)),
+  };
 }

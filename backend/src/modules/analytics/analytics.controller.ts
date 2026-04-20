@@ -121,3 +121,11 @@ export async function moneyStuckHandler(req: Request, res: Response): Promise<vo
     handleErrorResponse(res, errOpts(err));
   }
 }
+export async function channelRevenueHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const { since, until } = range(req);
+    handleApiResponse(res, { data: await service.getChannelRevenue(since, until) });
+  } catch (err) {
+    handleErrorResponse(res, errOpts(err));
+  }
+}

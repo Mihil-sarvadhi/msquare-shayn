@@ -93,3 +93,9 @@ export interface MoneyStuckRow {
   cod_pending: string;
   total_stuck: string;
 }
+
+export interface ChannelRevenueRow {
+  shopify_revenue: string;
+  meta_revenue: string;
+  organic_revenue: string;
+}
