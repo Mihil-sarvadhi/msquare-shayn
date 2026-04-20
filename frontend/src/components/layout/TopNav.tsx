@@ -14,6 +14,26 @@ import {
 import { DateRangePicker } from '@components/ui/DateRangePicker';
 import { cn } from '@/lib/utils';
 import type { ConnectorHealth } from '@app/types/dashboard';
+import baseService from '@services/configs/baseService';
+import { API_ENDPOINTS } from '@utils/constants/api.constant';
+
+function useConnectorHealth() {
+  const [health, setHealth] = useState<ConnectorHealth[]>([]);
+
+  const fetch = useCallback(() => {
+    baseService.get<{ data: ConnectorHealth[] }>(API_ENDPOINTS.health)
+      .then((r) => setHealth(r.data.data ?? []))
+      .catch(() => { /* silent — no toast for background poll */ });
+  }, []);
+
+  useEffect(() => {
+    fetch();
+    const id = setInterval(fetch, 30_000); // refresh every 30s
+    return () => clearInterval(id);
+  }, [fetch]);
+
+  return { health, refetch: fetch };
+}
 
 const NAV = [
   { label: 'Dashboard',  to: '/dashboard'  },
@@ -48,19 +68,20 @@ const STATUS_DOT: Record<string, string> = {
 
 interface ConnectorRowProps {
   h: ConnectorHealth;
+  onSynced: () => void;
 }
 
-function ConnectorRow({ h }: ConnectorRowProps) {
+function ConnectorRow({ h, onSynced }: ConnectorRowProps) {
   const syncShopify = useSyncShopify();
   const syncMeta    = useSyncMeta();
   const syncIthink  = useSyncIthink();
   const syncJudgeme = useSyncJudgeme();
 
   const syncMap: Record<string, () => void> = {
-    shopify:  () => syncShopify.mutate(),
-    meta_ads: () => syncMeta.mutate(),
-    ithink:   () => syncIthink.mutate(),
-    judgeme:  () => syncJudgeme.mutate(),
+    shopify:  () => syncShopify.mutate(undefined, { onSuccess: onSynced }),
+    meta_ads: () => syncMeta.mutate(undefined, { onSuccess: onSynced }),
+    ithink:   () => syncIthink.mutate(undefined, { onSuccess: onSynced }),
+    judgeme:  () => syncJudgeme.mutate(undefined, { onSuccess: onSynced }),
   };
 
   const pendingMap: Record<string, boolean> = {
@@ -97,10 +118,10 @@ function ConnectorRow({ h }: ConnectorRowProps) {
 }
 
 export function TopNav() {
-  const dispatch   = useAppDispatch();
-  const range      = useAppSelector((s) => s.range);
-  const health     = useAppSelector((s) => s.dashboard.health);
-  const syncAll    = useSyncAll();
+  const dispatch             = useAppDispatch();
+  const range                = useAppSelector((s) => s.range);
+  const { health, refetch }  = useConnectorHealth();
+  const syncAll              = useSyncAll();
 
   const [showPicker,  setShowPicker]  = useState(false);
   const [showSources, setShowSources] = useState(false);
@@ -238,24 +259,24 @@ export function TopNav() {
                 />
               ))}
             </span>
-            Data Sources
+            Sync Status
           </button>
 
           {showSources && (
             <div className="absolute top-full right-0 mt-2 z-50 w-56 bg-white rounded-xl shadow-lg border border-[#F0EBE0] p-3">
               <p className="text-[10px] font-semibold text-[#8C7B64] uppercase tracking-widest mb-2 px-1">
-                Data Sources
+                Sync Status
               </p>
               <div className="flex flex-col">
                 {health.length === 0 ? (
                   <p className="text-[12px] text-[#8C7B64] px-1 py-2">No connectors found</p>
                 ) : (
-                  health.map((h) => <ConnectorRow key={h.connector_name} h={h} />)
+                  health.map((h) => <ConnectorRow key={h.connector_name} h={h} onSynced={refetch} />)
                 )}
               </div>
               <div className="mt-2 pt-2 border-t border-[#F0EBE0]">
                 <button
-                  onClick={() => { syncAll.mutate(); setShowSources(false); }}
+                  onClick={() => { syncAll.mutate(undefined, { onSuccess: refetch }); setShowSources(false); }}
                   disabled={syncAll.isPending}
                   className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#B8860B] text-white hover:bg-[#B8860B]/90 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
                 >
