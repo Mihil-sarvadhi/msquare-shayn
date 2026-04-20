@@ -49,9 +49,10 @@ export async function logisticsCostsHandler(req: Request, res: Response): Promis
     handleErrorResponse(res, errOpts(err));
   }
 }
-export async function codCashFlowHandler(_req: Request, res: Response): Promise<void> {
+export async function codCashFlowHandler(req: Request, res: Response): Promise<void> {
   try {
-    handleApiResponse(res, { data: await service.getCodCashFlow() });
+    const { since, until } = service.getDateRange((req.query as { range?: string }).range);
+    handleApiResponse(res, { data: await service.getCodCashFlow(since, until) });
   } catch (err) {
     handleErrorResponse(res, errOpts(err));
   }
@@ -64,9 +65,10 @@ export async function customerOverviewHandler(req: Request, res: Response): Prom
     handleErrorResponse(res, errOpts(err));
   }
 }
-export async function customerSegmentsHandler(_req: Request, res: Response): Promise<void> {
+export async function customerSegmentsHandler(req: Request, res: Response): Promise<void> {
   try {
-    handleApiResponse(res, { data: await service.getCustomerSegments() });
+    const { since, until } = range(req);
+    handleApiResponse(res, { data: await service.getCustomerSegments(since, until) });
   } catch (err) {
     handleErrorResponse(res, errOpts(err));
   }

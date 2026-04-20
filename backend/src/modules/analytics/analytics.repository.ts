@@ -93,14 +93,14 @@ export async function getLogisticsCosts(since: string, until: string): Promise<L
   return row;
 }
 
-export async function getCodCashFlow(): Promise<CodCashFlowRow> {
+export async function getCodCashFlow(since: string, until: string): Promise<CodCashFlowRow> {
   const [row] = await sequelize.query<CodCashFlowRow>(
     `SELECT COALESCE(SUM(cod_generated), 0) AS cod_generated,
             COALESCE(SUM(cod_remitted), 0) AS cod_remitted,
             COALESCE(SUM(cod_generated - cod_remitted), 0) AS pending
      FROM ithink_remittance
-     WHERE remittance_date >= NOW() - INTERVAL '30 days'`,
-    { type: QueryTypes.SELECT },
+     WHERE remittance_date BETWEEN :since AND :until`,
+    { type: QueryTypes.SELECT, replacements: { since, until } },
   );
   return row;
 }
@@ -110,48 +110,73 @@ export async function getCustomerOverview(
   until: string,
 ): Promise<CustomerOverviewRow> {
   const [row] = await sequelize.query<CustomerOverviewRow>(
-    `SELECT
-       COUNT(DISTINCT o.customer_id) AS total_customers,
-       COUNT(DISTINCT CASE WHEN fo.min_date BETWEEN :since AND :until
-         THEN o.customer_id END) AS new_customers
-     FROM shopify_orders o
-     JOIN (
-       SELECT customer_id, MIN(created_at::date) AS min_date
-       FROM shopify_orders WHERE financial_status != 'voided' AND customer_id IS NOT NULL
-       GROUP BY customer_id
-     ) fo ON fo.customer_id = o.customer_id
-     WHERE o.created_at::date BETWEEN :since AND :until
-       AND o.financial_status != 'voided' AND o.customer_id IS NOT NULL`,
+    `WITH period_customers AS (
+       SELECT o.customer_id,
+              MIN(fo.min_date) AS first_ever_date
+       FROM shopify_orders o
+       JOIN (
+         SELECT customer_id, MIN(created_at::date) AS min_date
+         FROM shopify_orders
+         WHERE financial_status != 'voided' AND customer_id IS NOT NULL
+         GROUP BY customer_id
+       ) fo ON fo.customer_id = o.customer_id
+       WHERE o.created_at::date BETWEEN :since AND :until
+         AND o.financial_status != 'voided' AND o.customer_id IS NOT NULL
+       GROUP BY o.customer_id
+     )
+     SELECT
+       COUNT(*)::int                                                              AS total_customers,
+       COUNT(CASE WHEN first_ever_date BETWEEN :since AND :until THEN 1 END)::int AS new_customers,
+       COUNT(CASE WHEN first_ever_date < :since THEN 1 END)::int                  AS returning_customers,
+       CASE WHEN COUNT(*) > 0
+            THEN ROUND(COUNT(CASE WHEN first_ever_date < :since THEN 1 END)::numeric / COUNT(*)::numeric * 100, 1)
+            ELSE 0 END                                                             AS repeat_rate
+     FROM period_customers`,
     { type: QueryTypes.SELECT, replacements: { since, until } },
   );
   return row;
 }
 
-export async function getCustomerSegments(): Promise<CustomerSegmentRow[]> {
+export async function getCustomerSegments(since: string, until: string): Promise<CustomerSegmentRow[]> {
   return sequelize.query<CustomerSegmentRow>(
-    `SELECT
+    `WITH customer_order_counts AS (
+       SELECT customer_id, COUNT(*) AS orders_count
+       FROM shopify_orders
+       WHERE financial_status != 'voided'
+         AND customer_id IS NOT NULL
+         AND created_at::date BETWEEN :since AND :until
+       GROUP BY customer_id
+     )
+     SELECT
        CASE WHEN orders_count = 1 THEN '1 order'
-            WHEN orders_count BETWEEN 2 AND 3 THEN '2–3 orders'
-            WHEN orders_count BETWEEN 4 AND 5 THEN '4–5 orders'
+            WHEN orders_count BETWEEN 2 AND 3 THEN '2-3 orders'
+            WHEN orders_count BETWEEN 4 AND 5 THEN '4-5 orders'
             ELSE '6+ orders' END AS bucket,
-       MIN(orders_count) AS sort_key,
-       COUNT(*) AS count
-     FROM shopify_customers WHERE orders_count > 0
+       MIN(orders_count)::int    AS sort_key,
+       COUNT(*)::int             AS count
+     FROM customer_order_counts
      GROUP BY 1 ORDER BY MIN(orders_count)`,
-    { type: QueryTypes.SELECT },
+    { type: QueryTypes.SELECT, replacements: { since, until } },
   );
 }
 
 export async function getTopCustomers(since: string, until: string): Promise<TopCustomerRow[]> {
   return sequelize.query<TopCustomerRow>(
-    `SELECT sc.customer_id, sc.email, sc.city, sc.state,
-            sc.orders_count, sc.total_spent::text AS total_spent,
-            MAX(o.created_at)::date AS last_order_date
-     FROM shopify_customers sc
-     JOIN shopify_orders o ON o.customer_id = sc.customer_id
-     WHERE o.created_at::date BETWEEN :since AND :until AND o.financial_status != 'voided'
-     GROUP BY sc.customer_id, sc.email, sc.city, sc.state, sc.orders_count, sc.total_spent
-     ORDER BY sc.total_spent DESC LIMIT 10`,
+    `SELECT customer_id,
+            MAX(customer_email)                          AS email,
+            MAX(customer_name)                           AS name,
+            MAX(customer_city)                           AS city,
+            MAX(customer_state)                          AS state,
+            COUNT(*)                                     AS orders_count,
+            COALESCE(SUM(revenue), 0)::text              AS total_spent,
+            MAX(created_at::date)                        AS last_order_date
+     FROM shopify_orders
+     WHERE created_at::date BETWEEN :since AND :until
+       AND financial_status != 'voided'
+       AND customer_id IS NOT NULL
+     GROUP BY customer_id
+     ORDER BY SUM(revenue) DESC
+     LIMIT 10`,
     { type: QueryTypes.SELECT, replacements: { since, until } },
   );
 }
