@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
-import { RefreshCw, CalendarDays, DatabaseZap } from 'lucide-react';
+import { RefreshCw, CalendarDays, Settings } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '@store/hooks';
 import { setPreset, setCustomRange } from '@store/slices/rangeSlice';
 import type { RangePreset } from '@store/slices/rangeSlice';
@@ -248,7 +248,11 @@ export function TopNav() {
                 : 'border-[#E8E0D0] text-[#8C7B64] hover:border-[#B8860B] hover:text-[#B8860B]'
             )}
           >
-            <DatabaseZap size={13} strokeWidth={1.5} />
+            {/* Gear inside circular arrows — matches sync icon reference */}
+            <span className="relative inline-flex items-center justify-center w-[14px] h-[14px]">
+              <RefreshCw size={14} strokeWidth={1.5} className="absolute" />
+              <Settings size={7} strokeWidth={2} className="absolute" />
+            </span>
             Sync Status
           </button>
 
