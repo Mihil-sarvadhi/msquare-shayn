@@ -249,9 +249,9 @@ export function TopNav() {
             )}
           >
             {/* Gear inside circular arrows — matches sync icon reference */}
-            <span className="relative inline-flex items-center justify-center w-[14px] h-[14px]">
-              <RefreshCw size={14} strokeWidth={1.5} className="absolute" />
-              <Settings size={7} strokeWidth={2} className="absolute" />
+            <span className="relative inline-flex items-center justify-center w-[16px] h-[16px]">
+              <RefreshCw size={16} strokeWidth={1.5} className="absolute" />
+              <Settings size={8} strokeWidth={2} className="absolute" />
             </span>
             Sync Status
           </button>
