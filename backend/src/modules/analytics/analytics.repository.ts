@@ -4,7 +4,6 @@ import type {
   RtoByStateRow,
   CodVsPrepaidRow,
   GeoRevenueRow,
-  LogisticsCostsRow,
   CodCashFlowRow,
   CustomerOverviewRow,
   CustomerSegmentRow,
@@ -83,17 +82,14 @@ export async function getGeoRevenue(since: string, until: string): Promise<GeoRe
   );
 }
 
-export async function getLogisticsCosts(since: string, until: string): Promise<LogisticsCostsRow> {
-  const [row] = await sequelize.query<LogisticsCostsRow>(
-    `SELECT COALESCE(SUM(billed_fwd_charges), 0) AS fwd,
-            COALESCE(SUM(billed_rto_charges), 0) AS rto,
-            COALESCE(SUM(billed_cod_charges), 0) AS cod,
-            COALESCE(SUM(billed_gst_charges), 0) AS gst,
-            COALESCE(SUM(billed_total), 0) AS total
-     FROM ithink_shipments WHERE order_date BETWEEN :since AND :until`,
+export async function getShipmentStatusBreakdown(since: string, until: string): Promise<{ status: string; count: number }[]> {
+  return sequelize.query<{ status: string; count: number }>(
+    `SELECT COALESCE(current_status, 'Unknown') AS status, COUNT(*) AS count
+     FROM ithink_shipments
+     WHERE order_date BETWEEN :since AND :until
+     GROUP BY current_status ORDER BY count DESC`,
     { type: QueryTypes.SELECT, replacements: { since, until } },
   );
-  return row;
 }
 
 export async function getCodCashFlow(since: string, until: string): Promise<CodCashFlowRow> {
