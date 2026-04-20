@@ -55,16 +55,12 @@ export function useSyncAll() {
   const refetch = useRefetchDashboard();
   return useMutation({
     mutationFn: () => triggerSync('all'),
-    onSuccess: (res: unknown) => {
-      const data = res as { results?: Record<string, string> } | undefined;
-      const failed = Object.values(data?.results ?? {}).filter((v) => v !== 'ok').length;
-      if (failed === 0) {
-        toast.success('All connectors synced successfully');
-      } else {
-        toast.warning(`Sync done — ${failed} connector(s) had errors`);
-      }
+    onSuccess: () => {
+      toast.success('Sync started — data will refresh in ~60 seconds');
+      // Refetch once immediately (clears stale data), then again after sync likely finishes
       refetch();
+      setTimeout(refetch, 60_000);
     },
-    onError: () => { toast.error('Full sync failed'); },
+    onError: () => { toast.error('Failed to trigger sync'); },
   });
 }

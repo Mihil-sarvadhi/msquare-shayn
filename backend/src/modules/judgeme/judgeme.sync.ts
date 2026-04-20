@@ -8,6 +8,7 @@ import {
   type JudgeMeProduct,
 } from './judgeme.connector';
 import { logger } from '@logger/logger';
+import { environment } from '@config/config';
 
 async function upsertReviews(reviews: JudgeMeReview[]): Promise<number> {
   let count = 0;
@@ -52,6 +53,10 @@ async function upsertProducts(products: JudgeMeProduct[]): Promise<void> {
 }
 
 export async function syncJudgeMe(): Promise<void> {
+  if (!environment.judgeme.apiToken || !environment.judgeme.shopDomain) {
+    logger.warn('[JudgeMe] Skipping sync — JUDGEME_API_TOKEN or JUDGEME_SHOP_DOMAIN not configured');
+    return;
+  }
   try {
     const products = await fetchAllProducts();
     await upsertProducts(products);
