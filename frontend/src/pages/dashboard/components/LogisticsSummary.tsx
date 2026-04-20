@@ -22,13 +22,13 @@ export default function LogisticsSummary({ kpis, loading }: Props) {
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-5 gap-1">
+      <div className="grid grid-cols-5 gap-2">
         {stats.map((s) => (
-          <div key={s.label} className="flex flex-col items-center">
+          <div key={s.label} className="flex flex-col items-center min-w-0">
             <span className={`text-xl font-bold ${s.color}`}>{formatNum(s.value)}</span>
-            <div className="flex items-center gap-1 mt-0.5">
+            <div className="flex items-center gap-1 mt-0.5 max-w-full">
               <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${s.dot}`} />
-              <span className="text-[11px] text-muted whitespace-nowrap">{s.label}</span>
+              <span className="text-[11px] text-muted truncate">{s.label}</span>
             </div>
           </div>
         ))}
