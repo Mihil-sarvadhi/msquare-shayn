@@ -12,6 +12,7 @@ import type {
   DiscountRow,
   MarketingTrendRow,
   AttributionGapRow,
+  TopSkuRow,
 } from './analytics.types';
 
 export async function getNetRevenue(since: string, until: string) {
@@ -229,4 +230,25 @@ export async function getAttributionGap(since: string, until: string): Promise<A
     meta_purchases: meta?.meta_purchases ?? '0',
     shopify_orders: shopify?.shopify_orders ?? '0',
   };
+}
+
+export async function getTopSkus(since: string, until: string): Promise<TopSkuRow[]> {
+  return sequelize.query<TopSkuRow>(
+    `SELECT
+       li.sku,
+       li.title,
+       COALESCE(li.variant, '') AS variant,
+       SUM(li.quantity) AS units_sold,
+       COUNT(DISTINCT o.order_id) AS orders_count,
+       SUM(li.quantity * li.unit_price) AS revenue
+     FROM shopify_order_lineitems li
+     JOIN shopify_orders o ON o.order_id = li.order_id
+     WHERE o.created_at::date BETWEEN :since AND :until
+       AND o.financial_status != 'voided'
+       AND li.sku IS NOT NULL AND li.sku != ''
+     GROUP BY li.sku, li.title, li.variant
+     ORDER BY revenue DESC
+     LIMIT 10`,
+    { type: QueryTypes.SELECT, replacements: { since, until } },
+  );
 }

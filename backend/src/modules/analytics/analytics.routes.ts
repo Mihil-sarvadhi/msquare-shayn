@@ -15,5 +15,6 @@ router.get('/top-customers', c.topCustomersHandler);
 router.get('/discount-analysis', c.discountAnalysisHandler);
 router.get('/marketing-trend', c.marketingTrendHandler);
 router.get('/attribution-gap', c.attributionGapHandler);
+router.get('/top-skus', c.topSkusHandler);
 
 export default router;

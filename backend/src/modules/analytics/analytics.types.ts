@@ -33,8 +33,10 @@ export interface CodCashFlowRow {
 }
 
 export interface CustomerOverviewRow {
-  total_customers: string;
-  new_customers: string;
+  total_customers: number;
+  new_customers: number;
+  returning_customers: number;
+  repeat_rate: number;
 }
 
 export interface CustomerSegmentRow {
@@ -45,6 +47,7 @@ export interface CustomerSegmentRow {
 export interface TopCustomerRow {
   customer_id: string;
   email: string;
+  name: string | null;
   city: string;
   state: string;
   orders_count: string;
@@ -73,4 +76,13 @@ export interface MarketingTrendRow {
 export interface AttributionGapRow {
   meta_purchases: string;
   shopify_orders: string;
+}
+
+export interface TopSkuRow {
+  sku: string;
+  title: string;
+  variant: string;
+  units_sold: string;
+  orders_count: string;
+  revenue: string;
 }

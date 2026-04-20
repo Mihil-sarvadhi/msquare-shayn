@@ -24,3 +24,4 @@ export const getTopCustomers = (s: string, u: string) => repo.getTopCustomers(s,
 export const getDiscountAnalysis = (s: string, u: string) => repo.getDiscountAnalysis(s, u);
 export const getMarketingTrend = (s: string, u: string) => repo.getMarketingTrend(s, u);
 export const getAttributionGap = (s: string, u: string) => repo.getAttributionGap(s, u);
+export const getTopSkus = (since: string, until: string) => repo.getTopSkus(since, until);

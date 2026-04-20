@@ -105,3 +105,11 @@ export async function attributionGapHandler(req: Request, res: Response): Promis
     handleErrorResponse(res, errOpts(err));
   }
 }
+export async function topSkusHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const { since, until } = range(req);
+    handleApiResponse(res, { data: await service.getTopSkus(since, until) });
+  } catch (err) {
+    handleErrorResponse(res, errOpts(err));
+  }
+}
