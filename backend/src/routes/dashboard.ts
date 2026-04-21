@@ -275,8 +275,7 @@ router.get('/top-rated-products', async (_req: Request, res: Response) => {
         ROUND(AVG(r.rating)::numeric, 2) AS average_rating,
         COUNT(r.review_id) AS reviews_count
        FROM judgeme_products p
-       JOIN judgeme_reviews r ON r.product_external_id = p.external_id
-          OR r.product_handle = p.handle
+       JOIN judgeme_reviews r ON r.product_id::text = p.external_id
        WHERE r.published = TRUE
        GROUP BY p.product_id, p.handle, p.title
        HAVING COUNT(r.review_id) > 0
@@ -296,7 +295,7 @@ router.get('/recent-reviews', async (_req: Request, res: Response) => {
         r.review_id, r.rating, r.title, r.body, r.reviewer_name,
         r.created_at, r.has_photos, r.verified, r.picture_urls,
         (SELECT p.title FROM judgeme_products p
-         WHERE p.external_id = r.product_external_id OR p.handle = r.product_handle
+         WHERE p.external_id = r.product_id::text
          LIMIT 1) AS product_title
        FROM judgeme_reviews r
        WHERE r.published = TRUE

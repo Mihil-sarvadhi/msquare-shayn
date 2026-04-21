@@ -51,7 +51,7 @@ export function OperationsPage() {
             <GeoRevenue data={geoRevenue} loading={L} />
           </div>
           <div className="bg-white rounded-xl border border-parch shadow-card p-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted mb-4">Logistics Cost Breakdown</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted mb-4">Shipment Status Breakdown</h3>
             <LogisticsCostDonut data={logisticsCosts} loading={L} />
           </div>
         </div>

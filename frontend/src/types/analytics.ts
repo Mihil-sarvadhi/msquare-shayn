@@ -26,11 +26,8 @@ export interface GeoRevenueItem {
 }
 
 export interface LogisticsCosts {
-  fwd: number;
-  rto: number;
-  cod: number;
-  gst: number;
-  total: number;
+  status: string;
+  count: number;
 }
 
 export interface CodCashFlow {
@@ -114,7 +111,7 @@ export interface AnalyticsState {
   rtoByState: RtoByStateItem[];
   codVsPrepaidRto: CodVsPrepaidItem[];
   geoRevenue: GeoRevenueItem[];
-  logisticsCosts: LogisticsCosts | null;
+  logisticsCosts: LogisticsCosts[];
   codCashFlow: CodCashFlow | null;
   customerOverview: CustomerOverview | null;
   customerSegments: CustomerSegmentItem[];

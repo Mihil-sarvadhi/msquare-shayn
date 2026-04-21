@@ -5,7 +5,7 @@ import type { RangeState } from './rangeSlice';
 
 const initialState: AnalyticsState = {
   netRevenue: null, rtoByState: [], codVsPrepaidRto: [], geoRevenue: [],
-  logisticsCosts: null, codCashFlow: null,
+  logisticsCosts: [], codCashFlow: null,
   customerOverview: null, customerSegments: [], topCustomers: [], discountAnalysis: [],
   marketingTrend: [], attributionGap: null, topSkus: [], moneyStuck: null, channelRevenue: null,
   loadingOperations: false, loadingCustomers: false, loadingMarketing: false, error: null,
