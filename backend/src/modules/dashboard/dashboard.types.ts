@@ -44,6 +44,7 @@ export interface CampaignRow {
   objective: string;
   spend: number;
   impressions: number;
+  reach: number;
   clicks: number;
   purchases: number;
   purchase_value: number;
@@ -113,4 +114,17 @@ export interface AllReviewsQuery {
   rating?: string;
   search?: string;
   range?: string;
+}
+
+export interface RecentOrderRow {
+  order_name: string;
+  revenue: number;
+  customer_city: string;
+  created_at: string;
+}
+
+export interface RevenueVsSpendRow {
+  date: string;
+  revenue: string;
+  ad_spend: string;
 }

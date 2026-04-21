@@ -19,4 +19,9 @@ export const getMarketingTrend  = (s: string, u: string) => repo.getMarketingTre
 export const getAttributionGap  = (s: string, u: string) => repo.getAttributionGap(s, u);
 export const getTopSkus         = (s: string, u: string) => repo.getTopSkus(s, u);
 export const getMoneyStuck      = (s: string, u: string) => repo.getMoneyStuck(s, u);
-export const getChannelRevenue  = (s: string, u: string) => repo.getChannelRevenue(s, u);
+export const getChannelRevenue    = (s: string, u: string) => repo.getChannelRevenue(s, u);
+export const getCourierScorecard  = (s: string, u: string) => repo.getCourierScorecard(s, u);
+export const getSlaByZone         = (s: string, u: string) => repo.getSlaByZone(s, u);
+export const getCreativeFatigue   = (s: string, u: string) => repo.getCreativeFatigue(s, u);
+export const getCohortRetention   = () => repo.getCohortRetention();
+export const getReturnReasons   = (s: string, u: string) => repo.getReturnReasons(s, u);

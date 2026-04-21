@@ -14,6 +14,11 @@ import type {
   TopSkuRow,
   MoneyStuckRow,
   ChannelRevenueRow,
+  CourierScorecardRow,
+  SlaByZoneRow,
+  CreativeFatigueRow,
+  CohortRetentionRow,
+  ReturnReasonRow,
 } from './analytics.types';
 
 export async function getNetRevenue(since: string, until: string) {
@@ -211,16 +216,27 @@ export async function getMarketingTrend(
   until: string,
 ): Promise<MarketingTrendRow[]> {
   return sequelize.query<MarketingTrendRow>(
-    `SELECT date::text,
-            SUM(spend) AS spend, SUM(purchases) AS purchases,
-            SUM(purchase_value) AS purchase_value,
-            CASE WHEN SUM(spend) > 0
-              THEN ROUND((SUM(purchase_value) / SUM(spend))::numeric, 2) ELSE 0 END AS roas,
-            ROUND(AVG(ctr)::numeric, 2) AS ctr,
-            CASE WHEN SUM(purchases) > 0
-              THEN ROUND((SUM(spend) / SUM(purchases))::numeric, 2) ELSE 0 END AS cpp
-     FROM meta_daily_insights WHERE date BETWEEN :since AND :until
-     GROUP BY date ORDER BY date ASC`,
+    `SELECT d.date::text,
+            m.spend, m.purchases, m.purchase_value,
+            m.roas, m.ctr, m.cpp
+     FROM generate_series(:since::date, :until::date, '1 day'::interval) AS d(date)
+     LEFT JOIN (
+       SELECT date,
+              SUM(spend)::text AS spend,
+              SUM(purchases)::text AS purchases,
+              SUM(purchase_value)::text AS purchase_value,
+              CASE WHEN SUM(spend) > 0
+                THEN ROUND((SUM(purchase_value) / SUM(spend))::numeric, 2)::text
+                ELSE NULL END AS roas,
+              ROUND(AVG(ctr)::numeric, 2)::text AS ctr,
+              CASE WHEN SUM(purchases) > 0
+                THEN ROUND((SUM(spend) / SUM(purchases))::numeric, 2)::text
+                ELSE NULL END AS cpp
+       FROM meta_daily_insights
+       WHERE date BETWEEN :since AND :until
+       GROUP BY date
+     ) m ON m.date = d.date
+     ORDER BY d.date ASC`,
     { type: QueryTypes.SELECT, replacements: { since, until } },
   );
 }
@@ -280,6 +296,53 @@ export async function getMoneyStuck(since: string, until: string): Promise<Money
   return row;
 }
 
+export async function getCourierScorecard(since: string, until: string): Promise<CourierScorecardRow[]> {
+  const total = await sequelize.query<{ total: string }>(
+    `SELECT COUNT(*) AS total FROM ithink_shipments WHERE order_date BETWEEN :since AND :until`,
+    { type: QueryTypes.SELECT, replacements: { since, until } },
+  );
+  const grandTotal = parseFloat(total[0]?.total ?? '1') || 1;
+  return sequelize.query<CourierScorecardRow>(
+    `SELECT
+       COALESCE(NULLIF(courier, ''), 'Unknown') AS courier,
+       COUNT(*) AS volume,
+       ROUND(100.0 * COUNT(*) / :grandTotal, 1) AS split_pct,
+       ROUND(100.0 * SUM(CASE WHEN current_status_code LIKE 'RT%' THEN 1 ELSE 0 END)
+         / NULLIF(COUNT(*), 0), 1) AS rto_rate,
+       COALESCE(ROUND(AVG(
+         CASE WHEN delivered_date IS NOT NULL AND order_date IS NOT NULL
+           THEN EXTRACT(EPOCH FROM (delivered_date::timestamp - order_date::date::timestamp)) / 86400.0
+         END
+       )::numeric, 1), 0) AS avg_sla_days,
+       COALESCE(ROUND(AVG(CASE WHEN billed_total > 0 THEN billed_total END)::numeric, 2), 0) AS cost_per_shipment
+     FROM ithink_shipments
+     WHERE order_date BETWEEN :since AND :until
+     GROUP BY courier
+     ORDER BY COUNT(*) DESC`,
+    { type: QueryTypes.SELECT, replacements: { since, until, grandTotal } },
+  );
+}
+
+export async function getSlaByZone(since: string, until: string): Promise<SlaByZoneRow[]> {
+  return sequelize.query<SlaByZoneRow>(
+    `SELECT
+       zone,
+       ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (
+         ORDER BY EXTRACT(EPOCH FROM (delivered_date::timestamp - order_date::date::timestamp)) / 86400.0
+       )::numeric, 1) AS median_days,
+       ROUND(PERCENTILE_CONT(0.95) WITHIN GROUP (
+         ORDER BY EXTRACT(EPOCH FROM (delivered_date::timestamp - order_date::date::timestamp)) / 86400.0
+       )::numeric, 1) AS p95_days,
+       COUNT(*) AS total_shipments
+     FROM ithink_shipments
+     WHERE delivered_date IS NOT NULL AND zone IS NOT NULL AND zone != ''
+       AND order_date BETWEEN :since AND :until
+     GROUP BY zone
+     ORDER BY median_days ASC`,
+    { type: QueryTypes.SELECT, replacements: { since, until } },
+  );
+}
+
 export async function getChannelRevenue(since: string, until: string): Promise<ChannelRevenueRow> {
   const [shopifyRow] = await sequelize.query<{ shopify_revenue: string }>(
     `SELECT COALESCE(SUM(revenue), 0) AS shopify_revenue
@@ -301,4 +364,102 @@ export async function getChannelRevenue(since: string, until: string): Promise<C
     meta_revenue: String(meta),
     organic_revenue: String(Math.max(0, shopify - meta)),
   };
+}
+
+export async function getCreativeFatigue(since: string, until: string): Promise<CreativeFatigueRow[]> {
+  return sequelize.query<CreativeFatigueRow>(
+    `WITH top_campaigns AS (
+       SELECT campaign_id
+       FROM meta_daily_insights
+       WHERE date BETWEEN :since AND :until
+       GROUP BY campaign_id
+       ORDER BY SUM(spend) DESC
+       LIMIT 5
+     ),
+     daily_agg AS (
+       SELECT
+         date,
+         SUM(impressions)::bigint AS impressions,
+         SUM(reach)::bigint       AS reach,
+         SUM(clicks)::bigint      AS clicks
+       FROM meta_daily_insights
+       WHERE date BETWEEN :since AND :until
+         AND campaign_id IN (SELECT campaign_id FROM top_campaigns)
+       GROUP BY date
+     )
+     SELECT
+       date::text,
+       ROUND(
+         SUM(impressions) OVER w7 /
+         NULLIF(SUM(reach) OVER w7, 0)::numeric,
+         2
+       )::text AS frequency,
+       ROUND(
+         100.0 * SUM(clicks) OVER w7 /
+         NULLIF(SUM(impressions) OVER w7, 0)::numeric,
+         2
+       )::text AS ctr
+     FROM daily_agg
+     WINDOW w7 AS (ORDER BY date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW)
+     ORDER BY date ASC`,
+    { type: QueryTypes.SELECT, replacements: { since, until } },
+  );
+}
+
+export async function getCohortRetention(): Promise<CohortRetentionRow[]> {
+  return sequelize.query<CohortRetentionRow>(
+    `WITH first_orders AS (
+       SELECT customer_id, DATE_TRUNC('month', MIN(created_at)) AS cohort_month
+       FROM shopify_orders
+       WHERE financial_status != 'voided' AND customer_id IS NOT NULL AND customer_id != ''
+       GROUP BY customer_id
+     ),
+     repeat_orders AS (
+       SELECT o.customer_id, DATE_TRUNC('month', o.created_at) AS purchase_month
+       FROM shopify_orders o
+       WHERE o.financial_status != 'voided' AND o.customer_id IS NOT NULL AND o.customer_id != ''
+     )
+     SELECT
+       TO_CHAR(f.cohort_month, 'Mon YY') AS cohort_month,
+       COUNT(DISTINCT f.customer_id)::text AS cohort_size,
+       COUNT(DISTINCT CASE WHEN r.purchase_month = f.cohort_month                         THEN r.customer_id END)::text AS m0,
+       COUNT(DISTINCT CASE WHEN r.purchase_month = f.cohort_month + INTERVAL '1 month'    THEN r.customer_id END)::text AS m1,
+       COUNT(DISTINCT CASE WHEN r.purchase_month = f.cohort_month + INTERVAL '2 months'   THEN r.customer_id END)::text AS m2,
+       COUNT(DISTINCT CASE WHEN r.purchase_month = f.cohort_month + INTERVAL '3 months'   THEN r.customer_id END)::text AS m3,
+       COUNT(DISTINCT CASE WHEN r.purchase_month = f.cohort_month + INTERVAL '4 months'   THEN r.customer_id END)::text AS m4,
+       COUNT(DISTINCT CASE WHEN r.purchase_month = f.cohort_month + INTERVAL '5 months'   THEN r.customer_id END)::text AS m5
+     FROM first_orders f
+     LEFT JOIN repeat_orders r ON r.customer_id = f.customer_id
+     GROUP BY f.cohort_month
+     ORDER BY f.cohort_month DESC
+     LIMIT 12`,
+    { type: QueryTypes.SELECT, replacements: {} },
+  );
+}
+
+export async function getReturnReasons(since: string, until: string): Promise<ReturnReasonRow[]> {
+  return sequelize.query<ReturnReasonRow>(
+    `WITH reasons AS (
+       SELECT
+         COALESCE(
+           NULLIF(TRIM(last_scan::jsonb ->> 'reason'), ''),
+           NULLIF(TRIM(last_scan::jsonb ->> 'remark'), ''),
+           'Unknown'
+         ) AS reason
+       FROM ithink_shipments
+       WHERE current_status_code IN ('RT', 'RTD', 'RTO')
+         AND last_scan IS NOT NULL
+         AND left(trim(last_scan), 1) = '{'
+         AND order_date BETWEEN :since AND :until
+     )
+     SELECT
+       reason,
+       COUNT(*)::text AS count,
+       ROUND(COUNT(*) * 100.0 / NULLIF(SUM(COUNT(*)) OVER (), 0), 1)::text AS pct
+     FROM reasons
+     GROUP BY reason
+     ORDER BY COUNT(*) DESC
+     LIMIT 12`,
+    { type: QueryTypes.SELECT, replacements: { since, until } },
+  );
 }

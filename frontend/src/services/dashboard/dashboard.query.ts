@@ -3,7 +3,6 @@ import { useMutation } from '@tanstack/react-query';
 import { useAppDispatch, useAppSelector } from '@store/hooks';
 import { fetchDashboard } from '@store/slices/dashboardSlice';
 import baseService from '@services/configs/baseService';
-import { toast } from '@/components/ui/toast';
 
 function useRefetchDashboard() {
   const dispatch = useAppDispatch();
@@ -19,8 +18,8 @@ export function useSyncShopify() {
   const refetch = useRefetchDashboard();
   return useMutation({
     mutationFn: () => triggerSync('shopify'),
-    onSuccess: () => { toast.success('Shopify sync triggered'); refetch(); },
-    onError: () => { toast.error('Failed to trigger Shopify sync'); },
+    onSuccess: () => { refetch(); },
+    onError:   () => {},
   });
 }
 
@@ -28,8 +27,8 @@ export function useSyncMeta() {
   const refetch = useRefetchDashboard();
   return useMutation({
     mutationFn: () => triggerSync('meta'),
-    onSuccess: () => { toast.success('Meta sync triggered'); refetch(); },
-    onError: () => { toast.error('Failed to trigger Meta sync'); },
+    onSuccess: () => { refetch(); },
+    onError:   () => {},
   });
 }
 
@@ -37,8 +36,8 @@ export function useSyncIthink() {
   const refetch = useRefetchDashboard();
   return useMutation({
     mutationFn: () => triggerSync('ithink'),
-    onSuccess: () => { toast.success('iThink sync triggered'); refetch(); },
-    onError: () => { toast.error('Failed to trigger iThink sync'); },
+    onSuccess: () => { refetch(); },
+    onError:   () => {},
   });
 }
 
@@ -46,8 +45,8 @@ export function useSyncJudgeme() {
   const refetch = useRefetchDashboard();
   return useMutation({
     mutationFn: () => triggerSync('judgeme'),
-    onSuccess: () => { toast.success('Judge.me sync triggered'); refetch(); },
-    onError: () => { toast.error('Failed to trigger Judge.me sync'); },
+    onSuccess: () => { refetch(); },
+    onError:   () => {},
   });
 }
 
@@ -56,11 +55,9 @@ export function useSyncAll() {
   return useMutation({
     mutationFn: () => triggerSync('all'),
     onSuccess: () => {
-      toast.success('Sync started — data will refresh in ~60 seconds');
-      // Refetch once immediately (clears stale data), then again after sync likely finishes
       refetch();
       setTimeout(refetch, 60_000);
     },
-    onError: () => { toast.error('Failed to trigger sync'); },
+    onError: () => {},
   });
 }

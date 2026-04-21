@@ -4,9 +4,10 @@ import type { DashboardState } from '@app/types/dashboard';
 import type { RangeState } from './rangeSlice';
 
 const initialState: DashboardState = {
-  kpis: null, revenueTrend: [], metaFunnel: null, campaigns: [],
+  kpis: null, prevKpis: null, revenueTrend: [], metaFunnel: null, campaigns: [],
   topProducts: [], logistics: [], abandonedCarts: null, health: [],
   reviewsSummary: null, topRatedProducts: [], recentReviews: [],
+  recentOrders: [], reviewsTrend: [], revenueVsSpend: [], netRevenue: null,
   loading: false, error: null,
 };
 

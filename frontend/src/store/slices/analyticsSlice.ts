@@ -4,10 +4,11 @@ import type { AnalyticsState } from '@app/types/analytics';
 import type { RangeState } from './rangeSlice';
 
 const initialState: AnalyticsState = {
-  netRevenue: null, rtoByState: [], codVsPrepaidRto: [], geoRevenue: [],
-  logisticsCosts: [], codCashFlow: null,
-  customerOverview: null, customerSegments: [], topCustomers: [], discountAnalysis: [],
-  marketingTrend: [], attributionGap: null, topSkus: [], moneyStuck: null, channelRevenue: null,
+  rtoByState: [], geoRevenue: [], logisticsCosts: [],
+  customerOverview: null, customerSegments: [], topCustomers: [],
+  marketingTrend: [], attributionGap: null, topSkus: [], channelRevenue: null,
+  creativeFatigue: [],
+  returnReasons: [],
   loadingOperations: false, loadingCustomers: false, loadingMarketing: false, error: null,
 };
 

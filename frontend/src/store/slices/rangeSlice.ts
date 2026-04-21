@@ -1,7 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 
-export type RangePreset = '7d' | '30d' | 'all' | 'custom';
+export type RangePreset = '7d' | '30d' | 'fytd' | 'fqtd' | 'all' | 'custom';
 
 export interface RangeState {
   preset: RangePreset;

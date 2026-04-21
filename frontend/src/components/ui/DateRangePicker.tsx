@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface DateRangePickerProps {
+export interface DateRangePickerProps {
   startDate: string;
   endDate: string;
   onApply: (start: string, end: string) => void;
@@ -10,13 +10,10 @@ interface DateRangePickerProps {
 }
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const DAYS   = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+const DAYS   = ['M','T','W','T','F','S','S'];
 
-type View = 'calendar' | 'months' | 'years';
-
-function toISO(d: Date): string {
-  return d.toISOString().split('T')[0];
+function toYMD(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
 function parseISO(s: string): Date | null {
@@ -25,276 +22,345 @@ function parseISO(s: string): Date | null {
   return isNaN(d.getTime()) ? null : d;
 }
 
-function sameDay(a: Date, b: Date) {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+function fmtDisplay(iso: string): string {
+  const d = parseISO(iso);
+  if (!d) return '';
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function startOfMonth(year: number, month: number) {
-  return new Date(year, month, 1);
+// ── Presets ────────────────────────────────────────────────────────────────
+
+type PresetKey = 'today' | 'yesterday' | '7d' | '30d' | 'this_month' | 'last_month' | 'fqtd' | 'fytd' | 'all';
+
+const PRESETS: { key: PresetKey; label: string }[] = [
+  { key: 'today',      label: 'Today'            },
+  { key: 'yesterday',  label: 'Yesterday'         },
+  { key: '7d',         label: 'Last 7 days'       },
+  { key: '30d',        label: 'Last 30 days'      },
+  { key: 'this_month', label: 'This month'        },
+  { key: 'last_month', label: 'Last month'        },
+  { key: 'fqtd',       label: 'This quarter (FY)' },
+  { key: 'fytd',       label: 'This year (FY)'    },
+  { key: 'all',        label: 'All time'          },
+];
+
+function resolvePreset(key: PresetKey): { start: string; end: string } {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const td = toYMD(today);
+  const shift = (n: number) => { const x = new Date(today); x.setDate(x.getDate() + n); return toYMD(x); };
+
+  switch (key) {
+    case 'today':      return { start: td, end: td };
+    case 'yesterday':  return { start: shift(-1), end: shift(-1) };
+    case '7d':         return { start: shift(-6), end: td };
+    case '30d':        return { start: shift(-29), end: td };
+    case 'this_month': {
+      const s = new Date(today.getFullYear(), today.getMonth(), 1);
+      const e = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      return { start: toYMD(s), end: toYMD(e) };
+    }
+    case 'last_month': {
+      const s = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const e = new Date(today.getFullYear(), today.getMonth(), 0);
+      return { start: toYMD(s), end: toYMD(e) };
+    }
+    case 'fqtd': {
+      const m  = today.getMonth();
+      const fy = m >= 3 ? today.getFullYear() : today.getFullYear() - 1;
+      if (m >= 3 && m <= 5)  return { start: toYMD(new Date(fy,   3, 1)), end: toYMD(new Date(fy,   5, 30)) };
+      if (m >= 6 && m <= 8)  return { start: toYMD(new Date(fy,   6, 1)), end: toYMD(new Date(fy,   8, 30)) };
+      if (m >= 9 && m <= 11) return { start: toYMD(new Date(fy,   9, 1)), end: toYMD(new Date(fy,  11, 31)) };
+      return                          { start: toYMD(new Date(fy+1, 0, 1)), end: toYMD(new Date(fy+1, 2, 31)) };
+    }
+    case 'fytd': {
+      const fy = today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1;
+      return { start: toYMD(new Date(fy, 3, 1)), end: toYMD(new Date(fy+1, 2, 31)) };
+    }
+    case 'all': return { start: '2020-01-01', end: td };
+  }
 }
 
-function daysInMonth(year: number, month: number) {
-  return new Date(year, month + 1, 0).getDate();
+// ── Calendar month grid ────────────────────────────────────────────────────
+
+function buildGrid(year: number, month: number): (number | null)[] {
+  const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
+  const offset   = (firstDay + 6) % 7;               // Monday first
+  const total    = new Date(year, month + 1, 0).getDate();
+  const cells: (number | null)[] = [
+    ...Array<null>(offset).fill(null),
+    ...Array.from({ length: total }, (_, i) => i + 1),
+  ];
+  while (cells.length % 7 !== 0) cells.push(null);
+  return cells;
 }
 
-function getYearRange(centerYear: number): number[] {
-  const start = Math.floor(centerYear / 12) * 12 - 4;
-  return Array.from({ length: 16 }, (_, i) => start + i);
+interface MonthGridProps {
+  year: number;
+  month: number;
+  selStart: string;
+  selEnd: string;
+  hover: string;
+  onDayClick: (iso: string) => void;
+  onDayHover: (iso: string) => void;
 }
+
+function MonthGrid({ year, month, selStart, selEnd, hover, onDayClick, onDayHover }: MonthGridProps) {
+  const cells   = buildGrid(year, month);
+  const todayS  = toYMD(new Date());
+
+  const startD  = parseISO(selStart);
+  const endD    = parseISO(selEnd);
+  const hoverD  = parseISO(hover);
+  const effEnd  = startD && !selEnd && hoverD ? hoverD : endD;
+
+  return (
+    <div className="w-[196px]">
+      <div className="text-center text-[13px] font-semibold text-[#1A1208] mb-3">
+        {MONTHS[month]} {year}
+      </div>
+      <div className="grid grid-cols-7 mb-1.5">
+        {DAYS.map((d, i) => (
+          <div key={i} className="text-center text-[11px] font-semibold text-[#A89880] h-6 flex items-center justify-center">{d}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7">
+        {cells.map((day, idx) => {
+          if (!day) return <div key={`e-${idx}`} className="h-8" />;
+          const iso     = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+          const d       = new Date(year, month, day);
+          const isStart = iso === selStart;
+          const isEnd   = !!selEnd && iso === selEnd;
+          const isToday = iso === todayS;
+          const isEdge  = isStart || isEnd;
+
+          let inRange = false;
+          if (startD && effEnd) {
+            const lo = startD <= effEnd ? startD : effEnd;
+            const hi = startD <= effEnd ? effEnd  : startD;
+            inRange  = d > lo && d < hi;
+          }
+
+          // Rounded edges for range pill
+          const isRangeStart = inRange && (
+            day === 1 ||
+            new Date(year, month, day - 1) < (startD && effEnd ? (startD <= effEnd ? startD : effEnd) : startD!)
+          );
+          const isRangeEnd = inRange && (
+            day === new Date(year, month + 1, 0).getDate() ||
+            new Date(year, month, day + 1) > (startD && effEnd ? (startD <= effEnd ? effEnd : startD) : endD!)
+          );
+
+          return (
+            <div
+              key={iso}
+              className={cn(
+                'h-8 relative flex items-center justify-center',
+                inRange && 'bg-[#FBF0D4]',
+                inRange && isRangeStart && 'rounded-l-full',
+                inRange && isRangeEnd   && 'rounded-r-full',
+                isStart && selEnd && 'rounded-l-full bg-[#FBF0D4]',
+                isEnd   && selStart && 'rounded-r-full bg-[#FBF0D4]',
+              )}
+            >
+              <button
+                onClick={() => onDayClick(iso)}
+                onMouseEnter={() => onDayHover(iso)}
+                onMouseLeave={() => onDayHover('')}
+                className={cn(
+                  'w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-medium transition-all duration-100 z-10 relative',
+                  isEdge  && 'bg-[#B8860B] text-white font-bold',
+                  isToday && !isEdge && 'ring-1 ring-[#B8860B] text-[#B8860B] font-semibold',
+                  !isEdge && inRange && 'text-[#7A5C00]',
+                  !isEdge && !inRange && 'text-[#1A1208] hover:bg-[#F5E9CC]',
+                )}
+              >
+                {day}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Main component ─────────────────────────────────────────────────────────
 
 export function DateRangePicker({ startDate, endDate, onApply, onClose }: DateRangePickerProps) {
-  const today = new Date();
-  const initYear  = today.getFullYear();
-  const initMonth = today.getMonth();
+  const today     = new Date();
+  const defaultDates = startDate && endDate
+    ? { start: startDate, end: endDate }
+    : resolvePreset('30d');
 
-  const [year,     setYear]     = useState(initYear);
-  const [month,    setMonth]    = useState(initMonth);
-  const [view,     setView]     = useState<View>('calendar');
-  const [yearPage, setYearPage] = useState(initYear);
-  const [selStart, setSelStart] = useState<string>(startDate);
-  const [selEnd,   setSelEnd]   = useState<string>(endDate);
-  const [hover,    setHover]    = useState<string>('');
+  const [selStart, setSelStart] = useState(defaultDates.start);
+  const [selEnd,   setSelEnd]   = useState(defaultDates.end);
+  const [hover,    setHover]    = useState('');
+  const [activePreset, setActivePreset] = useState<PresetKey | null>(
+    startDate && endDate ? null : '30d'
+  );
+
+  // Left calendar month (right = left + 1)
+  const [viewYear,  setViewYear]  = useState(() => {
+    const d = parseISO(defaultDates.start);
+    return d ? d.getFullYear() : today.getFullYear();
+  });
+  const [viewMonth, setViewMonth] = useState(() => {
+    const d = parseISO(defaultDates.start);
+    const m = d ? d.getMonth() : today.getMonth();
+    return m === 11 ? 10 : m;
+  });
+
+  const rightMonth = viewMonth === 11 ? 0  : viewMonth + 1;
+  const rightYear  = viewMonth === 11 ? viewYear + 1 : viewYear;
 
   const prevMonth = useCallback(() => {
-    if (month === 0) { setMonth(11); setYear((y) => y - 1); }
-    else setMonth((m) => m - 1);
-  }, [month]);
+    if (viewMonth === 0) { setViewMonth(11); setViewYear((y) => y - 1); }
+    else setViewMonth((m) => m - 1);
+  }, [viewMonth]);
 
   const nextMonth = useCallback(() => {
-    if (month === 11) { setMonth(0); setYear((y) => y + 1); }
-    else setMonth((m) => m + 1);
-  }, [month]);
+    if (viewMonth === 11) { setViewMonth(0); setViewYear((y) => y + 1); }
+    else setViewMonth((m) => m + 1);
+  }, [viewMonth]);
 
   const handleDayClick = useCallback((iso: string) => {
+    setActivePreset(null);
     if (!selStart || (selStart && selEnd)) {
       setSelStart(iso);
       setSelEnd('');
     } else {
-      if (iso < selStart) {
-        setSelEnd(selStart);
-        setSelStart(iso);
-      } else {
-        setSelEnd(iso);
-      }
+      if (iso < selStart) { setSelEnd(selStart); setSelStart(iso); }
+      else setSelEnd(iso);
     }
   }, [selStart, selEnd]);
+
+  const handlePreset = useCallback((key: PresetKey) => {
+    const { start, end } = resolvePreset(key);
+    setSelStart(start);
+    setSelEnd(end);
+    setActivePreset(key);
+    // Navigate calendar to show the start month
+    const d = parseISO(start);
+    if (d) {
+      const m = d.getMonth();
+      setViewYear(d.getFullYear());
+      setViewMonth(m === 11 ? 10 : m);
+    }
+  }, []);
 
   const handleApply = useCallback(() => {
     if (selStart && selEnd) onApply(selStart, selEnd);
   }, [selStart, selEnd, onApply]);
 
-  const handleClear = useCallback(() => {
-    setSelStart('');
-    setSelEnd('');
-  }, []);
-
-  const handleMonthSelect = useCallback((m: number) => {
-    setMonth(m);
-    setView('calendar');
-  }, []);
-
-  const handleYearSelect = useCallback((y: number) => {
-    setYear(y);
-    setView('calendar');
-  }, []);
-
-  // Build calendar grid
-  const firstDay  = startOfMonth(year, month).getDay();
-  const totalDays = daysInMonth(year, month);
-  const cells: (number | null)[] = [
-    ...Array(firstDay).fill(null),
-    ...Array.from({ length: totalDays }, (_, i) => i + 1),
-  ];
-  while (cells.length % 7 !== 0) cells.push(null);
-
-  const startD     = parseISO(selStart);
-  const endD       = parseISO(selEnd);
-  const hoverD     = parseISO(hover);
-  const todayISO   = toISO(today);
-  const effectiveEnd = selStart && !selEnd && hoverD ? hoverD : endD;
-
-  function getDayState(day: number) {
-    const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const d   = new Date(year, month, day);
-    const isStart   = !!startD && sameDay(d, startD);
-    const isEnd     = !!endD   && sameDay(d, endD);
-    const isToday   = iso === todayISO;
-    const isHovered = iso === hover;
-    let inRange = false;
-    if (startD && effectiveEnd) {
-      const lo = startD <= effectiveEnd ? startD : effectiveEnd;
-      const hi = startD <= effectiveEnd ? effectiveEnd : startD;
-      inRange  = d > lo && d < hi;
-    }
-    return { iso, isStart, isEnd, inRange, isToday, isHovered };
-  }
-
   const canApply = !!(selStart && selEnd);
 
-  function fmtLabel(iso: string) {
-    if (!iso) return '—';
-    const d = parseISO(iso);
-    if (!d) return iso;
-    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-  }
-
-  const years = getYearRange(yearPage);
-
   return (
-    <div className="bg-white rounded-2xl border border-[#E8E0D0] shadow-2xl w-[300px] overflow-hidden select-none">
+    <div className="bg-white rounded-2xl border border-[#E8E0D0] shadow-2xl flex overflow-hidden select-none" style={{ width: 580 }}>
 
-      {/* Header bar */}
-      <div className="bg-[#B8860B] px-4 py-3 flex items-center justify-between">
-        <button
-          onClick={view === 'years' ? () => { setYearPage((y) => y - 16); } : prevMonth}
-          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/20 transition-colors text-white"
-        >
-          <ChevronLeft size={14} strokeWidth={2.5} />
-        </button>
-
-        <div className="flex items-center gap-1.5">
-          {/* Month button */}
-          {view !== 'years' && (
-            <button
-              onClick={() => setView(view === 'months' ? 'calendar' : 'months')}
-              className="text-white text-sm font-bold tracking-wide px-1.5 py-0.5 rounded hover:bg-white/20 transition-colors"
-            >
-              {MONTHS[month]}
-            </button>
-          )}
-          {/* Year button */}
+      {/* ── Left sidebar: presets ───────────────────────────────── */}
+      <div className="w-[160px] border-r border-[#F0EBE0] py-2 shrink-0">
+        <p className="text-[9px] font-bold text-[#A89880] uppercase tracking-widest px-4 py-2">Quick select</p>
+        {PRESETS.map(({ key, label }) => (
           <button
-            onClick={() => { setYearPage(year); setView(view === 'years' ? 'calendar' : 'years'); }}
-            className="text-white text-sm font-bold tracking-wide px-1.5 py-0.5 rounded hover:bg-white/20 transition-colors"
+            key={key}
+            onClick={() => handlePreset(key)}
+            className={cn(
+              'w-full text-left px-4 py-2 text-[13px] font-medium transition-colors',
+              activePreset === key
+                ? 'text-[#B8860B] bg-[#FBF0D4] font-semibold'
+                : 'text-[#3D2E1A] hover:bg-[#F5F0E8] hover:text-[#B8860B]',
+            )}
           >
-            {view === 'years' ? `${years[0]}–${years[years.length - 1]}` : year}
+            {label}
+          </button>
+        ))}
+        <div className="border-t border-[#F0EBE0] mt-2 pt-2">
+          <button
+            onClick={() => { setActivePreset(null); setSelStart(''); setSelEnd(''); }}
+            className="w-full text-left px-4 py-2 text-[13px] font-medium text-[#3D2E1A] hover:bg-[#F5F0E8] hover:text-[#B8860B] transition-colors"
+          >
+            Custom range
+          </button>
+        </div>
+      </div>
+
+      {/* ── Right panel: inputs + calendar ─────────────────────── */}
+      <div className="flex flex-col flex-1">
+
+        {/* Date input row */}
+        <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b border-[#F0EBE0]">
+          <div className="flex-1">
+            <p className="text-[10px] font-semibold text-[#A89880] mb-1">Start date</p>
+            <div className={cn(
+              'rounded-lg border px-3 py-2 text-[13px] font-medium min-h-[36px]',
+              selStart ? 'border-[#B8860B] text-[#1A1208]' : 'border-[#E8E0D0] text-[#C4B49E]',
+            )}>
+              {selStart ? fmtDisplay(selStart) : 'Select date'}
+            </div>
+          </div>
+          <div className="text-[#C4B49E] text-lg mt-4">–</div>
+          <div className="flex-1">
+            <p className="text-[10px] font-semibold text-[#A89880] mb-1">End date</p>
+            <div className={cn(
+              'rounded-lg border px-3 py-2 text-[13px] font-medium min-h-[36px]',
+              selEnd ? 'border-[#B8860B] text-[#1A1208]' : 'border-[#E8E0D0] text-[#C4B49E]',
+            )}>
+              {selEnd ? fmtDisplay(selEnd) : 'Select date'}
+            </div>
+          </div>
+        </div>
+
+        {/* Month navigation */}
+        <div className="flex items-center justify-between px-5 pt-3 pb-1">
+          <button
+            onClick={prevMonth}
+            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[#F5E9CC] text-[#8C7B64] transition-colors"
+          >
+            <ChevronLeft size={15} strokeWidth={2} />
+          </button>
+          <div className="flex gap-[28px]">
+            <span className="w-[196px] text-center text-[13px] font-semibold text-[#1A1208]">
+              {MONTHS[viewMonth]} {viewYear}
+            </span>
+            <span className="w-[196px] text-center text-[13px] font-semibold text-[#1A1208]">
+              {MONTHS[rightMonth]} {rightYear}
+            </span>
+          </div>
+          <button
+            onClick={nextMonth}
+            className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[#F5E9CC] text-[#8C7B64] transition-colors"
+          >
+            <ChevronRight size={15} strokeWidth={2} />
           </button>
         </div>
 
-        <button
-          onClick={view === 'years' ? () => { setYearPage((y) => y + 16); } : nextMonth}
-          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/20 transition-colors text-white"
-        >
-          <ChevronRight size={14} strokeWidth={2.5} />
-        </button>
-      </div>
-
-      {/* Selected range summary */}
-      <div className="grid grid-cols-2 divide-x divide-[#F0EBE0] bg-[#FDFAF4] border-b border-[#F0EBE0]">
-        <div className="px-3 py-2 text-center">
-          <p className="text-[9px] font-bold text-[#B8860B] uppercase tracking-widest mb-0.5">From</p>
-          <p className={cn('text-[11px] font-semibold', selStart ? 'text-[#1A1208]' : 'text-[#C4B49E]')}>
-            {selStart ? fmtLabel(selStart) : 'Select date'}
-          </p>
+        {/* Dual calendar */}
+        <div className="flex gap-7 px-5 pb-2">
+          <MonthGrid
+            year={viewYear} month={viewMonth}
+            selStart={selStart} selEnd={selEnd} hover={hover}
+            onDayClick={handleDayClick} onDayHover={setHover}
+          />
+          <MonthGrid
+            year={rightYear} month={rightMonth}
+            selStart={selStart} selEnd={selEnd} hover={hover}
+            onDayClick={handleDayClick} onDayHover={setHover}
+          />
         </div>
-        <div className="px-3 py-2 text-center">
-          <p className="text-[9px] font-bold text-[#B8860B] uppercase tracking-widest mb-0.5">To</p>
-          <p className={cn('text-[11px] font-semibold', selEnd ? 'text-[#1A1208]' : 'text-[#C4B49E]')}>
-            {selEnd ? fmtLabel(selEnd) : 'Select date'}
-          </p>
-        </div>
-      </div>
 
-      {/* Month picker */}
-      {view === 'months' && (
-        <div className="grid grid-cols-3 gap-2 px-4 py-4">
-          {MONTHS_SHORT.map((m, i) => (
-            <button
-              key={m}
-              onClick={() => handleMonthSelect(i)}
-              className={cn(
-                'py-2 rounded-lg text-xs font-semibold transition-colors',
-                i === month
-                  ? 'bg-[#B8860B] text-white'
-                  : 'text-[#1A1208] hover:bg-[#F5E9CC]',
-              )}
-            >
-              {m}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Year picker */}
-      {view === 'years' && (
-        <div className="grid grid-cols-4 gap-2 px-4 py-4">
-          {years.map((y) => (
-            <button
-              key={y}
-              onClick={() => handleYearSelect(y)}
-              className={cn(
-                'py-2 rounded-lg text-xs font-semibold transition-colors',
-                y === year
-                  ? 'bg-[#B8860B] text-white'
-                  : 'text-[#1A1208] hover:bg-[#F5E9CC]',
-              )}
-            >
-              {y}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Calendar grid */}
-      {view === 'calendar' && (
-        <>
-          <div className="grid grid-cols-7 px-3 pt-3 pb-1">
-            {DAYS.map((d) => (
-              <div key={d} className="text-center text-[10px] font-bold text-[#C4B49E] tracking-wide">
-                {d}
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-7 px-3 pb-2 gap-y-0.5">
-            {cells.map((day, idx) => {
-              if (!day) return <div key={`e-${idx}`} />;
-              const { iso, isStart, isEnd, inRange, isToday } = getDayState(day);
-              const isEdge = isStart || isEnd;
-              return (
-                <button
-                  key={iso}
-                  onClick={() => handleDayClick(iso)}
-                  onMouseEnter={() => setHover(iso)}
-                  onMouseLeave={() => setHover('')}
-                  className={cn(
-                    'relative h-8 w-full flex items-center justify-center text-[12px] font-medium transition-all duration-100 rounded-lg',
-                    inRange && 'bg-[#F5E9CC] text-[#7A5C00] rounded-none',
-                    isEdge && 'bg-[#B8860B] text-white rounded-lg font-bold z-10',
-                    isToday && !isEdge && 'ring-1 ring-[#B8860B] ring-inset',
-                    !isEdge && !inRange && 'hover:bg-[#F5E9CC] text-[#1A1208]',
-                    inRange && 'hover:bg-[#EDD99E]',
-                  )}
-                >
-                  {day}
-                  {isToday && !isEdge && (
-                    <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#B8860B]" />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </>
-      )}
-
-      {/* Footer */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-[#F0EBE0] bg-[#FDFAF4]">
-        <button
-          onClick={handleClear}
-          className="text-xs font-semibold text-[#8C7B64] hover:text-[#B8860B] transition-colors"
-        >
-          Clear
-        </button>
-        <div className="flex gap-2">
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-[#F0EBE0] mt-auto">
           <button
             onClick={onClose}
-            className="px-3 py-1.5 text-xs font-semibold text-[#8C7B64] hover:text-[#1A1208] transition-colors"
+            className="px-4 py-2 text-[13px] font-semibold text-[#8C7B64] hover:text-[#1A1208] transition-colors rounded-lg hover:bg-[#F5F0E8]"
           >
             Cancel
           </button>
           <button
             onClick={handleApply}
             disabled={!canApply}
-            className="px-4 py-1.5 text-xs font-bold bg-[#B8860B] text-white rounded-lg disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#9A720A] transition-colors"
+            className="px-5 py-2 text-[13px] font-bold bg-[#B8860B] text-white rounded-lg disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#9A720A] transition-colors"
           >
             Apply
           </button>

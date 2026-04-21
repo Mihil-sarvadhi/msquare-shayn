@@ -4,16 +4,23 @@ import db from '../config/database';
 const router = Router();
 
 function getDateRange(req: Request): { since: string; until: string } {
-  const { range } = req.query as { range?: string };
-  const end = new Date();
+  const { range, startDate, endDate } = req.query as { range?: string; startDate?: string; endDate?: string };
+  const today = new Date().toISOString().split('T')[0];
+
+  if (startDate && endDate) {
+    return { since: startDate, until: endDate };
+  }
+
   const start = new Date();
   if (range === '7d') start.setDate(start.getDate() - 7);
   else if (range === '30d') start.setDate(start.getDate() - 30);
   else if (range === 'mtd') start.setDate(1);
+  else if (range === 'all') return { since: '2020-01-01', until: today };
   else start.setDate(start.getDate() - 30);
+
   return {
     since: start.toISOString().split('T')[0],
-    until: end.toISOString().split('T')[0],
+    until: today,
   };
 }
 
@@ -189,12 +196,24 @@ router.get('/logistics', async (req: Request, res: Response) => {
   try {
     const { rows } = await db.query(
       `SELECT
-        current_status,
-        current_status_code,
+        CASE
+          WHEN current_status_code = 'DL' THEN 'Delivered'
+          WHEN current_status_code LIKE 'RT%' THEN 'RTO'
+          WHEN current_status_code = 'UD' AND current_status ILIKE '%Out For Delivery%' THEN 'Out For Delivery'
+          WHEN current_status ILIKE '%Undelivered%' THEN 'NDR'
+          ELSE 'In Transit'
+        END AS current_status,
+        CASE
+          WHEN current_status_code = 'DL' THEN 'delivered'
+          WHEN current_status_code LIKE 'RT%' THEN 'rto'
+          WHEN current_status_code = 'UD' AND current_status ILIKE '%Out For Delivery%' THEN 'out_for_delivery'
+          WHEN current_status ILIKE '%Undelivered%' THEN 'ndr'
+          ELSE 'in_transit'
+        END AS current_status_code,
         COUNT(*) AS count
        FROM ithink_shipments
        WHERE order_date BETWEEN $1 AND $2
-       GROUP BY current_status, current_status_code
+       GROUP BY 1, 2
        ORDER BY count DESC`,
       [since, until],
     );
@@ -288,7 +307,10 @@ router.get('/top-rated-products', async (_req: Request, res: Response) => {
   }
 });
 
-router.get('/recent-reviews', async (_req: Request, res: Response) => {
+router.get('/recent-reviews', async (req: Request, res: Response) => {
+  const { since, until } = getDateRange(req);
+  const limitParam = parseInt((req.query.limit as string) || '50', 10);
+  const limit = Math.min(Math.max(1, limitParam), 1000);
   try {
     const { rows } = await db.query(
       `SELECT
@@ -299,8 +321,10 @@ router.get('/recent-reviews', async (_req: Request, res: Response) => {
          LIMIT 1) AS product_title
        FROM judgeme_reviews r
        WHERE r.published = TRUE
+         AND r.created_at BETWEEN $1 AND $2
        ORDER BY r.created_at DESC
-       LIMIT 10`,
+       LIMIT $3`,
+      [since, until, limit],
     );
     res.json(rows);
   } catch (err) {

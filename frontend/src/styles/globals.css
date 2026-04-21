@@ -1,8 +1,35 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --bg: #fafaf7;
+  --surface: #ffffff;
+  --surface-2: #f5f3ee;
+  --border: #e8e6df;
+  --border-strong: #d4d1c7;
+  --text: #1a1814;
+  --text-muted: #6b6659;
+  --text-subtle: #a39f92;
+  --accent: #8b6f3a;
+  --accent-soft: #f5efe1;
+  --accent-dark: #6b5529;
+  --pos: #2d7a5f;
+  --pos-soft: #e8f3ed;
+  --neg: #b8433a;
+  --neg-soft: #fbe9e7;
+  --warn: #c4871f;
+  --warn-soft: #fdf5e3;
+  --ai: #5b4299;
+  --ai-soft: #ece7f7;
+}
+
+@keyframes beacon-ring {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
 
 @layer base {
   html {
@@ -11,5 +38,8 @@
   body {
     @apply bg-ivory text-ink antialiased;
     font-family: 'DM Sans', sans-serif;
+  }
+  .font-mono {
+    font-family: 'DM Mono', monospace;
   }
 }

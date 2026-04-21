@@ -65,12 +65,12 @@ export interface DiscountRow {
 
 export interface MarketingTrendRow {
   date: string;
-  spend: string;
-  purchases: string;
-  purchase_value: string;
-  roas: string;
-  ctr: string;
-  cpp: string;
+  spend: string | null;
+  purchases: string | null;
+  purchase_value: string | null;
+  roas: string | null;
+  ctr: string | null;
+  cpp: string | null;
 }
 
 export interface AttributionGapRow {
@@ -98,4 +98,43 @@ export interface ChannelRevenueRow {
   shopify_revenue: string;
   meta_revenue: string;
   organic_revenue: string;
+}
+
+export interface CourierScorecardRow {
+  courier: string;
+  volume: string;
+  split_pct: string;
+  rto_rate: string;
+  avg_sla_days: string;
+  cost_per_shipment: string;
+}
+
+export interface SlaByZoneRow {
+  zone: string;
+  median_days: string;
+  p95_days: string;
+  total_shipments: string;
+}
+
+export interface CreativeFatigueRow {
+  date: string;
+  frequency: string | null;
+  ctr: string | null;
+}
+
+export interface CohortRetentionRow {
+  cohort_month: string;
+  cohort_size: string;
+  m0: string;
+  m1: string | null;
+  m2: string | null;
+  m3: string | null;
+  m4: string | null;
+  m5: string | null;
+}
+
+export interface ReturnReasonRow {
+  reason: string;
+  count: string;
+  pct: string;
 }

@@ -15,5 +15,7 @@ router.get('/reviews-trend', controller.reviewsTrendHandler);
 router.get('/top-rated-products', controller.topRatedProductsHandler);
 router.get('/recent-reviews', controller.recentReviewsHandler);
 router.get('/all-reviews', controller.allReviewsHandler);
+router.get('/recent-orders', controller.recentOrdersHandler);
+router.get('/revenue-vs-spend', controller.revenueVsSpendHandler);
 
 export default router;

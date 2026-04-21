@@ -13,6 +13,8 @@ import type {
   TopRatedProductRow,
   RecentReviewRow,
   AllReviewsResult,
+  RecentOrderRow,
+  RevenueVsSpendRow,
 } from './dashboard.types';
 
 export async function getKpis(since: string, until: string): Promise<KpiResult> {
@@ -131,8 +133,9 @@ export async function getMetaFunnel(since: string, until: string): Promise<MetaF
 export async function getCampaigns(since: string, until: string): Promise<CampaignRow[]> {
   return sequelize.query<CampaignRow>(
     `SELECT campaign_id, campaign_name, objective,
-            SUM(spend) AS spend, SUM(impressions) AS impressions, SUM(clicks) AS clicks,
-            SUM(purchases) AS purchases, SUM(purchase_value) AS purchase_value,
+            SUM(spend) AS spend, SUM(impressions) AS impressions, SUM(reach) AS reach,
+            SUM(clicks) AS clicks, SUM(purchases) AS purchases,
+            SUM(purchase_value) AS purchase_value,
             CASE WHEN SUM(spend) > 0 THEN SUM(purchase_value) / SUM(spend) ELSE 0 END AS roas
      FROM meta_daily_insights WHERE date BETWEEN :since AND :until
      GROUP BY campaign_id, campaign_name, objective ORDER BY spend DESC LIMIT 20`,
@@ -156,9 +159,26 @@ export async function getTopProducts(since: string, until: string): Promise<TopP
 
 export async function getLogistics(since: string, until: string): Promise<LogisticsRow[]> {
   return sequelize.query<LogisticsRow>(
-    `SELECT current_status, current_status_code, COUNT(*) AS count
-     FROM ithink_shipments WHERE order_date BETWEEN :since AND :until
-     GROUP BY current_status, current_status_code ORDER BY count DESC`,
+    `SELECT
+       CASE
+         WHEN current_status_code = 'DL' THEN 'Delivered'
+         WHEN current_status_code LIKE 'RT%' THEN 'RTO'
+         WHEN current_status_code = 'UD' AND current_status ILIKE '%Out For Delivery%' THEN 'Out For Delivery'
+         WHEN current_status ILIKE '%Undelivered%' THEN 'NDR'
+         ELSE 'In Transit'
+       END AS current_status,
+       CASE
+         WHEN current_status_code = 'DL' THEN 'delivered'
+         WHEN current_status_code LIKE 'RT%' THEN 'rto'
+         WHEN current_status_code = 'UD' AND current_status ILIKE '%Out For Delivery%' THEN 'out_for_delivery'
+         WHEN current_status ILIKE '%Undelivered%' THEN 'ndr'
+         ELSE 'in_transit'
+       END AS current_status_code,
+       COUNT(*) AS count
+     FROM ithink_shipments
+     WHERE order_date BETWEEN :since AND :until
+     GROUP BY 1, 2
+     ORDER BY count DESC`,
     { type: QueryTypes.SELECT, replacements: { since, until } },
   );
 }
@@ -217,7 +237,7 @@ export async function getTopRatedProducts(
      WHERE r.published = TRUE AND r.created_at BETWEEN :since AND :until
      GROUP BY p.product_id, p.handle, p.title
      HAVING COUNT(r.review_id) > 0
-     ORDER BY average_rating DESC, COUNT(r.review_id) DESC LIMIT 5`,
+     ORDER BY average_rating DESC, COUNT(r.review_id) DESC LIMIT 20`,
     { type: QueryTypes.SELECT, replacements: { since, until } },
   );
 }
@@ -229,7 +249,7 @@ export async function getRecentReviews(since: string, until: string): Promise<Re
             (SELECT p.title FROM judgeme_products p
              WHERE p.external_id = r.product_id::text LIMIT 1) AS product_title
      FROM judgeme_reviews r WHERE r.published = TRUE AND r.created_at BETWEEN :since AND :until
-     ORDER BY r.created_at DESC LIMIT 10`,
+     ORDER BY r.created_at DESC LIMIT 50`,
     { type: QueryTypes.SELECT, replacements: { since, until } },
   );
 }
@@ -273,4 +293,40 @@ export async function getAllReviews(
   ]);
 
   return { reviews, total: parseInt(countRows[0].total, 10), page, limit };
+}
+
+export async function getRecentOrders(): Promise<RecentOrderRow[]> {
+  return sequelize.query<RecentOrderRow>(
+    `SELECT order_name, revenue, customer_city, created_at
+     FROM shopify_orders
+     WHERE financial_status != 'voided'
+     ORDER BY created_at DESC
+     LIMIT 5`,
+    { type: QueryTypes.SELECT },
+  );
+}
+
+export async function getRevenueVsSpend(
+  since: string,
+  until: string,
+): Promise<RevenueVsSpendRow[]> {
+  return sequelize.query<RevenueVsSpendRow>(
+    `SELECT d.date::text,
+            COALESCE(o.revenue, '0') AS revenue,
+            COALESCE(m.ad_spend, '0') AS ad_spend
+     FROM generate_series(:since::date, :until::date, '1 day'::interval) AS d(date)
+     LEFT JOIN (
+       SELECT created_at::date AS date, SUM(revenue)::text AS revenue
+       FROM shopify_orders
+       WHERE financial_status != 'voided'
+       GROUP BY created_at::date
+     ) o ON o.date = d.date
+     LEFT JOIN (
+       SELECT date, SUM(spend)::text AS ad_spend
+       FROM meta_daily_insights
+       GROUP BY date
+     ) m ON m.date = d.date
+     ORDER BY d.date ASC`,
+    { type: QueryTypes.SELECT, replacements: { since, until } },
+  );
 }

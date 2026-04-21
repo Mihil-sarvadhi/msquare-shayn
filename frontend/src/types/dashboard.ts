@@ -14,7 +14,7 @@ export interface MetaFunnel {
 }
 export interface Campaign {
   campaign_id: string; campaign_name: string; objective: string;
-  spend: number; impressions: number; clicks: number;
+  spend: number; impressions: number; reach: number; clicks: number;
   purchases: number; purchase_value: number; roas: number;
 }
 export interface Product {
@@ -44,8 +44,35 @@ export interface ConnectorHealth {
   status: string; error_message: string | null; records_synced: number;
 }
 
+export interface RecentOrder {
+  order_name: string;
+  revenue: number;
+  customer_city: string;
+  created_at: string;
+}
+
+export interface ReviewsTrendItem {
+  date: string;
+  review_count: number;
+  avg_rating: number;
+}
+
+export interface RevenueVsSpendItem {
+  date: string;
+  revenue: number;
+  ad_spend: number;
+}
+
+export interface NetRevenueSnapshot {
+  gross_revenue: number;
+  logistics_cost: number;
+  net_revenue: number;
+  rto_waste: number;
+}
+
 export interface DashboardState {
   kpis: KPIs | null;
+  prevKpis: KPIs | null;
   revenueTrend: RevenueTrendItem[];
   metaFunnel: MetaFunnel | null;
   campaigns: Campaign[];
@@ -56,6 +83,10 @@ export interface DashboardState {
   reviewsSummary: ReviewsSummary | null;
   topRatedProducts: TopRatedProduct[];
   recentReviews: RecentReview[];
+  recentOrders: RecentOrder[];
+  reviewsTrend: ReviewsTrendItem[];
+  revenueVsSpend: RevenueVsSpendItem[];
+  netRevenue: NetRevenueSnapshot | null;
   loading: boolean;
   error: string | null;
 }

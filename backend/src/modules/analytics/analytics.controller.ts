@@ -132,3 +132,42 @@ export async function channelRevenueHandler(req: Request, res: Response): Promis
     handleErrorResponse(res, errOpts(err));
   }
 }
+export async function courierScorecardHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const { since, until } = resolve(req);
+    handleApiResponse(res, { data: await service.getCourierScorecard(since, until) });
+  } catch (err) {
+    handleErrorResponse(res, errOpts(err));
+  }
+}
+export async function slaByZoneHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const { since, until } = resolve(req);
+    handleApiResponse(res, { data: await service.getSlaByZone(since, until) });
+  } catch (err) {
+    handleErrorResponse(res, errOpts(err));
+  }
+}
+export async function creativeFatigueHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const { since, until } = resolve(req);
+    handleApiResponse(res, { data: await service.getCreativeFatigue(since, until) });
+  } catch (err) {
+    handleErrorResponse(res, errOpts(err));
+  }
+}
+export async function cohortRetentionHandler(_req: Request, res: Response): Promise<void> {
+  try {
+    handleApiResponse(res, { data: await service.getCohortRetention() });
+  } catch (err) {
+    handleErrorResponse(res, errOpts(err));
+  }
+}
+export async function returnReasonsHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const { since, until } = resolve(req);
+    handleApiResponse(res, { data: await service.getReturnReasons(since, until) });
+  } catch (err) {
+    handleErrorResponse(res, errOpts(err));
+  }
+}

@@ -119,3 +119,20 @@ export async function allReviewsHandler(req: Request, res: Response): Promise<vo
     handleErrorResponse(res, errOpts(err));
   }
 }
+
+export async function recentOrdersHandler(_req: Request, res: Response): Promise<void> {
+  try {
+    handleApiResponse(res, { data: await service.getRecentOrders() });
+  } catch (err) {
+    handleErrorResponse(res, errOpts(err));
+  }
+}
+
+export async function revenueVsSpendHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const { since, until } = resolve(req);
+    handleApiResponse(res, { data: await service.getRevenueVsSpend(since, until) });
+  } catch (err) {
+    handleErrorResponse(res, errOpts(err));
+  }
+}

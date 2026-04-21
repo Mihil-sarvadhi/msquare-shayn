@@ -1,19 +1,5 @@
-export interface NetRevenue {
-  gross_revenue: number;
-  logistics_cost: number;
-  net_revenue: number;
-  rto_waste: number;
-}
-
 export interface RtoByStateItem {
   state: string;
-  total: number;
-  rto_count: number;
-  rto_rate: number;
-}
-
-export interface CodVsPrepaidItem {
-  payment_mode: string;
   total: number;
   rto_count: number;
   rto_rate: number;
@@ -28,12 +14,6 @@ export interface GeoRevenueItem {
 export interface LogisticsCosts {
   status: string;
   count: number;
-}
-
-export interface CodCashFlow {
-  cod_generated: number;
-  cod_remitted: number;
-  pending: number;
 }
 
 export interface CustomerOverview {
@@ -59,22 +39,14 @@ export interface TopCustomerItem {
   last_order_date: string;
 }
 
-export interface DiscountItem {
-  discount_code: string;
-  orders: number;
-  revenue: number;
-  aov: number;
-  pct_of_total: number;
-}
-
 export interface MarketingTrendItem {
   date: string;
-  spend: number;
-  purchases: number;
-  purchase_value: number;
-  roas: number;
-  ctr: number;
-  cpp: number;
+  spend: number | null;
+  purchases: number | null;
+  purchase_value: number | null;
+  roas: number | null;
+  ctr: number | null;
+  cpp: number | null;
 }
 
 export interface AttributionGap {
@@ -93,6 +65,65 @@ export interface TopSkuItem {
   revenue: number;
 }
 
+export interface ChannelRevenue {
+  shopify_revenue: number;
+  meta_revenue: number;
+  organic_revenue: number;
+}
+
+export interface CreativeFatigueItem {
+  date: string;
+  frequency: number | null;
+  ctr: number | null;
+}
+
+export interface AnalyticsState {
+  rtoByState: RtoByStateItem[];
+  geoRevenue: GeoRevenueItem[];
+  logisticsCosts: LogisticsCosts[];
+  customerOverview: CustomerOverview | null;
+  customerSegments: CustomerSegmentItem[];
+  topCustomers: TopCustomerItem[];
+  marketingTrend: MarketingTrendItem[];
+  attributionGap: AttributionGap | null;
+  topSkus: TopSkuItem[];
+  channelRevenue: ChannelRevenue | null;
+  creativeFatigue: CreativeFatigueItem[];
+returnReasons: ReturnReasonItem[];
+  loadingOperations: boolean;
+  loadingCustomers: boolean;
+  loadingMarketing: boolean;
+  error: string | null;
+}
+
+
+export interface ReturnReasonItem {
+  reason: string;
+  count: number;
+  pct: number;
+}
+
+export interface DiscountItem {
+  discount_code: string;
+  orders: number;
+  pct_of_total: number;
+  revenue: number;
+  aov: number;
+}
+
+export interface CodCashFlow {
+  cod_generated: number;
+  cod_remitted: number;
+  pending: number;
+}
+
+export interface CodVsPrepaidItem {
+  payment_mode: string;
+  total: number;
+  rto_count: number;
+  rto_rate: number;
+}
+
 export interface MoneyStuck {
   rto_count: number;
   rto_order_value: number;
@@ -100,30 +131,9 @@ export interface MoneyStuck {
   total_stuck: number;
 }
 
-export interface ChannelRevenue {
-  shopify_revenue: number;
-  meta_revenue: number;
-  organic_revenue: number;
-}
-
-export interface AnalyticsState {
-  netRevenue: NetRevenue | null;
-  rtoByState: RtoByStateItem[];
-  codVsPrepaidRto: CodVsPrepaidItem[];
-  geoRevenue: GeoRevenueItem[];
-  logisticsCosts: LogisticsCosts[];
-  codCashFlow: CodCashFlow | null;
-  customerOverview: CustomerOverview | null;
-  customerSegments: CustomerSegmentItem[];
-  topCustomers: TopCustomerItem[];
-  discountAnalysis: DiscountItem[];
-  marketingTrend: MarketingTrendItem[];
-  attributionGap: AttributionGap | null;
-  topSkus: TopSkuItem[];
-  moneyStuck: MoneyStuck | null;
-  channelRevenue: ChannelRevenue | null;
-  loadingOperations: boolean;
-  loadingCustomers: boolean;
-  loadingMarketing: boolean;
-  error: string | null;
+export interface NetRevenue {
+  gross_revenue: number;
+  logistics_cost: number;
+  net_revenue: number;
+  rto_waste: number;
 }
