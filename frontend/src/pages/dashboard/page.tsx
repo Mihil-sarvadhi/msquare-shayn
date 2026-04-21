@@ -83,24 +83,23 @@ export function DashboardPage() {
           </div>
         </div>
 
-        {/* Row 3 — Campaigns (scrollable, capped) + Order Status + Connector Status */}
+        {/* Row 3 — Campaigns (scrollable, capped) + Order Status + COD Split */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Campaign table — flex col so inner scroll works; capped at 520px */}
-          <div className="lg:col-span-2 bg-white rounded-xl border border-parch shadow-card p-4 flex flex-col"
-            style={{ maxHeight: 390 }}>
+          {/* Campaign table — fixed height on desktop so grid row = exactly that height */}
+          <div className="lg:col-span-2 bg-white rounded-xl border border-parch shadow-card p-4 flex flex-col lg:h-[430px]">
             <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3 shrink-0">
               Meta Campaigns Performance
             </h3>
             <CampaignTable campaigns={campaigns} loading={loading} />
           </div>
 
-          {/* Right column — Order Status on top, COD vs Prepaid fills remainder */}
-          <div className="flex flex-col gap-4" style={{ maxHeight: 380 }}>
+          {/* Right column — grid stretch makes this exactly 430px on desktop */}
+          <div className="flex flex-col gap-3 lg:h-full">
             <div className="bg-white rounded-xl border border-parch shadow-card p-4 shrink-0">
               <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3">Order Status</h3>
               <OrderStatus kpis={kpis} loading={loading} />
             </div>
-            <div className="bg-white rounded-xl border border-parch shadow-card p-4 flex-1 flex flex-col">
+            <div className="bg-white rounded-xl border border-parch shadow-card p-4 flex-1">
               <h3 className="font-semibold text-sm uppercase tracking-wide text-muted mb-3">COD vs Prepaid</h3>
               <CODSplit kpis={kpis} loading={loading} />
             </div>

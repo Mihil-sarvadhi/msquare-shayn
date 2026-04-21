@@ -73,7 +73,7 @@ export function AuthPage() {
         <div className="logo-animate flex flex-col items-center mb-8">
           <div className="relative mb-4">
             <div className="absolute inset-0 rounded-2xl bg-[#B8860B]/20 blur-md scale-110" />
-            <img src="/favicon.svg" alt="SHAYN" className="relative h-16 w-16 rounded-2xl" />
+            <img src="/shayn-logo.jpg" alt="SHAYN" className="relative h-16 w-16 rounded-2xl object-contain bg-white border border-[#D4AF37]/50 shadow-sm" />
           </div>
           <p className="shimmer-text font-bold text-xl tracking-[0.3em] uppercase">SHAYN</p>
           <p className="text-[#8C7B64] text-[10px] tracking-[0.3em] uppercase mt-1">Management Information System</p>
@@ -144,11 +144,11 @@ export function AuthPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full mt-1 py-3 rounded-xl bg-[#1A1208] text-[#D4A017] text-sm font-bold tracking-widest uppercase hover:bg-[#2C1E0A] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+            className="w-full mt-1 py-3 rounded-xl bg-gradient-to-r from-[#B8860B] via-[#D4A017] to-[#B8860B] bg-[length:200%_100%] text-white text-sm font-bold tracking-widest uppercase shadow-md shadow-[#B8860B]/30 hover:shadow-lg hover:shadow-[#B8860B]/40 hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-[#B8860B]/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
-                <div className="w-4 h-4 rounded-full border-2 border-[#D4A017]/30 border-t-[#D4A017] animate-spin" />
+                <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
                 Signing in…
               </>
             ) : (

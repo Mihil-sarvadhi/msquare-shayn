@@ -158,8 +158,8 @@ export function TopNav() {
   return (
     <header className="bg-white border-b border-[#F0EBE0] px-4 sm:px-6 flex items-center gap-4 h-[52px] shrink-0">
       {/* Logo */}
-      <div className="flex items-center gap-2 shrink-0">
-        <img src="/favicon.svg" alt="SHAYN" className="h-10 w-10 rounded-xl" />
+      <div className="flex items-center gap-1.5 shrink-0">
+        <img src="/shayn-logo.jpg" alt="SHAYN" className="h-9 w-9 rounded-xl object-contain bg-white border border-[#D4AF37]/50 shadow-sm" />
         <div className="flex items-baseline gap-1">
           <span className="text-[#1A1208] font-bold text-[14px] tracking-wider">SHAYN</span>
           <span className="text-[10px] text-[#B8860B] uppercase tracking-widest font-semibold">MIS</span>

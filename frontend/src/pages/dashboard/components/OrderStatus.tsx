@@ -4,7 +4,7 @@ import { formatNum } from '@utils/formatters';
 
 interface Props { kpis: KPIs | null; loading: boolean; }
 
-const COLORS = ['#C9991A', '#E07B3A', '#C0394B'];
+const COLORS = ['#C9991A', '#E07B3A', '#C0394B', '#9E9E9E'];
 const TRACK  = '#F0EBE0';
 
 export default function OrderStatus({ kpis, loading }: Props) {
@@ -13,9 +13,10 @@ export default function OrderStatus({ kpis, loading }: Props) {
 
   const fulfilled = Math.max(0, kpis.orders - (kpis.ndr + kpis.rto));
   const items = [
-    { name: 'Fulfilled',   value: fulfilled },
-    { name: 'In Transit',  value: kpis.ofd  },
-    { name: 'RTO',         value: kpis.rto  },
+    { name: 'Fulfilled',   value: fulfilled             },
+    { name: 'In Transit',  value: kpis.ofd              },
+    { name: 'RTO',         value: kpis.rto              },
+    { name: 'Cancelled',   value: kpis.cancelledOrders  },
   ].filter((d) => d.value > 0);
 
   const total = items.reduce((s, d) => s + d.value, 0);

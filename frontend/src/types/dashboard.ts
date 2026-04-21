@@ -4,7 +4,7 @@ export interface KPIs {
   adSpend: number; impressions: number; clicks: number;
   purchases: number; purchaseValue: number; roas: number;
   totalShipments: number; delivered: number; rto: number;
-  ofd: number; ndr: number; rtoRate: number;
+  ofd: number; ndr: number; rtoRate: number; cancelledOrders: number;
 }
 
 export interface RevenueTrendItem { date: string; revenue: number; orders: number; }

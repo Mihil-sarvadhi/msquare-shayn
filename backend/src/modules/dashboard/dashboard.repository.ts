@@ -24,17 +24,18 @@ export async function getKpis(since: string, until: string): Promise<KpiResult> 
       unique_customers: string;
       cod_orders: string;
       prepaid_orders: string;
+      cancelled_orders: string;
     }>(
       `SELECT
-        COALESCE(SUM(revenue), 0) AS total_revenue,
-        COUNT(*) AS total_orders,
-        COALESCE(AVG(revenue), 0) AS aov,
-        COUNT(DISTINCT customer_id) AS unique_customers,
-        SUM(CASE WHEN payment_mode = 'COD' THEN 1 ELSE 0 END) AS cod_orders,
-        SUM(CASE WHEN payment_mode = 'Prepaid' THEN 1 ELSE 0 END) AS prepaid_orders
+        COALESCE(SUM(CASE WHEN financial_status != 'voided' THEN revenue ELSE 0 END), 0) AS total_revenue,
+        COUNT(CASE WHEN financial_status != 'voided' THEN 1 END) AS total_orders,
+        COALESCE(AVG(CASE WHEN financial_status != 'voided' THEN revenue END), 0) AS aov,
+        COUNT(DISTINCT CASE WHEN financial_status != 'voided' THEN customer_id END) AS unique_customers,
+        SUM(CASE WHEN payment_mode = 'COD' AND financial_status != 'voided' THEN 1 ELSE 0 END) AS cod_orders,
+        SUM(CASE WHEN payment_mode = 'Prepaid' AND financial_status != 'voided' THEN 1 ELSE 0 END) AS prepaid_orders,
+        COUNT(CASE WHEN financial_status = 'voided' THEN 1 END) AS cancelled_orders
        FROM shopify_orders
-       WHERE created_at::date BETWEEN :since AND :until
-         AND financial_status != 'voided'`,
+       WHERE created_at::date BETWEEN :since AND :until`,
       { type: QueryTypes.SELECT, replacements: { since, until } },
     ),
     sequelize.query<{
@@ -102,6 +103,7 @@ export async function getKpis(since: string, until: string): Promise<KpiResult> 
     ofd: parseInt(i.ofd, 10),
     ndr: parseInt(i.ndr, 10),
     rtoRate: parseFloat(rtoRate),
+    cancelledOrders: parseInt(s.cancelled_orders, 10),
   };
 }
 
@@ -161,13 +163,16 @@ export async function getLogistics(since: string, until: string): Promise<Logist
   );
 }
 
-export async function getAbandonedCarts(since: string, until: string): Promise<AbandonedCartsRow> {
+export async function getAbandonedCarts(
+  _since: string,
+  _until: string,
+): Promise<AbandonedCartsRow> {
   const rows = await sequelize.query<AbandonedCartsRow>(
     `SELECT COUNT(*) AS count, COALESCE(SUM(cart_value), 0) AS total_value,
             COALESCE(AVG(cart_value), 0) AS avg_value
      FROM shopify_abandoned_checkouts
-     WHERE created_at::date BETWEEN :since AND :until AND recovered = FALSE`,
-    { type: QueryTypes.SELECT, replacements: { since, until } },
+     WHERE recovered = FALSE`,
+    { type: QueryTypes.SELECT, replacements: {} },
   );
   return rows[0];
 }
@@ -208,7 +213,7 @@ export async function getTopRatedProducts(
             ROUND(AVG(r.rating)::numeric, 2) AS average_rating,
             COUNT(r.review_id) AS reviews_count
      FROM judgeme_products p
-     JOIN judgeme_reviews r ON r.product_external_id = p.external_id OR r.product_handle = p.handle
+     JOIN judgeme_reviews r ON r.product_id::text = p.external_id
      WHERE r.published = TRUE AND r.created_at BETWEEN :since AND :until
      GROUP BY p.product_id, p.handle, p.title
      HAVING COUNT(r.review_id) > 0
@@ -222,7 +227,7 @@ export async function getRecentReviews(since: string, until: string): Promise<Re
     `SELECT r.review_id, r.rating, r.title, r.body, r.reviewer_name,
             r.created_at, r.has_photos, r.verified, r.picture_urls,
             (SELECT p.title FROM judgeme_products p
-             WHERE p.external_id = r.product_external_id OR p.handle = r.product_handle LIMIT 1) AS product_title
+             WHERE p.external_id = r.product_id::text LIMIT 1) AS product_title
      FROM judgeme_reviews r WHERE r.published = TRUE AND r.created_at BETWEEN :since AND :until
      ORDER BY r.created_at DESC LIMIT 10`,
     { type: QueryTypes.SELECT, replacements: { since, until } },
@@ -257,7 +262,7 @@ export async function getAllReviews(
       `SELECT r.review_id, r.rating, r.title, r.body, r.reviewer_name,
               r.created_at, r.has_photos, r.verified, r.picture_urls,
               (SELECT p.title FROM judgeme_products p
-               WHERE p.external_id = r.product_external_id OR p.handle = r.product_handle LIMIT 1) AS product_title
+               WHERE p.external_id = r.product_id::text LIMIT 1) AS product_title
        FROM judgeme_reviews r WHERE ${where} ORDER BY r.created_at DESC LIMIT :limit OFFSET :offset`,
       { type: QueryTypes.SELECT, replacements },
     ),

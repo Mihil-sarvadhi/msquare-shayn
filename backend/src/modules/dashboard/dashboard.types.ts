@@ -22,6 +22,7 @@ export interface KpiResult {
   ofd: number;
   ndr: number;
   rtoRate: number;
+  cancelledOrders: number;
 }
 
 export interface RevenueTrendRow {
