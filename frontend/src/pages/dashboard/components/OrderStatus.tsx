@@ -1,4 +1,4 @@
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { KPIs } from '@app/types/dashboard';
 import { formatNum } from '@utils/formatters';
 
@@ -43,19 +43,6 @@ export default function OrderStatus({ kpis, loading }: Props) {
                   : <Cell key={i} fill={COLORS[i % COLORS.length]} />
               )}
             </Pie>
-            <Tooltip
-              content={({ payload }) => {
-                const valid = payload?.filter((p) => p.name !== '__gap');
-                if (!valid?.length) return null;
-                return (
-                  <div style={{ fontSize: 11, borderRadius: 8, border: '1px solid #F0EBE0', background: '#fff', padding: '4px 8px' }}>
-                    {valid.map((p) => (
-                      <div key={p.name}><span style={{ color: p.payload.fill }}>{p.name}: </span>{formatNum(p.value as number)}</div>
-                    ))}
-                  </div>
-                );
-              }}
-            />
           </PieChart>
         </ResponsiveContainer>
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 text-center pb-1">

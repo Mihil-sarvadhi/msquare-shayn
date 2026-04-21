@@ -1,4 +1,5 @@
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { Info } from 'lucide-react';
 import { KPIs } from '@app/types/dashboard';
 import { formatNum } from '@utils/formatters';
 
@@ -21,6 +22,7 @@ export default function CODSplit({ kpis, loading }: Props) {
   const gaugeData = [...items, { name: '__gap', value: total }];
 
   return (
+    <div className="space-y-2">
     <div className="flex items-center gap-4">
       {/* Semi-circle gauge */}
       <div className="relative shrink-0" style={{ width: 130, height: 80 }}>
@@ -40,19 +42,6 @@ export default function CODSplit({ kpis, loading }: Props) {
                   : <Cell key={i} fill={COLORS[i % COLORS.length]} />
               )}
             </Pie>
-            <Tooltip
-              content={({ payload }) => {
-                const valid = payload?.filter((p) => p.name !== '__gap');
-                if (!valid?.length) return null;
-                return (
-                  <div style={{ fontSize: 11, borderRadius: 8, border: '1px solid #F0EBE0', background: '#fff', padding: '4px 8px' }}>
-                    {valid.map((p) => (
-                      <div key={p.name}><span style={{ color: p.payload.fill }}>{p.name}: </span>{formatNum(p.value as number)}</div>
-                    ))}
-                  </div>
-                );
-              }}
-            />
           </PieChart>
         </ResponsiveContainer>
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 text-center pb-1">
@@ -81,6 +70,14 @@ export default function CODSplit({ kpis, loading }: Props) {
           );
         })}
       </div>
+    </div>
+    {/* Source note — COD/Prepaid counts come from iThink shipments, not Shopify */}
+    <div className="flex items-start gap-1.5 px-1">
+      <Info size={11} strokeWidth={1.5} className="text-[#8C7B64] shrink-0 mt-0.5" />
+      <p className="text-[10px] text-[#8C7B64] leading-snug">
+        Count reflects iThink shipments with a recorded payment mode. Orders not yet shipped or missing payment info are excluded.
+      </p>
+    </div>
     </div>
   );
 }
