@@ -41,8 +41,17 @@ export default function CODSplit({ kpis, loading }: Props) {
               )}
             </Pie>
             <Tooltip
-              formatter={(val: number, name: string) => name === '__gap' ? null : [formatNum(val), name]}
-              contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid #F0EBE0' }}
+              content={({ payload }) => {
+                const valid = payload?.filter((p) => p.name !== '__gap');
+                if (!valid?.length) return null;
+                return (
+                  <div style={{ fontSize: 11, borderRadius: 8, border: '1px solid #F0EBE0', background: '#fff', padding: '4px 8px' }}>
+                    {valid.map((p) => (
+                      <div key={p.name}><span style={{ color: p.payload.fill }}>{p.name}: </span>{formatNum(p.value as number)}</div>
+                    ))}
+                  </div>
+                );
+              }}
             />
           </PieChart>
         </ResponsiveContainer>
