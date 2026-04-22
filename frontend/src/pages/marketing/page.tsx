@@ -6,6 +6,7 @@ import { DrawerProvider } from '@components/shared/DrawerContext';
 import { InfoDrawer } from '@components/shared/InfoDrawer';
 import { Panel } from '@components/shared/Panel';
 import { KpiCard } from '@components/shared/KpiCard';
+import { PageLoader } from '@components/shared/PageLoader';
 import { formatINR, formatNum } from '@utils/formatters';
 import { rangeLabel } from '@utils/common-functions/buildRangeParams';
 import {
@@ -681,9 +682,12 @@ export function MarketingPage() {
   const hasPrevCustomers = (prevKpis?.customers ?? 0) > 0;
   const prevMerValid    = hasPrevSpend && (prevKpis?.revenue ?? 0) > 0;
 
+  const showPageLoader = isLoading && !kpis;
+
   return (
     <DrawerProvider>
       <InfoDrawer />
+      {showPageLoader && <PageLoader overlay />}
       <div className="bg-[var(--bg)]">
         <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 pt-4 pb-6 space-y-5">
 

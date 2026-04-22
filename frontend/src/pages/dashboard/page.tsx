@@ -8,6 +8,7 @@ import { DrawerProvider } from '@components/shared/DrawerContext';
 import { InfoDrawer } from '@components/shared/InfoDrawer';
 import { KpiCard } from '@components/shared/KpiCard';
 import { Panel } from '@components/shared/Panel';
+import { PageLoader } from '@components/shared/PageLoader';
 import { CustomTooltip } from '@components/shared/CustomTooltip';
 import { formatINR, formatNum, formatPct, formatDate } from '@utils/formatters';
 import { rangeLabel } from '@utils/common-functions/buildRangeParams';
@@ -458,9 +459,12 @@ export function DashboardPage() {
     );
   }
 
+  const showPageLoader = loading && !kpis;
+
   return (
     <DrawerProvider>
       <InfoDrawer />
+      {showPageLoader && <PageLoader overlay />}
       <div className="bg-[var(--bg)]">
         <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 pt-4 pb-6 space-y-4">
 

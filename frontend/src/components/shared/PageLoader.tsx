@@ -1,7 +1,21 @@
-export function PageLoader() {
+import { ModernLoader } from './ModernLoader';
+
+interface PageLoaderProps {
+  label?: string;
+  overlay?: boolean;
+}
+
+export function PageLoader({ label = 'Loading', overlay = false }: PageLoaderProps) {
+  if (overlay) {
+    return (
+      <div className="fixed inset-0 z-50 bg-[#FDFAF4]/70 backdrop-blur-[1px] flex items-center justify-center">
+        <ModernLoader size="lg" label={label} />
+      </div>
+    );
+  }
   return (
-    <div className="flex h-screen items-center justify-center">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#B8860B] border-t-transparent" />
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <ModernLoader size="lg" label={label} />
     </div>
   );
 }

@@ -678,7 +678,7 @@ export function AnalyticsPage() {
   return (
     <DrawerProvider>
       <InfoDrawer />
-      {realtimeWidgetLoading && (
+      {((loading && !summary) || realtimeWidgetLoading) && (
         <div className="fixed inset-0 z-50 bg-[#FDFAF4]/70 backdrop-blur-[1px] flex items-center justify-center">
           <ModernLoader size="lg" label="Loading" />
         </div>

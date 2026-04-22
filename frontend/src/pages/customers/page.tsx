@@ -7,6 +7,7 @@ import { InfoDrawer } from '@components/shared/InfoDrawer';
 import { Panel } from '@components/shared/Panel';
 import { KpiCard } from '@components/shared/KpiCard';
 import { CustomTooltip } from '@components/shared/CustomTooltip';
+import { PageLoader } from '@components/shared/PageLoader';
 import { formatINR, formatNum, formatPct } from '@utils/formatters';
 import {
   BarChart, Bar, Cell,
@@ -224,9 +225,12 @@ export function CustomersPage() {
     ? (customerOverview.returning_customers / customerOverview.total_customers) * 100 : 0;
   const storeRating  = Number(reviewsSummary?.store_rating ?? 0);
 
+  const showPageLoader = isLoading && !customerOverview;
+
   return (
     <DrawerProvider>
       <InfoDrawer />
+      {showPageLoader && <PageLoader overlay />}
       <div className="bg-[var(--bg)]">
         <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 pt-4 pb-6 space-y-4">
 

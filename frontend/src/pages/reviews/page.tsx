@@ -6,6 +6,7 @@ import { InfoDrawer } from '@components/shared/InfoDrawer';
 import { Panel } from '@components/shared/Panel';
 import { KpiCard } from '@components/shared/KpiCard';
 import { CustomTooltip } from '@components/shared/CustomTooltip';
+import { PageLoader } from '@components/shared/PageLoader';
 import { formatNum, formatPct, formatDate } from '@utils/formatters';
 import {
   AreaChart, Area, Bar, ComposedChart, Line, PieChart, Pie, Cell,
@@ -571,9 +572,12 @@ export function ReviewsPage() {
   const fiveStarCount  = reviewsSummary?.five_star       ?? 0;
   const fiveStarPct    = totalReviews > 0 ? (fiveStarCount / totalReviews) * 100 : 0;
 
+  const showPageLoader = loading && !reviewsSummary;
+
   return (
     <DrawerProvider>
       <InfoDrawer />
+      {showPageLoader && <PageLoader overlay />}
       <div className="bg-[var(--bg)]">
         <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 pt-4 pb-6 space-y-4">
 

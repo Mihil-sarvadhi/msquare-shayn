@@ -6,6 +6,7 @@ import { DrawerProvider } from '@components/shared/DrawerContext';
 import { InfoDrawer } from '@components/shared/InfoDrawer';
 import { Panel } from '@components/shared/Panel';
 import { KpiCard } from '@components/shared/KpiCard';
+import { PageLoader } from '@components/shared/PageLoader';
 import { formatNum, formatPct } from '@utils/formatters';
 import {
   ComposedChart, Line, Bar,
@@ -214,9 +215,12 @@ export function OperationsPage() {
   /* Contextual insight text */
   const rtoRate = kpis?.rtoRate ?? 0;
 
+  const showPageLoader = isLoading && !kpis;
+
   return (
     <DrawerProvider>
       <InfoDrawer />
+      {showPageLoader && <PageLoader overlay />}
       <div className="bg-[var(--bg)]">
         <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 pt-4 pb-6 space-y-4">
 
