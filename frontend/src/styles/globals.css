@@ -31,6 +31,11 @@
   100% { transform: scale(2.4); opacity: 0; }
 }
 
+@keyframes loader-pop {
+  0%, 100% { transform: scale(0.8); opacity: 0.55; }
+  50% { transform: scale(1.12); opacity: 1; }
+}
+
 @layer base {
   html {
     zoom: 1.1;

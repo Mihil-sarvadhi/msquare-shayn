@@ -7,8 +7,7 @@ import {
   getTrafficByChannel,
   getEcommercePerformance,
   getTopProducts,
-  getDeviceBreakdown,
-  getGeography,
+  getTopPagesScreens,
   getRealtimeUsers,
   formatGA4Date,
   type GA4Response,
@@ -147,59 +146,33 @@ async function upsertProducts(resp: GA4Response, snapshotDate: string): Promise<
   return count;
 }
 
-async function upsertDevices(resp: GA4Response): Promise<number> {
+async function upsertPagesScreens(resp: GA4Response): Promise<number> {
   let count = 0;
   for (const r of rows(resp)) {
+    const activeUsers = parseInt(r.metricValues[1].value, 10);
+    const engagementDuration = parseFloat(r.metricValues[4].value);
+    const avgEngagementPerUser = activeUsers > 0 ? engagementDuration / activeUsers : 0;
     await sequelize.query(
-      `INSERT INTO ga4_devices
-         (date, device_category, sessions, active_users, purchase_revenue, conversion_rate, synced_at)
-       VALUES (:date, :device, :sessions, :activeUsers, :revenue, :convRate, NOW())
-       ON CONFLICT (date, device_category) DO UPDATE SET
-         sessions = EXCLUDED.sessions,
+      `INSERT INTO ga4_pages_screens
+         (date, page_title, screen_page_views, active_users, event_count, bounce_rate, avg_engagement_time_per_active_user, synced_at)
+       VALUES (:date, :pageTitle, :views, :activeUsers, :eventCount, :bounceRate, :avgEngagementPerUser, NOW())
+       ON CONFLICT (date, page_title) DO UPDATE SET
+         screen_page_views = EXCLUDED.screen_page_views,
          active_users = EXCLUDED.active_users,
-         purchase_revenue = EXCLUDED.purchase_revenue,
-         conversion_rate = EXCLUDED.conversion_rate,
+         event_count = EXCLUDED.event_count,
+         bounce_rate = EXCLUDED.bounce_rate,
+         avg_engagement_time_per_active_user = EXCLUDED.avg_engagement_time_per_active_user,
          synced_at = NOW()`,
       {
         type: QueryTypes.INSERT,
         replacements: {
           date: formatGA4Date(r.dimensionValues[0].value),
-          device: r.dimensionValues[1].value,
-          sessions: parseInt(r.metricValues[0].value, 10),
-          activeUsers: parseInt(r.metricValues[1].value, 10),
-          revenue: parseFloat(r.metricValues[2].value),
-          convRate: parseFloat(r.metricValues[3].value),
-        },
-      },
-    );
-    count++;
-  }
-  return count;
-}
-
-async function upsertGeography(resp: GA4Response): Promise<number> {
-  let count = 0;
-  for (const r of rows(resp)) {
-    await sequelize.query(
-      `INSERT INTO ga4_geography
-         (date, region, city, active_users, sessions, purchase_revenue, transactions, synced_at)
-       VALUES (:date, :region, :city, :activeUsers, :sessions, :revenue, :transactions, NOW())
-       ON CONFLICT (date, region, city) DO UPDATE SET
-         active_users = EXCLUDED.active_users,
-         sessions = EXCLUDED.sessions,
-         purchase_revenue = EXCLUDED.purchase_revenue,
-         transactions = EXCLUDED.transactions,
-         synced_at = NOW()`,
-      {
-        type: QueryTypes.INSERT,
-        replacements: {
-          date: formatGA4Date(r.dimensionValues[0].value),
-          region: r.dimensionValues[1].value || 'Unknown',
-          city: r.dimensionValues[2].value || 'Unknown',
-          activeUsers: parseInt(r.metricValues[0].value, 10),
-          sessions: parseInt(r.metricValues[1].value, 10),
-          revenue: parseFloat(r.metricValues[2].value),
-          transactions: parseInt(r.metricValues[3].value, 10),
+          pageTitle: r.dimensionValues[1].value || '(not set)',
+          views: parseInt(r.metricValues[0].value, 10),
+          activeUsers,
+          eventCount: parseInt(r.metricValues[2].value, 10),
+          bounceRate: parseFloat(r.metricValues[3].value),
+          avgEngagementPerUser,
         },
       },
     );
@@ -237,8 +210,7 @@ export async function syncGA4Data(
     await runStep('channels',  () => getTrafficByChannel(startDate, endDate),    upsertChannels),
     await runStep('ecommerce', () => getEcommercePerformance(startDate, endDate), upsertEcommerce),
     await runStep('products',  () => getTopProducts(startDate, endDate),          (v) => upsertProducts(v, snapshotDate)),
-    await runStep('devices',   () => getDeviceBreakdown(startDate, endDate),      upsertDevices),
-    await runStep('geography', () => getGeography(startDate, endDate),            upsertGeography),
+    await runStep('pages-screens', () => getTopPagesScreens(startDate, endDate),  upsertPagesScreens),
   ];
 
   const total  = results.reduce((a, r) => a + r.count, 0);

@@ -8,6 +8,7 @@ import {
   triggerIthinkBackfill,
   triggerJudgeMeSync,
   triggerGA4Sync,
+  triggerGA4TokenRefresh,
   triggerAllSync,
 } from './sync.service';
 
@@ -51,6 +52,19 @@ export function syncJudgeMeHandler(_req: Request, res: Response): void {
 
 export function syncGA4Handler(_req: Request, res: Response): void {
   fireAndForget(res, 'ga4', triggerGA4Sync);
+}
+
+export async function refreshGA4TokenHandler(_req: Request, res: Response): Promise<void> {
+  try {
+    const data = await triggerGA4TokenRefresh();
+    res.status(200).json({ success: true, ...data });
+  } catch (err) {
+    handleErrorResponse(res, {
+      statusCode: 500,
+      message: (err as Error).message,
+      error: 'GA4_TOKEN_REFRESH_FAILED',
+    });
+  }
 }
 
 export function syncAllHandler(_req: Request, res: Response): void {

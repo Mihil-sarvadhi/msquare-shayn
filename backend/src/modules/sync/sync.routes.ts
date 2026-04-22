@@ -6,6 +6,7 @@ import {
   syncIthinkBackfillHandler,
   syncJudgeMeHandler,
   syncGA4Handler,
+  refreshGA4TokenHandler,
   syncAllHandler,
 } from './sync.controller';
 
@@ -18,5 +19,6 @@ router.post('/ithink', syncIthinkHandler);
 router.post('/ithink/backfill', syncIthinkBackfillHandler);
 router.post('/judgeme', syncJudgeMeHandler);
 router.post('/ga4', syncGA4Handler);
+router.post('/ga4/token-refresh', refreshGA4TokenHandler);
 
 export default router;

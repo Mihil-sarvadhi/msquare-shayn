@@ -40,23 +40,31 @@ export async function productsHandler(req: Request, res: Response): Promise<void
   } catch (err) { handleErrorResponse(res, errOpts(err)); }
 }
 
-export async function devicesHandler(req: Request, res: Response): Promise<void> {
-  try {
-    const { since, until } = resolve(req);
-    handleApiResponse(res, { data: await service.getDevices(since, until) });
-  } catch (err) { handleErrorResponse(res, errOpts(err)); }
-}
-
-export async function geographyHandler(req: Request, res: Response): Promise<void> {
-  try {
-    const { since, until } = resolve(req);
-    handleApiResponse(res, { data: await service.getGeography(since, until) });
-  } catch (err) { handleErrorResponse(res, errOpts(err)); }
-}
-
 export async function realtimeHandler(_req: Request, res: Response): Promise<void> {
   try {
     handleApiResponse(res, { data: await service.getRealtime() });
+  } catch (err) { handleErrorResponse(res, errOpts(err)); }
+}
+
+export async function pagesScreensHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const { since, until } = resolve(req);
+    handleApiResponse(res, { data: await service.getPagesScreens(since, until) });
+  } catch (err) { handleErrorResponse(res, errOpts(err)); }
+}
+
+export async function realtimeWidgetHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const metric = req.query.metric === 'newUsers' ? 'newUsers' : 'activeUsers';
+    const location = req.query.location === 'city' ? 'city' : 'country';
+    handleApiResponse(res, { data: await service.getRealtimeWidgetData({ metric, location }) });
+  } catch (err) { handleErrorResponse(res, errOpts(err)); }
+}
+
+export async function countryActiveUsersHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const { since, until } = resolve(req);
+    handleApiResponse(res, { data: await service.getCountryActiveUsersData(since, until) });
   } catch (err) { handleErrorResponse(res, errOpts(err)); }
 }
 

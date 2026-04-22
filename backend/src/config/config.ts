@@ -60,6 +60,13 @@ if (!parsed.success) {
 
 const env = parsed.data;
 
+function normalizeGa4PrivateKey(raw: string | undefined): string | undefined {
+  if (!raw) return raw;
+
+  const unquoted = raw.replace(/^['"]|['"]$/g, '');
+  return unquoted.replace(/\\n/g, '\n').trim();
+}
+
 export const environment = {
   nodeEnv: env.NODE_ENV,
   appEnv: env.APP_ENV,
@@ -97,7 +104,7 @@ export const environment = {
     type: env.GA4_TYPE,
     projectId: env.GA4_PROJECT_ID,
     privateKeyId: env.GA4_PRIVATE_KEY_ID,
-    privateKey: env.GA4_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    privateKey: normalizeGa4PrivateKey(env.GA4_PRIVATE_KEY),
     clientEmail: env.GA4_CLIENT_EMAIL,
     clientId: env.GA4_CLIENT_ID,
     tokenUri: env.GA4_TOKEN_URI,

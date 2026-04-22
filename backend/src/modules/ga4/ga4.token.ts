@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { createPrivateKey } from 'crypto';
 import { GoogleAuth } from 'google-auth-library';
 import { QueryTypes } from 'sequelize';
 import { sequelize } from '@db/sequelize';
@@ -12,6 +13,46 @@ const SCOPE = 'https://www.googleapis.com/auth/analytics.readonly';
 interface TokenRow {
   access_token: string;
   expires_at: string;
+}
+
+function toPem(body: string): string {
+  const wrapped = body.match(/.{1,64}/g)?.join('\n') ?? body;
+  return `-----BEGIN PRIVATE KEY-----\n${wrapped}\n-----END PRIVATE KEY-----\n`;
+}
+
+function isParseablePrivateKey(pem: string): boolean {
+  try {
+    createPrivateKey({ key: pem, format: 'pem' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function resolvePrivateKey(raw: string): string {
+  const unescaped = raw.replace(/\\n/g, '\n').trim();
+  const candidates: string[] = [];
+
+  // Candidate 1: as provided (common case when env has full PEM).
+  candidates.push(unescaped);
+
+  // Candidate 2: PEM-wrap plain base64 body if markers are missing.
+  if (!unescaped.includes('-----BEGIN PRIVATE KEY-----')) {
+    const compact = unescaped.replace(/\s+/g, '');
+    if (/^[A-Za-z0-9+/=]+$/.test(compact)) {
+      candidates.push(toPem(compact));
+      // Candidate 3: tolerate accidental leading "n" before MII.
+      candidates.push(toPem(compact.replace(/^n(?=MII)/, '')));
+    }
+  }
+
+  const valid = candidates.find((key) => isParseablePrivateKey(key));
+  if (!valid) {
+    throw new Error(
+      'Invalid GA4 private key format. Ensure GA4_PRIVATE_KEY is full PEM with \\n newlines.',
+    );
+  }
+  return valid;
 }
 
 /**
@@ -38,12 +79,14 @@ function buildAuth(): GoogleAuth {
     );
   }
 
+  const resolvedPrivateKey = resolvePrivateKey(privateKey);
+
   return new GoogleAuth({
     credentials: {
       type,
       project_id: projectId,
       private_key_id: privateKeyId,
-      private_key: privateKey,
+      private_key: resolvedPrivateKey,
       client_email: clientEmail,
       client_id: clientId,
     },

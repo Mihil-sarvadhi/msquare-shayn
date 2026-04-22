@@ -98,31 +98,29 @@ export function getTopProducts(startDate: string, endDate: string): Promise<GA4R
   });
 }
 
-export function getDeviceBreakdown(startDate: string, endDate: string): Promise<GA4Response> {
+export function getTopPagesScreens(startDate: string, endDate: string): Promise<GA4Response> {
   return runReport({
     dateRanges: [{ startDate, endDate }],
-    dimensions: [{ name: 'date' }, { name: 'deviceCategory' }],
+    dimensions: [{ name: 'date' }, { name: 'pageTitle' }],
     metrics: [
-      { name: 'sessions' },
+      { name: 'screenPageViews' },
       { name: 'activeUsers' },
-      { name: 'purchaseRevenue' },
-      { name: 'sessionConversionRate' },
+      { name: 'eventCount' },
+      { name: 'bounceRate' },
+      { name: 'userEngagementDuration' },
     ],
+    orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }],
+    limit: 1000,
   });
 }
 
-export function getGeography(startDate: string, endDate: string): Promise<GA4Response> {
+export function getCountryActiveUsers(startDate: string, endDate: string): Promise<GA4Response> {
   return runReport({
     dateRanges: [{ startDate, endDate }],
-    dimensions: [{ name: 'date' }, { name: 'region' }, { name: 'city' }],
-    metrics: [
-      { name: 'activeUsers' },
-      { name: 'sessions' },
-      { name: 'purchaseRevenue' },
-      { name: 'transactions' },
-    ],
-    orderBys: [{ metric: { metricName: 'purchaseRevenue' }, desc: true }],
-    limit: 500,
+    dimensions: [{ name: 'country' }],
+    metrics: [{ name: 'activeUsers' }],
+    orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }],
+    limit: 50,
   });
 }
 
@@ -149,6 +147,40 @@ export function getRealtimeUsers(): Promise<GA4Response> {
     },
     true,
   );
+}
+
+export function getRealtimeByDimension(dimension: 'country' | 'city'): Promise<GA4Response> {
+  return runReport(
+    {
+      dimensions: [{ name: dimension }],
+      metrics: [{ name: 'activeUsers' }],
+      orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }],
+      limit: 50,
+    },
+    true,
+  );
+}
+
+export function getRealtimeTrendActiveUsers(): Promise<GA4Response> {
+  return runReport(
+    {
+      dimensions: [{ name: 'minutesAgo' }],
+      metrics: [{ name: 'activeUsers' }],
+      orderBys: [{ dimension: { dimensionName: 'minutesAgo' } }],
+      limit: 30,
+    },
+    true,
+  );
+}
+
+export function getRecentNewUsersByMinuteAndDimension(dimension: 'country' | 'city'): Promise<GA4Response> {
+  return runReport({
+    dateRanges: [{ startDate: 'today', endDate: 'today' }],
+    dimensions: [{ name: 'dateHourMinute' }, { name: dimension }],
+    metrics: [{ name: 'newUsers' }],
+    orderBys: [{ dimension: { dimensionName: 'dateHourMinute' }, desc: true }],
+    limit: 2000,
+  });
 }
 
 /** Convert GA4 YYYYMMDD to PostgreSQL YYYY-MM-DD */

@@ -18,20 +18,26 @@ export interface ProductRow {
   item_name: string; items_viewed: string; items_added_to_cart: string;
   items_purchased: string; purchase_revenue: string;
 }
-export interface DeviceRow {
-  device_category: string; sessions: string; active_users: string;
-  purchase_revenue: string; conversion_rate: string;
-}
-export interface GeographyRow {
-  region: string; city: string; active_users: string; sessions: string;
-  purchase_revenue: string; transactions: string;
-}
 export interface RealtimeRow {
   country: string; device_category: string; active_users: number; updated_at: string;
+}
+export interface CountryActiveUsersRow {
+  country: string;
+  active_users: string;
+  updated_at: string;
 }
 export interface SummaryRow {
   total_sessions: string; total_users: string; total_new_users: string;
   total_page_views: string; avg_bounce_rate: string; avg_session_duration: string;
+}
+export interface PagesScreensRow {
+  page_title: string;
+  screen_page_views: string;
+  active_users: string;
+  views_per_active_user: string;
+  avg_engagement_time_per_active_user: string;
+  event_count: string;
+  bounce_rate: string;
 }
 
 export function getTrafficDaily(since: string, until: string): Promise<TrafficDailyRow[]> {
@@ -87,42 +93,53 @@ export function getProducts(since: string, until: string): Promise<ProductRow[]>
   );
 }
 
-export function getDevices(since: string, until: string): Promise<DeviceRow[]> {
-  return sequelize.query<DeviceRow>(
-    `SELECT device_category,
-       SUM(sessions) AS sessions,
-       SUM(active_users) AS active_users,
-       SUM(purchase_revenue) AS purchase_revenue,
-       AVG(conversion_rate) AS conversion_rate
-     FROM ga4_devices
-     WHERE date BETWEEN :since AND :until
-     GROUP BY device_category`,
-    { type: QueryTypes.SELECT, replacements: { since, until } },
-  );
-}
-
-export function getGeography(since: string, until: string): Promise<GeographyRow[]> {
-  return sequelize.query<GeographyRow>(
-    `SELECT region, city,
-       SUM(active_users) AS active_users,
-       SUM(sessions) AS sessions,
-       SUM(purchase_revenue) AS purchase_revenue,
-       SUM(transactions) AS transactions
-     FROM ga4_geography
-     WHERE date BETWEEN :since AND :until
-     GROUP BY region, city
-     ORDER BY SUM(purchase_revenue) DESC
-     LIMIT 20`,
-    { type: QueryTypes.SELECT, replacements: { since, until } },
-  );
-}
-
 export function getRealtime(): Promise<RealtimeRow[]> {
   return sequelize.query<RealtimeRow>(
     `SELECT country, device_category, active_users, updated_at::text
      FROM ga4_realtime
      ORDER BY active_users DESC`,
     { type: QueryTypes.SELECT },
+  );
+}
+
+export function getCountryActiveUsersFromRealtime(): Promise<CountryActiveUsersRow[]> {
+  return sequelize.query<CountryActiveUsersRow>(
+    `SELECT country,
+       SUM(active_users) AS active_users,
+       MAX(updated_at)::text AS updated_at
+     FROM ga4_realtime
+     WHERE country IS NOT NULL
+       AND country <> ''
+       AND LOWER(country) NOT IN ('unknown', '(not set)', 'not set')
+     GROUP BY country
+     ORDER BY SUM(active_users) DESC
+     LIMIT 20`,
+    { type: QueryTypes.SELECT },
+  );
+}
+
+export function getPagesScreens(since: string, until: string): Promise<PagesScreensRow[]> {
+  return sequelize.query<PagesScreensRow>(
+    `SELECT page_title,
+       SUM(screen_page_views) AS screen_page_views,
+       SUM(active_users) AS active_users,
+       CASE
+         WHEN SUM(active_users) > 0
+           THEN ROUND(SUM(screen_page_views)::numeric / SUM(active_users)::numeric, 2)
+         ELSE 0
+       END AS views_per_active_user,
+       AVG(avg_engagement_time_per_active_user) AS avg_engagement_time_per_active_user,
+       SUM(event_count) AS event_count,
+       AVG(bounce_rate) AS bounce_rate
+     FROM ga4_pages_screens
+     WHERE date BETWEEN :since AND :until
+       AND page_title IS NOT NULL
+       AND page_title <> ''
+       AND LOWER(page_title) NOT IN ('(not set)', 'unknown')
+     GROUP BY page_title
+     ORDER BY SUM(screen_page_views) DESC
+     LIMIT 10`,
+    { type: QueryTypes.SELECT, replacements: { since, until } },
   );
 }
 

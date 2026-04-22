@@ -9,6 +9,7 @@ import {
 } from '@modules/ithink/ithink.sync';
 import { syncJudgeMe } from '@modules/judgeme/judgeme.sync';
 import { syncGA4Data, syncGA4Realtime } from '@modules/ga4/ga4.sync';
+import { generateToken } from '@modules/ga4/ga4.token';
 import { logger } from '@logger/logger';
 import type { SyncResult } from './sync.types';
 
@@ -39,6 +40,26 @@ export async function triggerIthinkBackfill(
 export async function triggerGA4Sync(): Promise<SyncResult> {
   await Promise.all([syncGA4Data(), syncGA4Realtime()]);
   return { message: 'GA4 sync triggered' };
+}
+
+interface GA4TokenRow {
+  expires_at: string;
+}
+
+export async function triggerGA4TokenRefresh(): Promise<SyncResult & { expiresAt: string | null }> {
+  await generateToken();
+  const [latest] = await sequelize.query<GA4TokenRow>(
+    `SELECT expires_at::text
+     FROM ga4_tokens
+     ORDER BY id DESC
+     LIMIT 1`,
+    { type: QueryTypes.SELECT },
+  );
+
+  return {
+    message: 'GA4 token refreshed',
+    expiresAt: latest?.expires_at ?? null,
+  };
 }
 
 export async function triggerJudgeMeSync(): Promise<SyncResult> {

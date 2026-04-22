@@ -7,6 +7,15 @@ export interface GA4Summary {
   avg_session_duration: number;
 }
 
+export interface GA4SummaryInsights {
+  sessions_delta_pct: number;
+  users_delta_pct: number;
+  new_users_delta_pct: number;
+  page_views_delta_pct: number;
+  bounce_rate_delta_pct: number;
+  avg_session_duration_delta_pct: number;
+}
+
 export interface GA4TrafficDaily {
   date:                 string;
   sessions:             number;
@@ -44,26 +53,45 @@ export interface GA4Product {
   purchase_revenue:    number;
 }
 
-export interface GA4Device {
-  device_category:  string;
-  sessions:         number;
-  active_users:     number;
-  purchase_revenue: number;
-  conversion_rate:  number;
-}
-
-export interface GA4Geography {
-  region:           string;
-  city:             string;
-  active_users:     number;
-  sessions:         number;
-  purchase_revenue: number;
-  transactions:     number;
-}
-
 export interface GA4Realtime {
   country:         string;
   device_category: string;
   active_users:    number;
   updated_at:      string;
+}
+
+export interface GA4RealtimeTrendPoint {
+  minute: string;
+  value: number;
+}
+
+export interface GA4RealtimeBreakdownRow {
+  location: string;
+  value: number;
+}
+
+export interface GA4RealtimeWidget {
+  metric: 'activeUsers' | 'newUsers';
+  location: 'country' | 'city';
+  total: number;
+  trend: GA4RealtimeTrendPoint[];
+  breakdown: GA4RealtimeBreakdownRow[];
+  updatedAt: string;
+}
+
+export interface GA4PageScreen {
+  page_title: string;
+  screen_page_views: number;
+  active_users: number;
+  views_per_active_user: number;
+  avg_engagement_time_per_active_user: number;
+  event_count: number;
+  bounce_rate: number;
+}
+
+export interface GA4CountryActiveUsers {
+  country: string;
+  activeUsers: number;
+  updatedAt: string;
+  source: 'db' | 'ga4';
 }

@@ -47,8 +47,8 @@ export function startScheduler(): void {
     await syncGA4Data();
   }, TZ);
 
-  // Every 5 min — GA4 realtime
-  cron.schedule('*/5 * * * *', async () => {
+  // Every 1 min — GA4 realtime
+  cron.schedule('*/1 * * * *', async () => {
     await syncGA4Realtime();
   }, TZ);
 

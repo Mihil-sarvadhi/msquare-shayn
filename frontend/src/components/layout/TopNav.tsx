@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import type { ConnectorHealth } from '@app/types/dashboard';
 import baseService from '@services/configs/baseService';
 import { API_ENDPOINTS } from '@utils/constants/api.constant';
+import { BrandIcon } from '@components/shared/BrandIcon';
 
 /* ── State machine ──────────────────────────────────────────────────────────
  * syncing  → success  → (3 s) → cooldown → (7 s) → null   (can't click during success/cooldown)
@@ -30,7 +31,7 @@ function useConnectorHealth() {
 
   useEffect(() => {
     fetch();
-    const id = setInterval(fetch, 30_000);
+    const id = setInterval(fetch, 60_000);
     return () => clearInterval(id);
   }, [fetch]);
 
@@ -62,13 +63,6 @@ function timeAgo(dateStr: string | null | undefined): string {
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   return `${Math.floor(diff / 86400)}d ago`;
 }
-
-const STATUS_DOT: Record<string, string> = {
-  green:   'bg-emerald-500',
-  amber:   'bg-amber-400',
-  red:     'bg-red-500',
-  unknown: 'bg-gray-300',
-};
 
 interface ConnectorRowProps {
   h: ConnectorHealth;
@@ -112,12 +106,17 @@ function ConnectorRow({
     return localSyncAt > apiTs ? new Date(localSyncAt).toISOString() : h.last_sync_at;
   })();
 
-  /* ── Dot ── */
-  const dot = isSyncing
-    ? <Loader2 size={10} strokeWidth={2} className="animate-spin text-amber-500 shrink-0" />
-    : syncState === 'error'
-      ? <span className="w-2 h-2 rounded-full shrink-0 bg-red-500" />
-      : <span className={cn('w-2 h-2 rounded-full shrink-0 transition-colors', STATUS_DOT[h.status] ?? STATUS_DOT.unknown)} />;
+  /* ── Brand icon (syncing overlays a spinner badge) ── */
+  const brand = (
+    <span className="relative inline-flex shrink-0">
+      <BrandIcon connector={key} size={22} className={isSyncing ? 'opacity-60' : ''} />
+      {isSyncing && (
+        <span className="absolute -bottom-0.5 -right-0.5 inline-flex items-center justify-center bg-white rounded-full w-3 h-3 ring-1 ring-white">
+          <Loader2 size={9} strokeWidth={2.5} className="animate-spin text-amber-500" />
+        </span>
+      )}
+    </span>
+  );
 
   /* ── Time label ── */
   const timeLabel = isSyncing
@@ -143,7 +142,7 @@ function ConnectorRow({
       syncState === 'success' ? 'bg-emerald-50' : 'hover:bg-[#F5F0E8]',
     )}>
       <div className="flex items-center gap-2.5">
-        {dot}
+        {brand}
         <span className="text-[13px] font-medium text-[#1A1208]">{meta.label}</span>
       </div>
       <div className="flex items-center gap-2">

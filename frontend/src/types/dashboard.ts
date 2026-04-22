@@ -42,6 +42,8 @@ export interface RecentReview {
 export interface ConnectorHealth {
   connector_name: string; last_sync_at: string | null;
   status: string; error_message: string | null; records_synced: number;
+  realtime_last_updated_at?: string | null;
+  realtime_lag_seconds?: number | null;
 }
 
 export interface RecentOrder {
