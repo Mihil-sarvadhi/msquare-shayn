@@ -7,6 +7,7 @@ import {
   triggerIthinkSync,
   triggerIthinkBackfill,
   triggerJudgeMeSync,
+  triggerGA4Sync,
   triggerAllSync,
 } from './sync.service';
 
@@ -46,6 +47,10 @@ export async function syncIthinkBackfillHandler(req: Request, res: Response): Pr
 
 export function syncJudgeMeHandler(_req: Request, res: Response): void {
   fireAndForget(res, 'judgeme', triggerJudgeMeSync);
+}
+
+export function syncGA4Handler(_req: Request, res: Response): void {
+  fireAndForget(res, 'ga4', triggerGA4Sync);
 }
 
 export function syncAllHandler(_req: Request, res: Response): void {

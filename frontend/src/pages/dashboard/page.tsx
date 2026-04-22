@@ -189,7 +189,7 @@ function CodPrepaidDonut({ codPct }: { codPct: number }) {
     { name: 'Prepaid', value: 100 - codPct, fill: POS },
   ];
   return (
-    <div className="h-full min-h-[140px]">
+    <div className="flex-1 min-h-[140px]">
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie data={data} cx="50%" cy="50%" innerRadius={48} outerRadius={68} dataKey="value" paddingAngle={2}>
@@ -530,10 +530,12 @@ export function DashboardPage() {
               info={{ what: 'Split between Cash on Delivery and Prepaid orders for the period.', source: 'Shopify Orders' }}
               ai={{ observation: `${codPct.toFixed(0)}% COD orders carry ~3× the RTO risk of prepaid.${prevCodPct !== undefined ? ` Previously ${prevCodPct.toFixed(0)}%.` : ''}`, insight: 'A 5% shift to prepaid meaningfully improves cash flow and RTO rate. Prepaid customers are also more intentional buyers.', actions: ['Offer ₹50–100 prepaid discount at checkout', 'Show trust signals (reviews, delivery guarantee) at checkout', 'Run prepaid-only flash sales monthly'] }}
             >
-              <CodPrepaidDonut codPct={codPct} />
-              <div className="flex justify-center gap-6 mt-2 text-xs text-[var(--text-muted)]">
-                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: WARN }} />COD {codPct.toFixed(1)}%</span>
-                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: POS }} />Prepaid {(100 - codPct).toFixed(1)}%</span>
+              <div className="flex flex-col h-full">
+                <CodPrepaidDonut codPct={codPct} />
+                <div className="flex justify-center gap-6 mt-2 shrink-0 text-xs text-[var(--text-muted)]">
+                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: WARN }} />COD {codPct.toFixed(1)}%</span>
+                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: POS }} />Prepaid {(100 - codPct).toFixed(1)}%</span>
+                </div>
               </div>
             </Panel>
           </div>

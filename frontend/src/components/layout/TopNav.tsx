@@ -1,13 +1,13 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
-import { RefreshCw, CalendarDays, Loader2, AlertCircle, Check } from 'lucide-react';
+import { RefreshCw, /* CalendarDays, */ Loader2, AlertCircle, Check } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '@store/hooks';
-import { setPreset, setCustomRange } from '@store/slices/rangeSlice';
+import { setPreset, /* setCustomRange, */ } from '@store/slices/rangeSlice';
 import type { RangePreset } from '@store/slices/rangeSlice';
 import {
-  useSyncAll, useSyncShopify, useSyncMeta, useSyncIthink, useSyncJudgeme,
+  useSyncAll, useSyncShopify, useSyncMeta, useSyncIthink, useSyncJudgeme, useSyncGA4,
 } from '@services/dashboard/dashboard.query';
-import { DateRangePicker } from '@components/ui/DateRangePicker';
+// import { DateRangePicker } from '@components/ui/DateRangePicker'; // re-enable with Custom date button
 import { cn } from '@/lib/utils';
 import type { ConnectorHealth } from '@app/types/dashboard';
 import baseService from '@services/configs/baseService';
@@ -43,6 +43,7 @@ const NAV = [
   { label: 'Customers',  to: '/customers'  },
   { label: 'Operations', to: '/operations' },
   { label: 'Reviews',    to: '/reviews'    },
+  { label: 'Analytics',  to: '/analytics'  },
 ];
 
 const CONNECTOR_META: Record<string, { label: string }> = {
@@ -50,6 +51,7 @@ const CONNECTOR_META: Record<string, { label: string }> = {
   meta_ads: { label: 'Meta Ads'  },
   ithink:   { label: 'iThink'    },
   judgeme:  { label: 'Judge.me'  },
+  ga4:      { label: 'GA4'       },
 };
 
 function timeAgo(dateStr: string | null | undefined): string {
@@ -86,6 +88,7 @@ function ConnectorRow({
   const syncMeta    = useSyncMeta();
   const syncIthink  = useSyncIthink();
   const syncJudgeme = useSyncJudgeme();
+  const syncGA4     = useSyncGA4();
 
   const key  = h.connector_name;
   const meta = CONNECTOR_META[key] ?? { label: key };
@@ -95,6 +98,7 @@ function ConnectorRow({
     meta_ads: () => { onSyncStart(); syncMeta.mutate(undefined,    { onSuccess: () => { onSyncSuccess(); onSynced(); }, onError: () => onSyncError() }); },
     ithink:   () => { onSyncStart(); syncIthink.mutate(undefined,  { onSuccess: () => { onSyncSuccess(); onSynced(); }, onError: () => onSyncError() }); },
     judgeme:  () => { onSyncStart(); syncJudgeme.mutate(undefined, { onSuccess: () => { onSyncSuccess(); onSynced(); }, onError: () => onSyncError() }); },
+    ga4:      () => { onSyncStart(); syncGA4.mutate(undefined,     { onSuccess: () => { onSyncSuccess(); onSynced(); }, onError: () => onSyncError() }); },
   };
   const trigger = triggers[key];
 
@@ -188,10 +192,10 @@ export function TopNav() {
     setShowPicker(false);
   }, [dispatch]);
 
-  const handleApply = useCallback((start: string, end: string) => {
+  /* const handleApply = useCallback((start: string, end: string) => {
     dispatch(setCustomRange({ startDate: start, endDate: end }));
     setShowPicker(false);
-  }, [dispatch]);
+  }, [dispatch]); // re-enable with Custom date button */
 
   /* Per-connector state machine — guards against stale timeouts overwriting newer states */
   const setConnState = useCallback((key: string, state: ConnSyncState) => {
@@ -249,7 +253,7 @@ export function TopNav() {
     return () => document.removeEventListener('mousedown', onOutside);
   }, [showPicker, showSources]);
 
-  const customLabel     = range.preset === 'custom' ? `${range.startDate} → ${range.endDate}` : 'Custom';
+  // const customLabel = range.preset === 'custom' ? `${range.startDate} → ${range.endDate}` : 'Custom'; // re-enable with Custom date button
   const syncingCount    = health.filter((h) => syncStates[h.connector_name] === 'syncing').length;
   const isSyncingAny    = syncAll.isPending || syncingCount > 0;
   const isSyncAllDisabled = isSyncingAny || syncAllCooldown;
@@ -324,8 +328,8 @@ export function TopNav() {
             </button>
           ))}
 
-          {/* Custom date */}
-          <div className="relative" ref={pickerRef}>
+          {/* Custom date — temporarily hidden, uncomment to re-enable */}
+          {/* <div className="relative" ref={pickerRef}>
             <button
               onClick={() => setShowPicker((v) => !v)}
               className={cn(
@@ -348,7 +352,7 @@ export function TopNav() {
                 />
               </div>
             )}
-          </div>
+          </div> */}
         </div>
 
         {/* Sync Status button + dropdown */}

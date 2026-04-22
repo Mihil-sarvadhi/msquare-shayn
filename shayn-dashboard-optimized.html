@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SHAYN MIS — Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --gold:#B8860B;--gold-soft:#FDF8F0;--gold-border:#E8DFD0;
+  --ivory:#FDFAF4;--ink:#1A1208;--muted:#8C7B64;--parch:#F0EBE0;
+  --emerald:#2D7D46;--ruby:#9B2235;--amber:#B45309;
+  --pos:#2D7D46;--pos-soft:#E8F3ED;--neg:#C0394B;--neg-soft:#FBE9EB;
+  --warn:#B45309;--warn-soft:#FEF3E2;--ai:#5B4299;--ai-soft:#ECE7F7;
+  --surface:#fff;--bg:#FDFAF4;--border:#F0EBE0;
+}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,'Inter',sans-serif;font-size:14px;-webkit-font-smoothing:antialiased;}
+.topnav{background:#fff;border-bottom:1px solid var(--border);padding:0 24px;height:52px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:40;}
+nav.tabs a{display:flex;align-items:center;padding:0 12px;font-size:13px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;text-decoration:none;white-space:nowrap;height:52px;}
+nav.tabs a.active{font-weight:600;color:var(--ink);border-bottom-color:var(--gold);}
+.range-btns{display:flex;gap:2px;background:var(--parch);border-radius:8px;padding:3px;}
+.range-btns button{padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;background:transparent;color:var(--muted);border:none;cursor:pointer;}
+.range-btns button.active{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08);}
+.sync-pill{display:flex;align-items:center;gap:6px;padding:4px 10px;border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--muted);}
+main{max-width:1400px;margin:0 auto;padding:20px 24px 60px;display:flex;flex-direction:column;gap:16px;}
+.card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;}
+.st{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;gap:8px;}
+.pbtns{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.ib{width:20px;height:20px;border-radius:50%;border:1px solid var(--border);background:#fff;color:var(--muted);cursor:pointer;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.ib:hover{border-color:var(--gold);color:var(--gold);background:var(--gold-soft);}
+.ab{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;height:20px;border-radius:10px;border:1px solid var(--ai);background:var(--ai-soft);color:var(--ai);cursor:pointer;font-size:10px;font-weight:700;}
+.ab:hover{background:var(--ai);color:#fff;}
+.g7{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;}
+.g21{display:grid;grid-template-columns:2fr 1fr;gap:12px;}
+.g12{display:grid;grid-template-columns:1fr 2fr;gap:12px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+.g13{display:grid;grid-template-columns:1fr 3fr;gap:12px;}
+.g112{display:grid;grid-template-columns:1fr 1fr 2fr;gap:12px;}
+.g21b{display:grid;grid-template-columns:2fr 1fr;gap:12px;}
+.chip{display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;}
+.cp{background:var(--pos-soft);color:var(--pos);}
+.cn{background:var(--neg-soft);color:var(--neg);}
+.cs{background:#E8F3ED;color:#2D7D46;}
+.ch{background:#FEF3E2;color:#B45309;}
+.cc{background:#FBE9EB;color:#C0394B;}
+.mono{font-variant-numeric:tabular-nums;font-family:ui-monospace,monospace;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{text-align:left;padding:5px 0;font-weight:600;font-size:10px;color:var(--muted);border-bottom:1px solid var(--border);}
+th.r,td.r{text-align:right;}
+td{padding:6px 0;border-bottom:1px solid var(--border);}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--ivory);}
+.overlay{position:fixed;inset:0;background:rgba(26,18,8,.2);backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:opacity 200ms;z-index:50;}
+.overlay.open{opacity:1;pointer-events:auto;}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:420px;max-width:90vw;background:#fff;border-left:1px solid var(--border);transform:translateX(100%);transition:transform 240ms cubic-bezier(.32,.72,0,1);z-index:60;display:flex;flex-direction:column;box-shadow:-12px 0 30px rgba(26,18,8,.06);}
+.drawer.open{transform:translateX(0);}
+.dhdr{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+.dbody{flex:1;overflow-y:auto;padding:20px 24px;}
+.dcls{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;}
+.ds{margin-bottom:18px;}
+.dst{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:5px;}
+.dsb{font-size:13.5px;line-height:1.55;color:var(--ink);}
+.dm{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid var(--border);}
+.dm:last-child{border-bottom:none;}
+.da{padding:9px 12px;background:var(--gold-soft);border-left:2px solid var(--gold);border-radius:0 6px 6px 0;margin-bottom:7px;font-size:13px;line-height:1.5;}
+.aib{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;background:var(--ai-soft);color:var(--ai);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border-radius:10px;margin-bottom:8px;}
+::-webkit-scrollbar{width:6px;height:6px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+@media(max-width:900px){.g7{grid-template-columns:repeat(3,1fr);}.g21,.g12,.g3,.g13,.g112,.g21b{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<div class="topnav">
+  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+    <div style="width:34px;height:34px;border-radius:10px;background:var(--gold-soft);border:1px solid var(--gold-border);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:var(--gold)">S</div>
+    <div><div style="font-weight:700;font-size:14px;letter-spacing:.1em;color:var(--ink)">SHAYN</div><div style="font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:.2em;font-weight:600">MIS</div></div>
+  </div>
+  <nav class="tabs" style="display:flex;align-items:stretch;gap:2px;flex:1;height:100%">
+    <a href="#" class="active">Dashboard</a>
+    <a href="#">Marketing</a>
+    <a href="#">Customers</a>
+    <a href="#">Operations</a>
+    <a href="#">Reviews</a>
+  </nav>
+  <div class="range-btns">
+    <button onclick="setRange(this)">7d</button>
+    <button onclick="setRange(this)" class="active">30d</button>
+    <button onclick="setRange(this)">All</button>
+  </div>
+  <div class="sync-pill"><span style="width:6px;height:6px;border-radius:50%;background:var(--emerald)"></span> Synced 2 min ago</div>
+</div>
+
+<main>
+  <div class="g7" id="kpis"></div>
+  <div class="card" id="margin-card">
+    <div class="ph">
+      <div><div class="st">Contribution Margin</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Last 30 days &middot; Gross &rarr; Ad Spend &rarr; Logistics &rarr; Net CM2</div></div>
+      <div class="pbtns"><button class="ib" onclick="od('info','Contribution Margin')">i</button><button class="ab" onclick="od('ai','Contribution Margin')">&#10022; AI</button></div>
+    </div>
+    <div style="display:flex;align-items:center" id="margin-strip"></div>
+  </div>
+
+  <div class="g21">
+    <div class="card"><div class="ph"><div><div class="st">Revenue vs Ad Spend</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Daily &middot; last 30 days</div></div><div class="pbtns"><button class="ib" onclick="od('info','Revenue vs Ad Spend')">i</button><button class="ab" onclick="od('ai','Revenue vs Ad Spend')">&#10022; AI</button></div></div><canvas id="revChart" height="200"></canvas></div>
+    <div class="card"><div class="ph"><div><div class="st">Revenue by Channel</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Shopify &middot; Meta &middot; Organic</div></div><div class="pbtns"><button class="ib" onclick="od('info','Revenue by Channel')">i</button><button class="ab" onclick="od('ai','Revenue by Channel')">&#10022; AI</button></div></div><canvas id="chanChart" height="200"></canvas></div>
+  </div>
+
+  <div class="g12">
+    <div class="card"><div class="ph"><div><div class="st">Meta Acquisition Funnel</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Impressions &rarr; Purchases</div></div><div class="pbtns"><button class="ib" onclick="od('info','Meta Acquisition Funnel')">i</button><button class="ab" onclick="od('ai','Meta Acquisition Funnel')">&#10022; AI</button></div></div><div id="funnel"></div></div>
+    <div class="card"><div class="ph"><div><div class="st">Campaign Performance</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Meta Ads &middot; Scale / Hold / Cut by ROAS</div></div><div class="pbtns"><button class="ib" onclick="od('info','Campaign Performance')">i</button><button class="ab" onclick="od('ai','Campaign Performance')">&#10022; AI</button></div></div><div style="overflow-x:auto" id="campaigns"></div></div>
+  </div>
+
+  <div class="g3">
+    <div class="card"><div class="ph"><div><div class="st">Order Status</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Current period shipments</div></div><div class="pbtns"><button class="ib" onclick="od('info','Order Status')">i</button><button class="ab" onclick="od('ai','Order Status')">&#10022; AI</button></div></div><canvas id="gauge" width="220" height="120" style="display:block;margin:0 auto"></canvas><div id="gauge-leg" style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:4px"></div></div>
+    <div class="card"><div class="ph"><div><div class="st">COD vs Prepaid</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Payment mode split</div></div><div class="pbtns"><button class="ib" onclick="od('info','COD vs Prepaid')">i</button><button class="ab" onclick="od('ai','COD vs Prepaid')">&#10022; AI</button></div></div><canvas id="cod" height="130" style="display:block;margin:0 auto"></canvas><div id="cod-leg" style="margin-top:8px"></div></div>
+    <div class="card"><div class="ph"><div class="st">Customer Metrics</div></div><div id="custm"></div></div>
+  </div>
+
+  <div class="g12">
+    <div class="card"><div class="ph"><div><div class="st">Top Products</div><div style="font-size:11px;color:var(--muted);margin-top:2px">By revenue &middot; last 30 days</div></div><div class="pbtns"><button class="ib" onclick="od('info','Top Products')">i</button><button class="ab" onclick="od('ai','Top Products')">&#10022; AI</button></div></div><div id="topprods"></div></div>
+    <div class="card"><div class="ph"><div><div class="st">Top 10 SKUs by Revenue</div></div><div class="pbtns"><button class="ib" onclick="od('info','Top 10 SKUs by Revenue')">i</button><button class="ab" onclick="od('ai','Top 10 SKUs by Revenue')">&#10022; AI</button></div></div><div style="overflow-x:auto" id="skus"></div></div>
+  </div>
+
+  <div class="g3">
+    <div class="card"><div class="ph"><div><div class="st">Top Rated Products</div></div><div class="pbtns"><button class="ib" onclick="od('info','Top Rated Products')">i</button><button class="ab" onclick="od('ai','Top Rated Products')">&#10022; AI</button></div></div><div id="toprated"></div></div>
+    <div class="card"><div class="ph"><div><div class="st">Logistics Overview</div><div style="font-size:11px;color:var(--muted);margin-top:2px">iThink &middot; current period</div></div><div class="pbtns"><button class="ib" onclick="od('info','Logistics Overview')">i</button><button class="ab" onclick="od('ai','Logistics Overview')">&#10022; AI</button></div></div><div id="logistics"></div></div>
+    <div class="card"><div class="ph"><div><div class="st">Abandoned Carts</div></div><div class="pbtns"><button class="ib" onclick="od('info','Abandoned Carts')">i</button><button class="ab" onclick="od('ai','Abandoned Carts')">&#10022; AI</button></div></div><div id="abandoned"></div></div>
+  </div>
+
+  <div class="g21b">
+    <div class="card"><div class="ph"><div><div class="st">Cohort Retention</div><div style="font-size:11px;color:var(--muted);margin-top:2px">% repeat purchase by acquisition month &middot; mock data</div></div><div class="pbtns"><button class="ib" onclick="od('info','Cohort Retention')">i</button><button class="ab" onclick="od('ai','Cohort Retention')">&#10022; AI</button></div></div><div style="overflow-x:auto" id="cohort"></div></div>
+    <div class="card"><div class="ph"><div><div class="st">Customer Segments</div><div style="font-size:11px;color:var(--muted);margin-top:2px">By purchase frequency</div></div><div class="pbtns"><button class="ib" onclick="od('info','Customer Segments')">i</button><button class="ab" onclick="od('ai','Customer Segments')">&#10022; AI</button></div></div><div id="segments"></div></div>
+  </div>
+
+  <div class="g112">
+    <div class="card"><div class="ph"><div><div class="st">Rating Trend</div><div style="font-size:11px;color:var(--muted);margin-top:2px">Daily avg &middot; 30 days</div></div><div class="pbtns"><button class="ib" onclick="od('info','Review Rating Trend')">i</button><button class="ab" onclick="od('ai','Review Rating Trend')">&#10022; AI</button></div></div><canvas id="ratingChart" height="160"></canvas></div>
+    <div class="card"><div class="ph"><div><div class="st">Review Distribution</div><div style="font-size:11px;color:var(--muted);margin-top:2px">2,894 total reviews</div></div><div class="pbtns"><button class="ib" onclick="od('info','Review Distribution')">i</button><button class="ab" onclick="od('ai','Review Distribution')">&#10022; AI</button></div></div><div id="revdist"></div></div>
+    <div class="card"><div class="ph"><div><div class="st">Recent Reviews</div></div><div class="pbtns"><button class="ib" onclick="od('info','Recent Reviews')">i</button></div></div><div id="reviews"></div></div>
+  </div>
+
+  <div class="g13">
+    <div class="card"><div class="st" style="margin-bottom:12px">Data Connectors</div><div id="connectors"></div></div>
+    <div class="card" style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px"><div style="font-size:12px;color:var(--muted);text-align:center">Platform data last synced 2 minutes ago &middot; iThink sync delayed (1 hr) &mdash; check connection</div><div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><span style="font-size:10px;padding:2px 8px;border-radius:4px;background:var(--parch);color:var(--muted)">Shopify</span><span style="font-size:10px;padding:2px 8px;border-radius:4px;background:var(--parch);color:var(--muted)">Meta Ads</span><span style="font-size:10px;padding:2px 8px;border-radius:4px;background:var(--parch);color:var(--muted)">iThink</span><span style="font-size:10px;padding:2px 8px;border-radius:4px;background:var(--parch);color:var(--muted)">Judge.me</span></div></div>
+  </div>
+</main>
+
+<footer style="border-top:1px solid var(--border);padding:12px 24px;display:flex;justify-content:space-between;font-size:10px;color:var(--muted)">
+  <span>Shopify &middot; Meta Ads &middot; iThink Logistics &middot; Judge.me</span>
+  <span class="mono">SHAYN MIS &mdash; Dashboard v2 &middot; Mock Data</span>
+</footer>
+
+<div class="overlay" id="overlay" onclick="cd()"></div>
+<div class="drawer" id="drawer">
+  <div class="dhdr"><div id="dtitle"></div><button class="dcls" onclick="cd()">&#10005;</button></div>
+  <div class="dbody" id="dbody"></div>
+</div>
+
+<script>
+/* MOCK DATA */
+var D=[];
+for(var i=0;i<30;i++){
+  var dt=new Date('2026-03-23');dt.setDate(dt.getDate()+i);
+  var we=dt.getDay()===0||dt.getDay()===6;
+  var base=820000*(1+i/90*0.18)*(0.85+Math.random()*0.3)*(we?1.22:1);
+  D.push({
+    date:dt.toISOString().slice(5,10),
+    revenue:Math.round(base),
+    orders:Math.round(base/1650*(0.9+Math.random()*0.2)),
+    spend:Math.round(base/(2.6+(Math.random()-0.5)*0.6)),
+    shopify:Math.round(base*0.587),
+    meta:Math.round(base*0.20),
+    organic:Math.round(base*0.213),
+    rating:+(4.3+Math.sin(i/5)*0.12+(i/90)*0.1).toFixed(2)
+  });
+}
+var tRev=D.reduce(function(s,d){return s+d.revenue;},0);
+var tOrd=D.reduce(function(s,d){return s+d.orders;},0);
+var tSpend=D.reduce(function(s,d){return s+d.spend;},0);
+var kpis={revenue:tRev,orders:tOrd,aov:Math.round(tRev/tOrd),adSpend:tSpend,
+  roas:+(tRev/tSpend).toFixed(2),rtoRate:14.2,repeatRate:24.8,
+  fulfilled:8420,ofd:1840,rto:1480,cancelled:380,
+  codOrders:9828,prepaidOrders:8372,shipments:18200,ndr:680,
+  uniqueCust:11240,abandonedCount:842,abandonedValue:18200000};
+
+var campaigns=[
+  {name:'Retargeting - ATC 7d',spend:6800000,rev:32400000,roas:4.76,ctr:3.21,purchases:2840},
+  {name:'Prospecting - Lookalikes',spend:12400000,rev:38200000,roas:3.08,ctr:1.82,purchases:2320},
+  {name:'Advantage+ Shopping',spend:18200000,rev:41800000,roas:2.30,ctr:1.45,purchases:3180},
+  {name:'Catalog - Broad',spend:9200000,rev:21200000,roas:2.30,ctr:1.12,purchases:1620},
+  {name:'Video Views - TOFU',spend:3400000,rev:3800000,roas:1.12,ctr:0.82,purchases:280},
+  {name:'Engagement - Reels',spend:2200000,rev:2900000,roas:1.32,ctr:0.94,purchases:220}
+];
+var topProds=[
+  {title:'Mini Hoop Earrings - 18KT Gold Vermeil',revenue:2840000,units:534},
+  {title:'Diamond Dot Earrings - Moissanite',revenue:2340000,units:578},
+  {title:'Personalise Initial Pendant',revenue:1980000,units:762},
+  {title:'Tiny Diamond Stud - Moissanite',revenue:1760000,units:344},
+  {title:'Diagonal Shine Ring - Moissanite',revenue:1540000,units:421}
+];
+var topSkus=[
+  {sku:'QM102005',title:'Mini Hoop Earrings',variant:'Gold Vermeil',units:534,orders:498,revenue:2840000},
+  {sku:'QM101010',title:'Diamond Dot Earrings',variant:'Moissanite',units:578,orders:512,revenue:2340000},
+  {sku:'QC120001',title:'Initial Pendant',variant:'Gold Vermeil',units:762,orders:698,revenue:1980000},
+  {sku:'QM101005',title:'Tiny Diamond Stud',variant:'Moissanite',units:344,orders:318,revenue:1760000},
+  {sku:'QA132010',title:'Diagonal Shine Ring',variant:'Moissanite',units:421,orders:384,revenue:1540000},
+  {sku:'QK114001',title:'Gold Vermeil Bracelet',variant:'Gold Vermeil',units:148,orders:136,revenue:1420000},
+  {sku:'QM132004',title:'Wave Stud Earrings',variant:'Moissanite',units:390,orders:362,revenue:1240000},
+  {sku:'QM113002',title:'Drop Heart Earrings',variant:'Gold Vermeil',units:436,orders:408,revenue:1080000},
+  {sku:'QN104012',title:'Butterfly Pendant',variant:'Gold Vermeil',units:228,orders:214,revenue:980000},
+  {sku:'QM102010',title:'Diamond Lined Hoops',variant:'Moissanite',units:155,orders:142,revenue:920000}
+];
+var topRated=[
+  {title:'Mini Hoop Earrings',rating:4.8,count:184},
+  {title:'Initial Pendant',rating:4.8,count:298},
+  {title:'Diamond Dot Earrings',rating:4.7,count:212},
+  {title:'Gold Vermeil Bracelet',rating:4.7,count:64},
+  {title:'Tennis Bracelet',rating:4.7,count:38}
+];
+var recentRevs=[
+  {rating:5,reviewer:'Meera J.',product:'Mini Hoop Earrings',body:'The gold vermeil finish is rich and even. Wore daily for 3 weeks - zero tarnish.',date:'Apr 18'},
+  {rating:5,reviewer:'Priya M.',product:'Diamond Dot Earrings',body:'Brighter than my actual diamonds. Caught so many compliments at a wedding.',date:'Apr 18'},
+  {rating:2,reviewer:'Divya S.',product:'Diagonal Shine Ring',body:'Ordered size 14 - too tight. Had to exchange. Stone setting also feels fragile.',date:'Apr 17'},
+  {rating:5,reviewer:'Ananya K.',product:'Initial Pendant',body:'Got "A" engraved - crisp and clear. Packaging was gift-ready.',date:'Apr 17'},
+  {rating:4,reviewer:'Rhea K.',product:'Wave Stud Earrings',body:'Elegant and sparkly. Just a touch smaller than the photos suggest.',date:'Apr 16'},
+  {rating:1,reviewer:'Pooja N.',product:'Diagonal Shine Ring',body:'Stone fell out after a week. Unacceptable quality at this price.',date:'Apr 15'}
+];
+var cohortData=[
+  {month:'Nov 25',size:2840,m0:100,m1:32,m2:21,m3:16,m4:13,m5:11},
+  {month:'Dec 25',size:3120,m0:100,m1:34,m2:22,m3:17,m4:14,m5:null},
+  {month:'Jan 26',size:3480,m0:100,m1:36,m2:24,m3:18,m4:null,m5:null},
+  {month:'Feb 26',size:3820,m0:100,m1:38,m2:26,m3:null,m4:null,m5:null},
+  {month:'Mar 26',size:4120,m0:100,m1:41,m2:null,m3:null,m4:null,m5:null},
+  {month:'Apr 26',size:4480,m0:100,m1:null,m2:null,m3:null,m4:null,m5:null}
+];
+var segments=[
+  {name:'Champions',customers:1240,revenue:6820000,color:'#2D7D46'},
+  {name:'Loyal',customers:2180,revenue:5240000,color:'#4f46e5'},
+  {name:'Potential',customers:3420,revenue:4120000,color:'#818cf8'},
+  {name:'New',customers:4680,revenue:3820000,color:'#B8860B'},
+  {name:'At Risk',customers:1820,revenue:1640000,color:'#B45309'},
+  {name:'Hibernating',customers:3240,revenue:980000,color:'#a3a3a3'}
+];
+var funnel=[
+  {stage:'Impressions',value:17630000},
+  {stage:'Clicks',value:298000},
+  {stage:'Sessions',value:274000},
+  {stage:'Add to Cart',value:38200},
+  {stage:'Checkout',value:18600},
+  {stage:'Purchases',value:15060}
+];
+
+/* FORMATTERS */
+function fi(v,c){
+  if(v==null)return'-';
+  if(c===false)return String.fromCharCode(8377)+v.toLocaleString('en-IN');
+  if(Math.abs(v)>=10000000)return String.fromCharCode(8377)+(v/10000000).toFixed(2)+'Cr';
+  if(Math.abs(v)>=100000)return String.fromCharCode(8377)+(v/100000).toFixed(1)+'L';
+  if(Math.abs(v)>=1000)return String.fromCharCode(8377)+(v/1000).toFixed(1)+'K';
+  return String.fromCharCode(8377)+v.toLocaleString('en-IN');
+}
+function fn(v){
+  if(v>=10000000)return(v/10000000).toFixed(2)+'Cr';
+  if(v>=100000)return(v/100000).toFixed(1)+'L';
+  if(v>=1000)return(v/1000).toFixed(1)+'K';
+  return v.toLocaleString('en-IN');
+}
+
+/* KPI CARDS */
+var kpiDefs=[
+  {label:'Total Revenue',value:fi(kpis.revenue),delta:16.8,sub:'vs prev 30d',accent:'var(--gold)'},
+  {label:'Total Orders',value:fn(kpis.orders),delta:12.4,sub:'non-cancelled'},
+  {label:'Avg Order Value',value:fi(kpis.aov,false),delta:3.8,sub:'AOV'},
+  {label:'Ad Spend',value:fi(kpis.adSpend),delta:22.4,sub:'Meta Ads',accent:'var(--ruby)'},
+  {label:'ROAS',value:kpis.roas+'x',delta:-2.1,sub:'blended'},
+  {label:'RTO Rate',value:kpis.rtoRate+'%',delta:-1.4,sub:'target <15%',accent:'var(--amber)'},
+  {label:'Repeat Rate',value:kpis.repeatRate+'%',delta:2.1,sub:'30d rolling',accent:'var(--emerald)'}
+];
+var kEl=document.getElementById('kpis');
+kpiDefs.forEach(function(k){
+  var pos=k.delta>=0;
+  var bad=(k.label==='RTO Rate'||k.label==='Ad Spend')&&pos;
+  var chipCls=bad?'chip cn':'chip '+(pos?'cp':'cn');
+  kEl.innerHTML+='<div class="card"><div class="st" style="margin-bottom:6px">'+k.label+'</div>'
+    +'<div class="mono" style="font-size:22px;font-weight:700;letter-spacing:-.02em;color:'+(k.accent||'var(--ink)')+'">'+k.value+'</div>'
+    +'<div style="display:flex;align-items:center;gap:6px;margin-top:6px">'
+    +'<span class="'+chipCls+'">'+(pos?'&uarr;':'&darr;')+Math.abs(k.delta).toFixed(1)+'%</span>'
+    +'<span style="font-size:10px;color:var(--muted)">'+k.sub+'</span></div></div>';
+});
+
+/* MARGIN STRIP */
+var gross=kpis.revenue,adS=kpis.adSpend,log=Math.round(gross*0.074),net=gross-adS-log;
+var cm2=((net/gross)*100).toFixed(1);
+var mItems=[
+  {label:'Gross Revenue',val:fi(gross),bg:'var(--gold-soft)',bdr:'var(--gold-border)',col:'var(--gold)'},
+  {label:'(-) Ad Spend',val:fi(adS),bg:'var(--neg-soft)',bdr:'#F9D0D4',col:'var(--neg)'},
+  {label:'(-) Logistics',val:fi(log),bg:'var(--neg-soft)',bdr:'#F9D0D4',col:'var(--neg)'},
+  {label:'Net CM2 '+cm2+'%',val:fi(net),bg:'var(--pos-soft)',bdr:'#C3E6D0',col:'var(--pos)'}
+];
+var ms=document.getElementById('margin-strip');
+mItems.forEach(function(m,i){
+  if(i>0)ms.innerHTML+='<div style="padding:0 6px;font-size:18px;color:var(--muted);flex-shrink:0">&rarr;</div>';
+  ms.innerHTML+='<div style="flex:1;padding:10px 14px;background:'+m.bg+';border:1px solid '+m.bdr+';border-radius:8px">'
+    +'<div style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:3px">'+m.label+'</div>'
+    +'<div class="mono" style="font-size:18px;font-weight:700;color:'+m.col+'">'+m.val+'</div></div>';
+});
+
+/* CHARTS */
+var chOpts={responsive:true,maintainAspectRatio:true,
+  plugins:{legend:{display:false},tooltip:{backgroundColor:'#1A1208',titleFont:{size:10},bodyFont:{size:11}}},
+  scales:{x:{grid:{display:false},ticks:{font:{size:9},maxRotation:0}},y:{grid:{color:'#F0EBE0'},ticks:{font:{size:9}}}}};
+
+new Chart(document.getElementById('revChart'),{type:'line',data:{
+  labels:D.map(function(d){return d.date;}),
+  datasets:[
+    {label:'Revenue',data:D.map(function(d){return d.revenue;}),borderColor:'#B8860B',backgroundColor:'rgba(184,134,11,0.1)',fill:true,tension:0.4,borderWidth:2,pointRadius:0},
+    {label:'Ad Spend',data:D.map(function(d){return d.spend;}),borderColor:'#9B2235',borderDash:[4,4],fill:false,tension:0.4,borderWidth:1.5,pointRadius:0}
+  ]
+},options:Object.assign({},chOpts,{plugins:{legend:{display:true,labels:{font:{size:10},boxWidth:16}},tooltip:{backgroundColor:'#1A1208'}}})});
+
+new Chart(document.getElementById('chanChart'),{type:'bar',data:{
+  labels:D.map(function(d){return d.date;}),
+  datasets:[
+    {label:'Shopify',data:D.map(function(d){return d.shopify;}),backgroundColor:'#B8860B',stack:'a'},
+    {label:'Meta',data:D.map(function(d){return d.meta;}),backgroundColor:'#5B4299',stack:'a'},
+    {label:'Organic',data:D.map(function(d){return d.organic;}),backgroundColor:'#2D7D46',stack:'a'}
+  ]
+},options:Object.assign({},chOpts,{plugins:{legend:{display:true,labels:{font:{size:10},boxWidth:10}},tooltip:{backgroundColor:'#1A1208'}}})});
+
+var orderData=[kpis.fulfilled,kpis.ofd,kpis.rto,kpis.cancelled];
+var orderColors=['#B8860B','#E07B3A','#C0394B','#9E9E9E'];
+var orderLabels=['Fulfilled','In Transit','RTO','Cancelled'];
+new Chart(document.getElementById('gauge'),{type:'doughnut',data:{
+  labels:orderLabels.concat(['gap']),
+  datasets:[{data:orderData.concat([orderData.reduce(function(a,b){return a+b;},0)]),backgroundColor:orderColors.concat(['transparent']),borderWidth:0,circumference:180,rotation:270}]
+},options:{responsive:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){if(ctx.dataIndex===4)return'';return ctx.label+': '+ctx.raw.toLocaleString('en-IN');}}}}}});
+var gl=document.getElementById('gauge-leg');
+orderLabels.forEach(function(l,i){
+  gl.innerHTML+='<div style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:'+orderColors[i]+';flex-shrink:0"></span><span style="font-size:10px;color:var(--muted)">'+l+'</span><span class="mono" style="font-size:10px;font-weight:600;margin-left:auto">'+orderData[i].toLocaleString('en-IN')+'</span></div>';
+});
+
+var codTotal=kpis.codOrders+kpis.prepaidOrders;
+new Chart(document.getElementById('cod'),{type:'doughnut',data:{
+  labels:['COD','Prepaid'],
+  datasets:[{data:[kpis.codOrders,kpis.prepaidOrders],backgroundColor:['#B8860B','#2D7D46'],borderWidth:0}]
+},options:{responsive:false,plugins:{legend:{display:false}}}});
+document.getElementById('cod-leg').innerHTML=
+  '<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:11px;display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:#B8860B"></span>COD</span><span class="mono" style="font-size:11px;font-weight:600">'+kpis.codOrders.toLocaleString('en-IN')+' <span style="color:var(--muted);font-weight:400">('+((kpis.codOrders/codTotal)*100).toFixed(1)+'%)</span></span></div>'
+  +'<div style="display:flex;justify-content:space-between"><span style="font-size:11px;display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:#2D7D46"></span>Prepaid</span><span class="mono" style="font-size:11px;font-weight:600">'+kpis.prepaidOrders.toLocaleString('en-IN')+' <span style="color:var(--muted);font-weight:400">('+((kpis.prepaidOrders/codTotal)*100).toFixed(1)+'%)</span></span></div>'
+  +'<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--muted)">COD share down from 58% last period &mdash; RTO risk declining</div>';
+
+new Chart(document.getElementById('ratingChart'),{type:'line',data:{
+  labels:D.map(function(d){return d.date;}),
+  datasets:[{label:'Avg Rating',data:D.map(function(d){return d.rating;}),borderColor:'#B8860B',fill:false,tension:0.4,borderWidth:2,pointRadius:0}]
+},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:9},maxRotation:0,maxTicksLimit:6}},y:{min:4,max:5,grid:{color:'#F0EBE0'},ticks:{font:{size:9},stepSize:0.25}}}}});
+
+/* FUNNEL */
+var fp=document.getElementById('funnel');
+var fmax=funnel[0].value;
+var fcols=['#B8860B','#C9972A','#D4A840','#c67b2a','#b95a2a','#9B2235'];
+funnel.forEach(function(f,i){
+  var pct=Math.round((f.value/fmax)*100);
+  var conv=i>0?((f.value/funnel[i-1].value)*100).toFixed(1):null;
+  fp.innerHTML+='<div style="margin-bottom:6px">'
+    +'<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">'
+    +'<span style="color:var(--muted)">'+f.stage+'</span>'
+    +'<span class="mono">'+fn(f.value)+(conv?'<span style="color:var(--muted);margin-left:6px">'+conv+'%</span>':'')+'</span></div>'
+    +'<div style="height:18px;background:var(--parch);border-radius:4px;overflow:hidden">'
+    +'<div style="height:100%;width:'+pct+'%;background:'+fcols[i]+';border-radius:4px"></div></div></div>';
+});
+fp.innerHTML+='<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--muted)">Overall: <span class="mono" style="color:var(--ink);font-weight:600">0.085%</span> impressions &rarr; purchase</div>';
+
+/* CAMPAIGNS */
+document.getElementById('campaigns').innerHTML='<table><thead><tr><th>Campaign</th><th class="r">Spend</th><th class="r">Revenue</th><th class="r">ROAS</th><th class="r">CTR</th><th class="r">Purchases</th><th class="r">Status</th></tr></thead><tbody>'
++campaigns.map(function(c){
+  var chip=c.roas>=3?'<span class="chip cs">Scale</span>':c.roas>=2?'<span class="chip ch">Hold</span>':'<span class="chip cc">Cut</span>';
+  var rc=c.roas>=3?'var(--emerald)':c.roas>=2?'var(--warn)':'var(--ruby)';
+  return'<tr><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+c.name+'</td>'
+    +'<td class="r mono">'+fi(c.spend)+'</td><td class="r mono">'+fi(c.rev)+'</td>'
+    +'<td class="r mono" style="font-weight:700;color:'+rc+'">'+c.roas+'x</td>'
+    +'<td class="r mono" style="color:var(--muted)">'+c.ctr+'%</td>'
+    +'<td class="r mono">'+c.purchases.toLocaleString('en-IN')+'</td>'
+    +'<td class="r">'+chip+'</td></tr>';
+}).join('')+'</tbody></table>';
+
+/* CUSTOMER METRICS */
+document.getElementById('custm').innerHTML=[
+  {l:'Unique Customers',v:fn(kpis.uniqueCust),c:'var(--gold)'},
+  {l:'Repeat Rate',v:kpis.repeatRate+'%',c:'var(--emerald)'},
+  {l:'New Customers',v:fn(Math.round(kpis.uniqueCust*0.55)),c:'var(--ink)'},
+  {l:'Returning',v:fn(Math.round(kpis.uniqueCust*0.45)),c:'var(--ink)'}
+].map(function(m,i,a){
+  return'<div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:8px;border-bottom:'+(i<a.length-1?'1px solid var(--border)':'none')+';margin-bottom:'+(i<a.length-1?'8px':'0')+'">'
+    +'<span style="font-size:12px;color:var(--muted)">'+m.l+'</span>'
+    +'<span class="mono" style="font-size:14px;font-weight:700;color:'+m.c+'">'+m.v+'</span></div>';
+}).join('');
+
+/* TOP PRODUCTS */
+document.getElementById('topprods').innerHTML=topProds.map(function(p,i){
+  return'<div style="display:flex;align-items:center;gap:10px;padding-bottom:8px;border-bottom:'+(i<4?'1px solid var(--border)':'none')+';margin-bottom:'+(i<4?'8px':'0')+'">'
+    +'<span style="width:18px;height:18px;border-radius:4px;background:var(--gold-soft);color:var(--gold);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">'+(i+1)+'</span>'
+    +'<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+p.title+'</div>'
+    +'<div class="mono" style="font-size:10px;color:var(--muted)">'+p.units.toLocaleString('en-IN')+' units</div></div>'
+    +'<span class="mono" style="font-size:12px;font-weight:700;flex-shrink:0">'+fi(p.revenue)+'</span></div>';
+}).join('');
+
+/* SKU TABLE */
+document.getElementById('skus').innerHTML='<table><thead><tr><th>SKU</th><th>Product</th><th class="r">Units</th><th class="r">Orders</th><th class="r">Revenue</th></tr></thead><tbody>'
++topSkus.map(function(s){
+  return'<tr><td class="mono" style="font-size:10px;color:var(--muted)">'+s.sku+'</td>'
+    +'<td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+s.title+' <span style="font-size:10px;color:var(--muted)">&middot; '+s.variant+'</span></td>'
+    +'<td class="r mono" style="font-size:11px">'+s.units.toLocaleString('en-IN')+'</td>'
+    +'<td class="r mono" style="font-size:11px;color:var(--muted)">'+s.orders.toLocaleString('en-IN')+'</td>'
+    +'<td class="r mono" style="font-size:11px;font-weight:600">'+fi(s.revenue)+'</td></tr>';
+}).join('')+'</tbody></table>';
+
+/* TOP RATED */
+document.getElementById('toprated').innerHTML=topRated.map(function(p,i){
+  return'<div style="display:flex;align-items:center;gap:10px;padding-bottom:8px;border-bottom:'+(i<4?'1px solid var(--border)':'none')+';margin-bottom:'+(i<4?'8px':'0')+'">'
+    +'<span class="mono" style="font-size:14px;font-weight:700;color:var(--gold);width:32px;flex-shrink:0">'+p.rating+'&#9733;</span>'
+    +'<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+p.title+'</div>'
+    +'<div style="font-size:10px;color:var(--muted)">'+p.count+' reviews</div></div></div>';
+}).join('');
+
+/* LOGISTICS */
+document.getElementById('logistics').innerHTML=[
+  {l:'Total Shipments',v:kpis.shipments.toLocaleString('en-IN'),c:'var(--ink)'},
+  {l:'Delivered',v:fn(kpis.fulfilled),c:'var(--emerald)'},
+  {l:'RTO Rate',v:kpis.rtoRate+'%',c:'var(--amber)'},
+  {l:'NDR Pending',v:kpis.ndr.toString(),c:'var(--amber)'}
+].map(function(m,i,a){
+  return'<div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:6px;border-bottom:'+(i<a.length-1?'1px solid var(--border)':'none')+';margin-bottom:'+(i<a.length-1?'6px':'0')+'">'
+    +'<span style="font-size:11px;color:var(--muted)">'+m.l+'</span>'
+    +'<span class="mono" style="font-size:13px;font-weight:700;color:'+m.c+'">'+m.v+'</span></div>';
+}).join('');
+
+/* ABANDONED */
+document.getElementById('abandoned').innerHTML='<div style="text-align:center;padding:12px 0">'
+  +'<div style="font-size:11px;color:var(--muted);margin-bottom:4px">Total Abandoned Value</div>'
+  +'<div class="mono" style="font-size:28px;font-weight:700;color:var(--ruby)">'+fi(kpis.abandonedValue)+'</div>'
+  +'<div style="font-size:11px;color:var(--muted);margin-top:4px">'+kpis.abandonedCount.toLocaleString('en-IN')+' carts &middot; '+fi(Math.round(kpis.abandonedValue/kpis.abandonedCount))+' avg</div></div>'
+  +'<div style="margin-top:8px;padding:10px;background:var(--warn-soft);border-radius:8px;font-size:11px;color:var(--warn)">'
+  +'Recovery potential at 12%: <strong>'+fi(Math.round(kpis.abandonedValue*0.12))+'</strong></div>';
+
+/* COHORT */
+var cohortEl=document.getElementById('cohort');
+var mks=['m0','m1','m2','m3','m4','m5'];
+cohortEl.innerHTML='<table><thead><tr style="color:var(--muted);font-size:10px;border-bottom:1px solid var(--border)">'
+  +'<th>Cohort</th><th class="r">Size</th>'
+  +'<th class="r">M+0</th><th class="r">M+1</th><th class="r">M+2</th><th class="r">M+3</th><th class="r">M+4</th><th class="r">M+5</th>'
+  +'</tr></thead><tbody>'
+  +cohortData.map(function(c){
+    return'<tr><td style="font-weight:500">'+c.month+'</td>'
+      +'<td class="r mono" style="font-size:11px;color:var(--muted)">'+c.size.toLocaleString('en-IN')+'</td>'
+      +mks.map(function(k){
+        var v=c[k];
+        if(v==null)return'<td class="r" style="color:var(--muted);opacity:.3;font-size:11px">&mdash;</td>';
+        var bg=k==='m0'?'rgba(184,134,11,'+(v/100*0.7)+')':'rgba(45,122,70,'+(v/100*2.5)+')';
+        var col=v>25?'white':'var(--ink)';
+        return'<td class="r" style="padding:6px 4px;font-variant-numeric:tabular-nums;font-size:11px;background:'+bg+';color:'+col+';font-weight:500">'+v+'%</td>';
+      }).join('')+'</tr>';
+  }).join('')+'</tbody></table>';
+
+/* SEGMENTS */
+var segEl=document.getElementById('segments');
+var maxSR=Math.max.apply(null,segments.map(function(s){return s.revenue;}));
+segments.forEach(function(s){
+  segEl.innerHTML+='<div style="margin-bottom:8px">'
+    +'<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">'
+    +'<span style="font-weight:500">'+s.name+' <span style="color:var(--muted)">('+s.customers.toLocaleString('en-IN')+')</span></span>'
+    +'<span class="mono">'+fi(s.revenue)+'</span></div>'
+    +'<div style="height:10px;background:var(--parch);border-radius:5px;overflow:hidden">'
+    +'<div style="height:100%;width:'+Math.round(s.revenue/maxSR*100)+'%;background:'+s.color+';border-radius:5px"></div></div></div>';
+});
+
+/* REVIEW DIST */
+var revDistData=[
+  {stars:5,count:1984,color:'var(--emerald)'},
+  {stars:4,count:612,color:'#6DA373'},
+  {stars:3,count:158,color:'var(--warn)'},
+  {stars:2,count:82,color:'var(--ruby)'},
+  {stars:1,count:58,color:'#C0394B'}
+];
+var rdEl=document.getElementById('revdist');
+revDistData.forEach(function(r){
+  rdEl.innerHTML+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+    +'<span class="mono" style="font-size:10px;width:20px;text-align:right">'+r.stars+'&#9733;</span>'
+    +'<div style="flex:1;height:14px;background:var(--parch);border-radius:3px;overflow:hidden">'
+    +'<div style="height:100%;width:'+Math.round(r.count/1984*100)+'%;background:'+r.color+';border-radius:3px"></div></div>'
+    +'<span class="mono" style="font-size:10px;width:28px;text-align:right;color:var(--muted)">'+r.count+'</span></div>';
+});
+rdEl.innerHTML+='<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+  +'<div><div style="font-size:10px;color:var(--muted)">Photo reviews</div><div class="mono" style="font-size:13px;font-weight:600">842</div></div>'
+  +'<div><div style="font-size:10px;color:var(--muted)">Avg rating</div><div class="mono" style="font-size:13px;font-weight:600;color:var(--gold)">4.56&#9733;</div></div></div>';
+
+/* RECENT REVIEWS */
+document.getElementById('reviews').innerHTML=recentRevs.map(function(r,i){
+  var col=r.rating>=4?'var(--emerald)':r.rating===3?'var(--warn)':'var(--ruby)';
+  return'<div style="display:flex;gap:10px;padding-bottom:'+(i<recentRevs.length-1?'10px':'0')+';border-bottom:'+(i<recentRevs.length-1?'1px solid var(--border)':'none')+';margin-bottom:'+(i<recentRevs.length-1?'10px':'0')+'">'
+    +'<span class="mono" style="font-size:16px;font-weight:700;color:'+col+';width:28px;flex-shrink:0">'+r.rating+'&#9733;</span>'
+    +'<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'
+    +'<span style="font-size:11px;font-weight:600">'+r.reviewer+'</span>'
+    +'<span style="font-size:10px;color:var(--muted)">'+r.product+'</span>'
+    +'<span style="font-size:9px;color:var(--muted);margin-left:auto">'+r.date+'</span></div>'
+    +'<div style="font-size:11px;color:var(--ink);line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'+r.body+'</div></div></div>';
+}).join('');
+
+/* CONNECTORS */
+var conns=[
+  {name:'Shopify',status:'green',sync:'2 min ago'},
+  {name:'Meta Ads',status:'green',sync:'5 min ago'},
+  {name:'iThink',status:'amber',sync:'1 hr ago'},
+  {name:'Judge.me',status:'green',sync:'32 min ago'}
+];
+var dotC={green:'var(--emerald)',amber:'var(--amber)',red:'var(--ruby)'};
+document.getElementById('connectors').innerHTML=conns.map(function(c){
+  return'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'
+    +'<div style="display:flex;align-items:center;gap:7px">'
+    +'<span style="width:7px;height:7px;border-radius:50%;background:'+dotC[c.status]+';flex-shrink:0"></span>'
+    +'<span style="font-size:12px">'+c.name+'</span></div>'
+    +'<span class="mono" style="font-size:10px;color:var(--muted)">'+c.sync+'</span></div>';
+}).join('');
+
+/* DRAWER */
+var INS={
+  'Revenue vs Ad Spend':{
+    info:{what:'Overlays daily revenue (area) with daily Meta ad spend (dashed line) over 30 days.',how:'Revenue = Shopify order totals per day. Ad Spend = Meta billed spend per day. Dual Y-axes so shapes are comparable.',source:'Shopify GraphQL Admin API + Meta Marketing Insights API.',readIt:'Revenue growing faster than spend = efficiency improving. Spend rising faster = saturation or creative fatigue setting in.'},
+    ai:{obs:'Revenue grew +16.8% over 30 days but ad spend grew +22.4% - efficiency is quietly decaying.',insight:'You are hitting saturation on Advantage+ Shopping. Each incremental rupee delivers less revenue than 3 weeks ago.',metrics:[['Revenue growth (30d)','+16.8%'],['Spend growth (30d)','+22.4%'],['ROAS Day 1-10','2.81x'],['ROAS Day 21-30','2.64x']],actions:['Launch 3-5 fresh UGC creatives this week - stone close-ups and testimonials outperform catalog images.','Cap Advantage+ Shopping budget; shift growth to Retargeting (ROAS 4.76x).','Build lookalike audiences from Champions segment (LTV >20K) - current broad audiences are fatigued.']}
+  },
+  'Revenue by Channel':{
+    info:{what:'Daily revenue split across channels - Shopify D2C, Meta-attributed, and Organic.',how:'Shopify = D2C order revenue. Meta-attributed = purchase_value from Meta Insights. Organic = residual.',source:'Shopify Admin API + Meta Marketing API.',readIt:'Gold = D2C Shopify. Purple = Meta. Green = Organic. Height = total daily revenue.'},
+    ai:{obs:'Shopify D2C contributes ~58.7% of revenue. Organic at ~21% - your most profitable channel.',insight:'Organic customers have 3.4x better LTV:CAC than Meta-acquired. Yet organic is growing slowly while Meta spend is accelerating.',metrics:[['D2C share','58.7%'],['Organic share','21.3%'],['Meta share','20.0%']],actions:['Assign a content/SEO resource for 3 months.','Build buying-guide hubs - high-intent, low-competition.','Ask every order confirmation email to request a Google Review.']}
+  },
+  'Meta Acquisition Funnel':{
+    info:{what:'End-to-end funnel from Meta impressions to completed purchases.',how:'Impressions/Clicks from Meta Insights API. Sessions/ATC/Checkout from Shopify analytics.',source:'Meta Marketing API + Shopify Analytics.',readIt:'Healthy benchmarks: Click to Session 85%+, Session to ATC 12-15%, ATC to Checkout 45-55%, Checkout to Purchase 75-85%.'},
+    ai:{obs:'ATC to Checkout at 48.7% is your weakest step - 19,600 carts abandoned before checkout.',insight:'Cart abandonment at jewellery AOVs is typically COD friction or shipping cost shock. Free shipping above 2,999 on cart page usually drops abandonment 8-12%.',metrics:[['ATC to Checkout','48.7% (weak)'],['Checkout to Purchase','80.9%'],['Overall conv.','0.085%']],actions:['Show free shipping threshold prominently on cart page.','Add trust badges at checkout: 7-day returns, certified jeweller, 12-mo warranty.','Cart-abandonment WhatsApp + email sequence.']}
+  },
+  'Campaign Performance':{
+    info:{what:'All active Meta campaigns ranked by spend, with ROAS, CTR, and Scale/Hold/Cut status.',how:'Status rule: ROAS 3x+ = Scale. 2-3x = Hold. Below 2x = Cut.',source:'Meta Marketing API - campaign-level insights. Updated hourly.',readIt:'Sort by ROAS for profit drivers. High frequency + falling CTR = creative fatigue.'},
+    ai:{obs:'Retargeting (4.76x) and Lookalikes (3.08x) are profitable. Advantage+ consumes 35% of budget at 2.3x.',insight:'You are underfunding winners and overfunding losers. Retargeting frequency will hit saturation in ~2 weeks at current pace.',metrics:[['Profitable spend','37%'],['Unprofitable spend','63%'],['Retargeting freq','4.8']],actions:['Pause Video Views + Reels - pure loss after COGS.','Refresh Retargeting creatives before frequency exceeds 6.','Create 1% lookalike from Champions for Advantage+.']}
+  },
+  'Order Status':{
+    info:{what:'Semi-circle gauge showing breakdown of all shipped orders by current status.',how:'Data from iThink Logistics API. Fulfilled=DL, OFD=UD, RTO=RT*, Cancelled=Shopify voided orders.',source:'iThink Logistics API + Shopify Orders API.',readIt:'Healthy: RTO segment small. Large OFD with low RTO = good logistics performance.'},
+    ai:{obs:'RTO at 14.2% of total shipments is at the industry threshold.',insight:'Your RTO risk is concentrated in UP and WB (24-25% RTO rate). Metro orders deliver at under 13% RTO.',metrics:[['Overall RTO rate','14.2%'],['Metro RTO','~12%'],['UP+WB RTO','~24%']],actions:['Disable COD for UP and WB for orders below 1,999.','Introduce COD confirmation fee in high-RTO pincodes.','Route high-AOV orders through Bluedart.']}
+  },
+  'COD vs Prepaid':{
+    info:{what:'Split of orders by payment mode - Cash On Delivery vs Prepaid.',how:'Shopify payment_mode field.',source:'Shopify Orders API.',readIt:'Higher prepaid % = lower RTO risk, faster cash flow. Target 50%+ prepaid.'},
+    ai:{obs:'COD at 54% is declining (was 58% last period). Prepaid crossing 50% is a healthy trend.',insight:'Each 1% shift from COD to Prepaid saves approximately 1.2L/month in reverse logistics.',metrics:[['COD share','54% (down 4pp)'],['Prepaid share','46% (up 4pp)'],['COD RTO rate','~22%'],['Prepaid RTO rate','~6%']],actions:['Add online payment cashback nudge at checkout.','Show COD fee explicitly - many customers switch to UPI when they see it.','For repeat customers, pre-select UPI on checkout.']}
+  },
+  'Contribution Margin':{
+    info:{what:'4-step waterfall: Gross Revenue minus Ad Spend minus Logistics equals Net Contribution Margin (CM2).',how:'Logistics cost estimated at 7.4% of gross revenue based on iThink invoices.',source:'Shopify + Meta + iThink.',readIt:'Net CM2 = what is left before fixed overheads. Target CM2 above 35% for D2C jewellery.'},
+    ai:{obs:'Net CM2 at '+cm2+'% - slightly below the 35% D2C target.',insight:'ROAS of 2.64x means Meta ads barely break even at current COGS. Every percentage point of ROAS improvement = 8-12L more CM2.',metrics:[['Gross Revenue',fi(gross)],['Ad Spend',fi(adS)+' ('+(adS/gross*100).toFixed(1)+'%)'],['Logistics',fi(log)+' (7.4%)'],['Net CM2',fi(net)+' ('+cm2+'%)']],actions:['Target 3x+ ROAS by pausing sub-2x campaigns.','Negotiate iThink rates for higher volume.','Introduce minimum order for free shipping to increase AOV.']}
+  },
+  'Top Products':{
+    info:{what:'Top 5 products by revenue in the selected date range.',how:'Shopify order lineitems grouped by product_id, summed by quantity x unit_price.',source:'Shopify Order Line Items API.',readIt:'Track if top-3 concentration is increasing (single-product risk) or new products are entering.'},
+    ai:{obs:'Top 3 products drive 29% of total revenue. Mini Hoop is #1 for the 4th consecutive month.',insight:'The Initial Pendant is rising fastest - it is your gateway product for gifting occasions.',metrics:[['Top 3 concentration','29%'],['Mini Hoop rank streak','4 months #1']],actions:['Create a gift set bundle: Initial Pendant + Mini Hoop - AOV uplift of 40-60%.','Stock up: Initial Pendant has 92 units left at 8.5/day velocity = 10-day cover.','Feature Mini Hoop in retargeting creatives - it converts warm audiences best.']}
+  },
+  'Top 10 SKUs by Revenue':{
+    info:{what:'Top 10 individual SKUs ranked by revenue.',how:'Shopify order lineitems joined on SKU field, grouped and ranked by revenue.',source:'Shopify Order Line Items API.',readIt:'High-revenue + low-unit SKUs = high-AOV heroes, protect stock carefully.'},
+    ai:{obs:'Top 10 SKUs contribute 63% of total revenue.',insight:'QA132010 Diagonal Shine Ring has an active quality complaint cluster. Running ads on a quality-flagged SKU amplifies negative reviews.',metrics:[['Top 10 SKU share','63%'],['Volume champion','QC120001 (762 units)']],actions:['Pause Meta campaigns for QA132010 until QC is resolved.','Prioritise restock for QC120001 - 92 units remaining.','Create a SKU bundle using Mini Hoop + Diamond Dot Earrings.']}
+  },
+  'Top Rated Products':{
+    info:{what:'Top 5 products ranked by average Judge.me rating.',how:'Average of all published Judge.me ratings per product.',source:'Judge.me API joined with Shopify product catalogue.',readIt:'High rating + high count = proven quality. High rating + low count = promising but unvalidated.'},
+    ai:{obs:'Mini Hoop and Initial Pendant tie at 4.8 stars - your most validated products at scale.',insight:'Products with 4.8 stars and 100+ reviews are brand trust anchors. They should lead every campaign.',metrics:[['4.8 star+ products','2 (validated)'],['Top reviewer-to-buyer ratio','34.5%']],actions:['Lead all marketing creative with Mini Hoop or Initial Pendant.','Feature ratings prominently on gift guide landing pages.','Set up review request automation for Tennis Bracelet.']}
+  },
+  'Logistics Overview':{
+    info:{what:'Summary of logistics performance: total shipments, delivered, RTO rate, and NDR pending.',how:'iThink Logistics API status codes.',source:'iThink Logistics API.',readIt:'Healthy targets: RTO below 15%, NDR below 5%. NDR is the leading indicator.'},
+    ai:{obs:'NDR at 3.7% (680 units) = ~11.2L of unresolved revenue risk.',insight:'Upgrading to WhatsApp-based NDR communication typically improves resolution from 50% to 65-70%.',metrics:[['NDR count','680'],['NDR resolution rate','51.6%'],['Revenue at risk','~11.2L']],actions:['Upgrade NDR communication to WhatsApp with courier photo + time slot.','For orders above 5K, CX team calls personally.','Set auto-retry logic on NDR.']}
+  },
+  'Abandoned Carts':{
+    info:{what:'Total abandoned checkouts with total abandoned value.',how:'Shopify abandoned checkouts API filtered to recovered=FALSE.',source:'Shopify Admin API.',readIt:'Industry recovery rate with email+WhatsApp is 12-18% of abandoned value.'},
+    ai:{obs:'1.82Cr in abandoned carts. Recovering 12% = 21.8L of found revenue.',insight:'Jewellery abandonment peaks at size selection and payment gateway steps.',metrics:[['Abandoned carts','842'],['Abandoned value','1.82Cr'],['Recovery potential (12%)','21.8L']],actions:['Set up WhatsApp abandoned cart message within 1 hour - 3x open rate vs email.','Offer free shipping as the recovery hook.','A/B test cart recovery at 1h, 6h, and 24h.']}
+  },
+  'Cohort Retention':{
+    info:{what:'What % of customers acquired in a given month came back in M+1, M+2, M+3 months later.',how:'Shopify orders joined by customer_id. First order = cohort month.',source:'Shopify Orders API - mock data shown, backend query in development.',readIt:'Darker = higher retention. Later cohorts improving = experience is getting better.'},
+    ai:{obs:'March cohort M+1 retention at 41% is the best ever recorded. Nov cohort was at 32%.',insight:'The jump likely correlates with the Personalised Pendant launch and new post-purchase email flow.',metrics:[['M+1 Nov 25','32%'],['M+1 Mar 26','41%'],['Retention improvement','+28%']],actions:['Identify which SKU March cohort bought first - that is your new retention hero.','Expand post-purchase flow: add Day 14 styling tip + Day 45 charm add-on offer.','Build 2nd purchase triggered campaign at Day 30.']}
+  },
+  'Customer Segments':{
+    info:{what:'Customers grouped by purchase frequency. Bar size proportional to revenue from that segment.',how:'Shopify orders grouped by customer_id.',source:'Shopify Orders + Customers API.',readIt:'Large Champions bar = strong loyalty base. Large New bar = retention problem.'},
+    ai:{obs:'Champions (6+ orders) drive disproportionate revenue per customer. Most customers buy once.',insight:'Getting a customer from Order 1 to Order 2 is the highest-ROI retention move.',metrics:[['1-order customers','~52% of base'],['6+ order revenue','~29% of total'],['1 to 2 conversion','~28%']],actions:['Post-purchase sequence: Day 7 styling tip, Day 30 complete the set offer.','Launch early-access drops for 6+ order customers.','Identify which SKU first-time buyers purchase - that is your gateway product.']}
+  },
+  'Review Rating Trend':{
+    info:{what:'Daily average Judge.me rating over the selected period.',how:'Mean star rating of reviews published each day.',source:'Judge.me API.',readIt:'Sustained dip below 4.5 stars over 3-5 days = quality issue to investigate.'},
+    ai:{obs:'30-day average holds at 4.56 stars. Brief dip around Day 14-16 correlates with Diagonal Shine Ring stone-loss cluster.',insight:'Your review velocity is high enough to absorb isolated quality hits. But the Diagonal Shine Ring issue is a supplier-level problem.',metrics:[['30d avg rating','4.56 stars'],['Critical reviews below 3 stars','4.8%'],['Photo/video reviews','35.5%']],actions:['Pull QA132010 production batch report.','Set a Slack alert when any SKU 7-day rating drops 0.3+ points.','Respond to every 1-2 star review within 4 hours.']}
+  },
+  'Review Distribution':{
+    info:{what:'Star rating breakdown across all 2,894 reviews.',how:'Judge.me aggregate_feed: count of reviews per star rating.',source:'Judge.me API.',readIt:'68.5% five-star is excellent for jewellery. Industry average is 58%.'},
+    ai:{obs:'68.5% five-star, only 4.8% at 1-2 stars. Photo review rate at 35.5% is exceptional.',insight:'Your review strategy is working. The 4.8% negative cluster is worth root-cause analysis.',metrics:[['5-star share','68.5%'],['Photo review rate','35.5%'],['Response rate','94%']],actions:['Feature the 842 photo reviews in Meta UGC ads.','Offer 100 store credit for a verified photo review.','Add a Customer Photos widget to PDP.']}
+  },
+  'Recent Reviews':{
+    info:{what:'Latest published reviews from Judge.me across all products.',how:'Judge.me reviews sorted by published_at descending.',source:'Judge.me API.',readIt:'Look for patterns: multiple 1-2 star reviews for the same SKU = quality issue.'}
+  }
+};
+
+function od(type,title){
+  var ins=INS[title];
+  if(!ins)return;
+  var content=type==='ai'?ins.ai:ins.info;
+  if(!content)return;
+  var dtEl=document.getElementById('dtitle');
+  var dbEl=document.getElementById('dbody');
+  if(type==='ai'){
+    dtEl.innerHTML='<div><div class="aib">&#10022; AI Insight</div><div style="font-weight:600;font-size:18px;color:var(--ink);margin-top:4px">'+title+'</div></div>';
+    dbEl.innerHTML='';
+    if(content.obs)dbEl.innerHTML+='<div class="ds"><div class="dst">What the data shows</div><div class="dsb">'+content.obs+'</div></div>';
+    if(content.insight)dbEl.innerHTML+='<div class="ds"><div class="dst">Why it matters</div><div class="dsb">'+content.insight+'</div></div>';
+    if(content.metrics&&content.metrics.length){
+      dbEl.innerHTML+='<div class="ds"><div class="dst">Key numbers</div>'
+        +content.metrics.map(function(m){return'<div class="dm"><span style="color:var(--muted)">'+m[0]+'</span><span class="mono" style="font-weight:500">'+m[1]+'</span></div>';}).join('')+'</div>';
+    }
+    if(content.actions&&content.actions.length){
+      dbEl.innerHTML+='<div class="ds"><div class="dst">Recommended actions</div>'
+        +content.actions.map(function(a,i){return'<div class="da"><strong>'+(i+1)+'.</strong> '+a+'</div>';}).join('')+'</div>';
+    }
+  } else {
+    dtEl.innerHTML='<div><div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px">About this chart</div><div style="font-weight:600;font-size:18px;color:var(--ink)">'+title+'</div></div>';
+    dbEl.innerHTML='';
+    if(content.what)dbEl.innerHTML+='<div class="ds"><div class="dst">What this shows</div><div class="dsb">'+content.what+'</div></div>';
+    if(content.how)dbEl.innerHTML+='<div class="ds"><div class="dst">How it\'s calculated</div><div class="dsb">'+content.how+'</div></div>';
+    if(content.source)dbEl.innerHTML+='<div class="ds"><div class="dst">Data source</div><div class="dsb">'+content.source+'</div></div>';
+    if(content.readIt)dbEl.innerHTML+='<div class="ds"><div class="dst">How to read it</div><div class="dsb">'+content.readIt+'</div></div>';
+  }
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('drawer').classList.add('open');
+}
+function cd(){
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('drawer').classList.remove('open');
+}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')cd();});
+function setRange(btn){
+  document.querySelectorAll('.range-btns button').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

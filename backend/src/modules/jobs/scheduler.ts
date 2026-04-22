@@ -3,6 +3,8 @@ import { syncShopifyOrders, syncAbandonedCheckouts } from '@modules/shopify/shop
 import { syncMetaInsights } from '@modules/meta/meta.sync';
 import { syncIthinkShipments, syncDailyRemittance } from '@modules/ithink/ithink.sync';
 import { syncJudgeMe } from '@modules/judgeme/judgeme.sync';
+import { syncGA4Data, syncGA4Realtime } from '@modules/ga4/ga4.sync';
+import { refreshTokenJob } from '@modules/ga4/ga4.token';
 import { logger } from '@logger/logger';
 
 const TZ = { timezone: 'Asia/Kolkata' };
@@ -39,5 +41,26 @@ export function startScheduler(): void {
     await syncJudgeMe();
   }, TZ);
 
+  // Every 30 min — GA4 full sync
+  cron.schedule('*/30 * * * *', async () => {
+    logger.info('[Cron] Running GA4 sync...');
+    await syncGA4Data();
+  }, TZ);
+
+  // Every 5 min — GA4 realtime
+  cron.schedule('*/5 * * * *', async () => {
+    await syncGA4Realtime();
+  }, TZ);
+
+  // Every 45 min — GA4 token refresh
+  cron.schedule('*/45 * * * *', async () => {
+    logger.info('[Cron] Refreshing GA4 token...');
+    await refreshTokenJob();
+  }, TZ);
+
   logger.info('[Scheduler] All cron jobs started (timezone: Asia/Kolkata)');
+
+  // Warm up GA4 realtime + sync so the UI isn't empty on first load after restart
+  void syncGA4Realtime();
+  void syncGA4Data();
 }

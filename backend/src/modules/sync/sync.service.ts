@@ -8,6 +8,7 @@ import {
   syncDailyRemittance,
 } from '@modules/ithink/ithink.sync';
 import { syncJudgeMe } from '@modules/judgeme/judgeme.sync';
+import { syncGA4Data, syncGA4Realtime } from '@modules/ga4/ga4.sync';
 import { logger } from '@logger/logger';
 import type { SyncResult } from './sync.types';
 
@@ -33,6 +34,11 @@ export async function triggerIthinkBackfill(
 ): Promise<SyncResult & { since: string; until: string }> {
   await backfillShipments(since, until);
   return { message: 'iThink backfill triggered', since, until };
+}
+
+export async function triggerGA4Sync(): Promise<SyncResult> {
+  await Promise.all([syncGA4Data(), syncGA4Realtime()]);
+  return { message: 'GA4 sync triggered' };
 }
 
 export async function triggerJudgeMeSync(): Promise<SyncResult> {
@@ -78,6 +84,14 @@ export async function triggerAllSync(): Promise<SyncResult & { results: Record<s
       .catch((e: Error) => {
         results['judgeme'] = e.message;
         logger.error(`[SyncAll] JudgeMe: ${e.message}`);
+      }),
+    Promise.all([syncGA4Data(), syncGA4Realtime()])
+      .then(() => {
+        results['ga4'] = 'ok';
+      })
+      .catch((e: Error) => {
+        results['ga4'] = e.message;
+        logger.error(`[SyncAll] GA4: ${e.message}`);
       }),
   ]);
 

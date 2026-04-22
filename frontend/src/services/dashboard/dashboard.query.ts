@@ -50,6 +50,15 @@ export function useSyncJudgeme() {
   });
 }
 
+export function useSyncGA4() {
+  const refetch = useRefetchDashboard();
+  return useMutation({
+    mutationFn: () => triggerSync('ga4'),
+    onSuccess: () => { refetch(); },
+    onError:   () => {},
+  });
+}
+
 export function useSyncAll() {
   const refetch = useRefetchDashboard();
   return useMutation({

@@ -5,6 +5,7 @@ import {
   syncIthinkHandler,
   syncIthinkBackfillHandler,
   syncJudgeMeHandler,
+  syncGA4Handler,
   syncAllHandler,
 } from './sync.controller';
 
@@ -16,5 +17,6 @@ router.post('/meta', syncMetaHandler);
 router.post('/ithink', syncIthinkHandler);
 router.post('/ithink/backfill', syncIthinkBackfillHandler);
 router.post('/judgeme', syncJudgeMeHandler);
+router.post('/ga4', syncGA4Handler);
 
 export default router;

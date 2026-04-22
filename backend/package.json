@@ -18,7 +18,9 @@
     "backfill:shopify": "tsx src/modules/shopify/shopify.backfill.ts",
     "backfill:meta": "tsx src/modules/meta/meta.backfill.ts",
     "backfill:ithink": "tsx src/modules/ithink/ithink.backfill.ts",
-    "backfill:judgeme": "tsx src/modules/judgeme/judgeme.backfill.ts"
+    "backfill:judgeme": "tsx src/modules/judgeme/judgeme.backfill.ts",
+    "backfill:ga4": "tsx src/modules/ga4/ga4.backfill.ts",
+    "ga4:token": "node scripts/getGA4Token.js"
   },
   "dependencies": {
     "axios": "^1.6.0",
@@ -28,6 +30,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.18.0",
     "express-rate-limit": "^7.4.0",
+    "google-auth-library": "^10.6.2",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
     "node-cron": "^3.0.0",

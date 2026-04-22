@@ -10,7 +10,7 @@ import { formatINR, formatNum } from '@utils/formatters';
 import { rangeLabel } from '@utils/common-functions/buildRangeParams';
 import {
   LineChart, Line, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import type { MarketingTrendItem, CreativeFatigueItem } from '@app/types/analytics';
 import type { Campaign } from '@app/types/dashboard';
@@ -314,15 +314,26 @@ function SpendByObjectiveDonut({ campaigns }: { campaigns: Campaign[] }) {
   }
   const data = Object.entries(grouped).map(([name, value]) => ({ name, value }));
   return (
-    <ResponsiveContainer width="100%" height={200}>
-      <PieChart>
-        <Pie data={data} cx="50%" cy="50%" innerRadius={52} outerRadius={72} dataKey="value" paddingAngle={2}>
-          {data.map((d, i) => <Cell key={i} fill={OBJ_COLORS[d.name] ?? FALLBACK_COLORS[i % FALLBACK_COLORS.length]} />)}
-        </Pie>
-        <Tooltip formatter={(v: number) => formatINR(v)} />
-        <Legend wrapperStyle={{ fontSize: 10 }} />
-      </PieChart>
-    </ResponsiveContainer>
+    <div className="h-full flex flex-col min-h-[180px]">
+      <div className="flex-1 min-h-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie data={data} cx="50%" cy="50%" innerRadius={52} outerRadius={72} dataKey="value" paddingAngle={2}>
+              {data.map((d, i) => <Cell key={i} fill={OBJ_COLORS[d.name] ?? FALLBACK_COLORS[i % FALLBACK_COLORS.length]} />)}
+            </Pie>
+            <Tooltip formatter={(v: number) => formatINR(v)} />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 pt-2">
+        {data.map((d, i) => (
+          <span key={d.name} className="flex items-center gap-1.5 text-[10px] text-[var(--text-muted)]">
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: OBJ_COLORS[d.name] ?? FALLBACK_COLORS[i % FALLBACK_COLORS.length] }} />
+            {d.name}
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -488,35 +499,32 @@ function CampaignTable({ campaigns }: { campaigns: Campaign[] }) {
     </th>
   );
 
+  const limitButtons = (
+    <div className="flex items-center gap-1">
+      {([10, 'all'] as ShowLimit[]).map((n) => (
+        <button
+          key={String(n)}
+          onClick={() => setShowLimit(n)}
+          className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${
+            showLimit === n
+              ? 'bg-[var(--accent-soft,#f5f0e8)] text-[var(--accent,#8b6f3a)]'
+              : 'text-[var(--text-muted)] hover:bg-[var(--surface-2)]'
+          }`}
+        >
+          {n === 'all' ? 'All' : `Top ${n}`}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <Panel
       title="Campaign Performance"
-      subtitle={`Meta Ads · ${campaigns.length} campaigns`}
+      subtitle="Meta Ads"
+      action={limitButtons}
       info={{ what: 'Meta ad campaigns sorted by revenue. Status: Scale (ROAS ≥ 3×), Hold (1.5–3×), Cut (< 1.5×), Inactive (no spend/data). CTR, CPM and Freq computed from Meta impressions.', source: 'Meta Ads API', readIt: 'Scale winners by duplicating ad sets. Cut campaigns below 1.5× ROAS after 3+ days of data.' }}
       ai={{ observation: 'Top 2–3 campaigns typically drive 80% of total purchase revenue.', insight: 'Identify your top creative-audience combination and build new campaigns around the same formula. Budget should follow performance, not be distributed evenly.', actions: ['Scale top 3 ROAS campaigns by 15% weekly', 'Create lookalike audiences from top purchasers', 'Archive campaigns with zero purchases after 7 days'] }}
     >
-      {/* Controls */}
-      <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
-        <p className="text-xs text-[var(--text-subtle)]">
-          Showing {rows.length} of {campaigns.length} · sorted by <span className="font-medium text-[var(--text-muted)]">{sortBy}</span>
-        </p>
-        <div className="flex items-center gap-1">
-          {([10, 20, 'all'] as ShowLimit[]).map((n) => (
-            <button
-              key={String(n)}
-              onClick={() => setShowLimit(n)}
-              className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${
-                showLimit === n
-                  ? 'bg-[var(--accent-soft,#f5f0e8)] text-[var(--accent,#8b6f3a)]'
-                  : 'text-[var(--text-muted)] hover:bg-[var(--surface-2)]'
-              }`}
-            >
-              {n === 'all' ? 'All' : `Top ${n}`}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Scrollable table */}
       <div className="overflow-x-auto">
         <div className="max-h-[420px] overflow-y-auto rounded-lg border border-[var(--border)]">
@@ -530,7 +538,7 @@ function CampaignTable({ campaigns }: { campaigns: Campaign[] }) {
                 <th className="py-2.5 pr-3 text-right text-[var(--text-muted)] font-medium">CTR</th>
                 <th className="py-2.5 pr-3 text-right text-[var(--text-muted)] font-medium">CPM</th>
                 <th className="py-2.5 pr-3 text-right text-[var(--text-muted)] font-medium">Freq</th>
-                <th className="py-2.5 pr-3 text-center text-[var(--text-muted)] font-medium">Status</th>
+                <th className="py-2 pr-3 text-center text-[var(--text-muted)] font-medium">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -553,20 +561,20 @@ function CampaignTable({ campaigns }: { campaigns: Campaign[] }) {
                     key={c.campaign_id}
                     className={`border-b border-[var(--border)] hover:bg-[var(--surface-2)] transition-colors ${c.inactive ? 'opacity-50' : ''}`}
                   >
-                    <td className="py-2.5 pl-3 pr-3 text-[var(--text)] max-w-[220px]">
+                    <td className="py-2 pl-3 pr-3 text-[var(--text)] max-w-[220px]">
                       <span className="block truncate" title={c.campaign_name}>{c.campaign_name}</span>
                     </td>
-                    <td className="py-2.5 pr-3 text-[var(--text-muted)] text-right tabular-nums">{formatINR(c.spend)}</td>
-                    <td className={`py-2.5 pr-3 text-right tabular-nums ${revStyle}`}>
+                    <td className="py-2 pr-3 text-[var(--text-muted)] text-right tabular-nums">{formatINR(c.spend)}</td>
+                    <td className={`py-2 pr-3 text-right tabular-nums ${revStyle}`}>
                       {c.purchase_value > 0 ? formatINR(c.purchase_value) : <span className="text-[10px] italic">No data</span>}
                     </td>
-                    <td className={`py-2.5 pr-3 text-right tabular-nums ${roasStyle}`}>
+                    <td className={`py-2 pr-3 text-right tabular-nums ${roasStyle}`}>
                       {c.inactive ? '—' : c.noRevenue ? <span className="text-[10px] text-[var(--text-subtle)] italic">No attr.</span> : `${c.roas.toFixed(2)}x`}
                     </td>
-                    <td className="py-2.5 pr-3 text-[var(--text-muted)] text-right tabular-nums">{c.ctr.toFixed(2)}%</td>
-                    <td className="py-2.5 pr-3 text-[var(--text-muted)] text-right tabular-nums">₹{Math.round(c.cpm)}</td>
-                    <td className="py-2.5 pr-3 text-[var(--text-muted)] text-right tabular-nums">{c.freq.toFixed(1)}</td>
-                    <td className="py-2.5 pr-3 text-center">
+                    <td className="py-2 pr-3 text-[var(--text-muted)] text-right tabular-nums">{c.ctr.toFixed(2)}%</td>
+                    <td className="py-2 pr-3 text-[var(--text-muted)] text-right tabular-nums">₹{Math.round(c.cpm)}</td>
+                    <td className="py-2 pr-3 text-[var(--text-muted)] text-right tabular-nums">{c.freq.toFixed(1)}</td>
+                    <td className="py-2 pr-3 text-center">
                       <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${statusStyle}`}>
                         {c.status}
                       </span>

@@ -40,6 +40,15 @@ const envSchema = z.object({
   // Judge.me
   JUDGEME_API_TOKEN: z.string().optional(),
   JUDGEME_SHOP_DOMAIN: z.string().optional(),
+  // GA4
+  GA4_PROPERTY_ID: z.string().optional(),
+  GA4_TYPE: z.string().default('service_account'),
+  GA4_PROJECT_ID: z.string().optional(),
+  GA4_PRIVATE_KEY_ID: z.string().optional(),
+  GA4_PRIVATE_KEY: z.string().optional(),
+  GA4_CLIENT_EMAIL: z.string().optional(),
+  GA4_CLIENT_ID: z.string().optional(),
+  GA4_TOKEN_URI: z.string().default('https://oauth2.googleapis.com/token'),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -82,6 +91,16 @@ export const environment = {
   judgeme: {
     apiToken: env.JUDGEME_API_TOKEN,
     shopDomain: env.JUDGEME_SHOP_DOMAIN,
+  },
+  ga4: {
+    propertyId: env.GA4_PROPERTY_ID,
+    type: env.GA4_TYPE,
+    projectId: env.GA4_PROJECT_ID,
+    privateKeyId: env.GA4_PRIVATE_KEY_ID,
+    privateKey: env.GA4_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    clientEmail: env.GA4_CLIENT_EMAIL,
+    clientId: env.GA4_CLIENT_ID,
+    tokenUri: env.GA4_TOKEN_URI,
   },
 } as const;
 

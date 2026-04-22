@@ -46,11 +46,18 @@
       "Bash(cp /Users/apple/Documents/Projects/Shayn/.claude-new/PROGRESS.md /Users/apple/Documents/Projects/Shayn/.claude/PROGRESS.md)",
       "Bash(cp /Users/apple/Documents/Projects/Shayn/.claude-new/QUESTIONS.md /Users/apple/Documents/Projects/Shayn/.claude/QUESTIONS.md)",
       "Bash(cp /Users/apple/Documents/Projects/Shayn/.claude-new/TASKS.md /Users/apple/Documents/Projects/Shayn/.claude/TASKS.md)",
-      "Bash(cp -r /Users/apple/Documents/Projects/Shayn/.claude-new/rules /Users/apple/Documents/Projects/Shayn/.claude/)"
+      "Bash(cp -r /Users/apple/Documents/Projects/Shayn/.claude-new/rules /Users/apple/Documents/Projects/Shayn/.claude/)",
+      "Read(//Users/apple/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.7/skills/subagent-driven-development/**)",
+      "Read(//Users/apple/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.7/skills/brainstorming/**)",
+      "Bash(/Users/apple/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.7/skills/brainstorming/scripts/start-server.sh --project-dir /Users/apple/Documents/Projects/Shayn)",
+      "Bash(npm list *)",
+      "Bash(DATABASE_URL='postgresql://shayn_user:mihil@localhost:5432/shayn_mis' NODE_ENV=local npx sequelize-cli db:migrate)",
+      "Bash(DATABASE_URL='postgresql://shayn_user:mihil@localhost:5432/shayn_mis' NODE_ENV=local npx sequelize-cli db:seed:all)"
     ],
     "additionalDirectories": [
       "/private/tmp",
-      "/Users/apple/Documents/Projects/Shayn/docs/superpowers"
+      "/Users/apple/Documents/Projects/Shayn/docs/superpowers",
+      "/Users/apple/Documents/Projects/Shayn/docs/superpowers/specs"
     ]
   }
 }
