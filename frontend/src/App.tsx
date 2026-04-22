@@ -14,7 +14,6 @@ const ReviewsPage    = lazy(() => import('@pages/reviews/page').then((m) => ({ d
 const OperationsPage = lazy(() => import('@pages/operations/page').then((m) => ({ default: m.OperationsPage })));
 const CustomersPage  = lazy(() => import('@pages/customers/page').then((m) => ({ default: m.CustomersPage })));
 const MarketingPage  = lazy(() => import('@pages/marketing/page').then((m) => ({ default: m.MarketingPage })));
-const AnalyticsPage  = lazy(() => import('@pages/analytics/page').then((m) => ({ default: m.AnalyticsPage })));
 const AuthPage       = lazy(() => import('@pages/auth/page').then((m) => ({ default: m.AuthPage })));
 
 export function App() {
@@ -46,7 +45,6 @@ export function App() {
                     <Route path="/operations" element={<OperationsPage />} />
                     <Route path="/customers"  element={<CustomersPage />} />
                     <Route path="/marketing"  element={<MarketingPage />} />
-                    <Route path="/analytics"  element={<AnalyticsPage />} />
                   </Routes>
                 </Suspense>
               </AppShell>

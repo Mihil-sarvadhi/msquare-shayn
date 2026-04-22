@@ -44,7 +44,6 @@ const NAV = [
   { label: 'Customers',  to: '/customers'  },
   { label: 'Operations', to: '/operations' },
   { label: 'Reviews',    to: '/reviews'    },
-  { label: 'Analytics',  to: '/analytics'  },
 ];
 
 const CONNECTOR_META: Record<string, { label: string }> = {

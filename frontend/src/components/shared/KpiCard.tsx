@@ -2,6 +2,7 @@ import { cn } from '@/lib/utils';
 
 interface KpiCardProps {
   label: string;
+  labelTooltip?: string;
   value: string | number;
   sub?: string;
   delta?: number;        // % change — positive = up (green), negative = down (red)
@@ -9,7 +10,7 @@ interface KpiCardProps {
   loading?: boolean;
 }
 
-export function KpiCard({ label, value, sub, delta, invertDelta = false, loading }: KpiCardProps) {
+export function KpiCard({ label, labelTooltip, value, sub, delta, invertDelta = false, loading }: KpiCardProps) {
   if (loading) {
     return <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] min-h-[96px] animate-pulse" />;
   }
@@ -21,7 +22,7 @@ export function KpiCard({ label, value, sub, delta, invertDelta = false, loading
   return (
     <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] px-5 py-4 flex flex-col gap-1.5 min-h-[96px]">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs text-[var(--text-muted)] uppercase tracking-wide leading-tight">{label}</span>
+        <span className="text-xs text-[var(--text-muted)] uppercase tracking-wide leading-tight line-clamp-2" title={labelTooltip}>{label}</span>
         {hasDelta && (
           <span className={cn(
             'shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full flex items-center gap-0.5',
