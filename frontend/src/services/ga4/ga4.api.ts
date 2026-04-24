@@ -75,10 +75,17 @@ export async function fetchGA4(range: RangeState) {
   const e = API_ENDPOINTS.ga4;
   const currentRange = resolveCurrentRange(range);
   const previousRange = currentRange ? getPreviousEquivalentRange(currentRange) : null;
+  // Use the same explicit window for current + prior summaries and charts. Passing only
+  // `range=30d` hits backend logic that does not match getPreviousEquivalentRange (30
+  // inclusive days vs 31), which skewed bounce and other GA4 deltas.
+  const rangeParams: Record<string, string> =
+    currentRange !== null
+      ? { startDate: currentRange.startDate, endDate: currentRange.endDate }
+      : params;
 
   const [summary, summaryPrevious, overview, channels, ecommerce, products, realtime, countryActiveUsers, pagesScreens] =
     await Promise.all([
-      safe(get<GA4Summary>(e.summary, params), {
+      safe(get<GA4Summary>(e.summary, rangeParams), {
         total_sessions: 0, total_users: 0, total_new_users: 0,
         total_page_views: 0, avg_bounce_rate: 0, avg_session_duration: 0,
       }),
@@ -89,13 +96,13 @@ export async function fetchGA4(range: RangeState) {
         total_sessions: 0, total_users: 0, total_new_users: 0,
         total_page_views: 0, avg_bounce_rate: 0, avg_session_duration: 0,
       }),
-      safe(get<GA4TrafficDaily[]>(e.overview, params), []),
-      safe(get<GA4Channel[]>(e.channels, params), []),
-      safe(get<GA4EcommerceDaily[]>(e.ecommerce, params), []),
-      safe(get<GA4Product[]>(e.products, params), []),
+      safe(get<GA4TrafficDaily[]>(e.overview, rangeParams), []),
+      safe(get<GA4Channel[]>(e.channels, rangeParams), []),
+      safe(get<GA4EcommerceDaily[]>(e.ecommerce, rangeParams), []),
+      safe(get<GA4Product[]>(e.products, rangeParams), []),
       safe(get<GA4Realtime[]>(e.realtime), []),
-      safe(get<GA4CountryActiveUsers[]>(e.countryActiveUsers, params), []),
-      safe(get<GA4PageScreen[]>(e.pagesScreens, params), []),
+      safe(get<GA4CountryActiveUsers[]>(e.countryActiveUsers, rangeParams), []),
+      safe(get<GA4PageScreen[]>(e.pagesScreens, rangeParams), []),
     ]);
 
   const normalizedSummary = numify(summary, [

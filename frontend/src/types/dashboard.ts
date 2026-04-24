@@ -47,9 +47,13 @@ export interface ConnectorHealth {
 }
 
 export interface RecentOrder {
+  order_id: string;
   order_name: string;
   revenue: number;
   customer_city: string;
+  financial_status: string;
+  fulfillment_status: string;
+  products: string[];
   created_at: string;
 }
 

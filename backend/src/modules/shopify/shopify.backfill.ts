@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { ShopifyOrder, ShopifyOrderLineitem } from '@db/models';
 import { startBulkBackfill, checkBulkStatus, graphqlRequest } from './shopify.connector';
+import { syncShopifyCustomers } from './shopify.sync';
 import { logger } from '@logger/logger';
 
 async function cancelExistingBulkOperation(): Promise<void> {
@@ -49,12 +50,27 @@ async function downloadAndInsertBulkData(url: string): Promise<number> {
       paymentGateways.includes('cash on delivery') ||
       paymentGateways.some((g) => g.toLowerCase().includes('cod'));
     const priceSet = order.totalPriceSet as { shopMoney: { amount: string } } | undefined;
+    const discountsSet = order.totalDiscountsSet as { shopMoney: { amount: string } } | undefined;
+    const shippingSet = order.totalShippingPriceSet as { shopMoney: { amount: string } } | undefined;
+    const taxSet = order.totalTaxSet as { shopMoney: { amount: string } } | undefined;
+    const refundedSet = order.totalRefundedSet as { shopMoney: { amount: string } } | undefined;
+    const totalRevenue = parseFloat(priceSet?.shopMoney?.amount || '0');
+    const totalDiscounts = parseFloat(discountsSet?.shopMoney?.amount || '0');
+    const totalShipping = parseFloat(shippingSet?.shopMoney?.amount || '0');
+    const totalTax = parseFloat(taxSet?.shopMoney?.amount || '0');
+    const totalRefunded = parseFloat(refundedSet?.shopMoney?.amount || '0');
+    const grossSales = totalRevenue + totalDiscounts + totalRefunded - totalTax - totalShipping;
 
     await ShopifyOrder.upsert({
       order_id: order.id as string,
       order_name: order.name as string,
       created_at: new Date(order.createdAt as string),
-      revenue: parseFloat(priceSet?.shopMoney?.amount || '0'),
+      revenue: totalRevenue,
+      gross_sales: grossSales,
+      total_discounts: totalDiscounts,
+      total_tax: totalTax,
+      total_shipping: totalShipping,
+      total_refunded: totalRefunded,
       payment_mode: isCOD ? 'COD' : 'Prepaid',
       financial_status: order.displayFinancialStatus as string,
       fulfillment_status: order.displayFulfillmentStatus as string,
@@ -77,16 +93,18 @@ async function downloadAndInsertBulkData(url: string): Promise<number> {
     const orderId = item.__parentId as string;
     if (!orders[orderId]) continue;
     const price = item.originalUnitPriceSet as { shopMoney: { amount: string } } | undefined;
+    const sku = (item.sku as string | undefined) || undefined;
+    const title = item.title as string;
+    const where = sku
+      ? { order_id: orderId, sku, title }
+      : { order_id: orderId, title };
+
     await ShopifyOrderLineitem.findOrCreate({
-      where: {
-        order_id: orderId,
-        sku: (item.sku as string) || undefined,
-        title: item.title as string,
-      },
+      where,
       defaults: {
         order_id: orderId,
-        sku: item.sku as string,
-        title: item.title as string,
+        sku,
+        title,
         quantity: item.quantity as number,
         unit_price: parseFloat(price?.shopMoney?.amount || '0'),
       },
@@ -111,7 +129,10 @@ export async function shopifyBackfill(): Promise<void> {
     logger.info(`[Shopify Backfill] Status: ${status}`);
     if (status === 'COMPLETED' && result.url) {
       const count = await downloadAndInsertBulkData(result.url);
-      logger.info(`[Shopify Backfill] Done. Inserted ${count} orders.`);
+      const customersSynced = await syncShopifyCustomers();
+      logger.info(
+        `[Shopify Backfill] Done. Inserted ${count} orders and synced ${customersSynced} customers.`,
+      );
       return;
     }
     if (status === 'FAILED') {

@@ -29,9 +29,9 @@ export async function getKpis(since: string, until: string): Promise<KpiResult> 
       cancelled_orders: string;
     }>(
       `SELECT
-        COALESCE(SUM(CASE WHEN financial_status != 'voided' THEN revenue ELSE 0 END), 0) AS total_revenue,
+        COALESCE(SUM(CASE WHEN financial_status != 'voided' THEN COALESCE(gross_sales, revenue) ELSE 0 END), 0) AS total_revenue,
         COUNT(CASE WHEN financial_status != 'voided' THEN 1 END) AS total_orders,
-        COALESCE(AVG(CASE WHEN financial_status != 'voided' THEN revenue END), 0) AS aov,
+        COALESCE(AVG(CASE WHEN financial_status != 'voided' THEN COALESCE(gross_sales, revenue) END), 0) AS aov,
         COUNT(DISTINCT CASE WHEN financial_status != 'voided' THEN customer_id END) AS unique_customers,
         SUM(CASE WHEN payment_mode = 'COD' AND financial_status != 'voided' THEN 1 ELSE 0 END) AS cod_orders,
         SUM(CASE WHEN payment_mode = 'Prepaid' AND financial_status != 'voided' THEN 1 ELSE 0 END) AS prepaid_orders,
@@ -111,7 +111,7 @@ export async function getKpis(since: string, until: string): Promise<KpiResult> 
 
 export async function getRevenueTrend(since: string, until: string): Promise<RevenueTrendRow[]> {
   return sequelize.query<RevenueTrendRow>(
-    `SELECT created_at::date AS date, SUM(revenue) AS revenue, COUNT(*) AS orders
+    `SELECT created_at::date AS date, SUM(COALESCE(gross_sales, revenue)) AS revenue, COUNT(*) AS orders
      FROM shopify_orders
      WHERE created_at::date BETWEEN :since AND :until AND financial_status != 'voided'
      GROUP BY created_at::date ORDER BY date ASC`,
@@ -297,10 +297,35 @@ export async function getAllReviews(
 
 export async function getRecentOrders(): Promise<RecentOrderRow[]> {
   return sequelize.query<RecentOrderRow>(
-    `SELECT order_name, revenue, customer_city, created_at
-     FROM shopify_orders
-     WHERE financial_status != 'voided'
-     ORDER BY created_at DESC
+    `SELECT
+       o.order_id,
+       o.order_name,
+       COALESCE(o.gross_sales, o.revenue) AS revenue,
+       COALESCE(
+         NULLIF(o.financial_status, ''),
+         CASE
+           WHEN o.payment_mode = 'Prepaid' THEN 'PAID'
+           WHEN o.payment_mode = 'COD' THEN 'PENDING'
+           ELSE 'N/A'
+         END
+       ) AS financial_status,
+       COALESCE(NULLIF(o.fulfillment_status, ''), 'UNFULFILLED') AS fulfillment_status,
+       o.customer_city,
+       o.created_at,
+       ARRAY_REMOVE(ARRAY_AGG(DISTINCT li.title), NULL) AS products
+     FROM shopify_orders o
+     LEFT JOIN shopify_order_lineitems li ON li.order_id = o.order_id
+     WHERE o.financial_status != 'voided'
+     GROUP BY
+       o.order_id,
+       o.order_name,
+       o.gross_sales,
+       o.revenue,
+       o.financial_status,
+       o.fulfillment_status,
+       o.customer_city,
+       o.created_at
+     ORDER BY o.created_at DESC
      LIMIT 5`,
     { type: QueryTypes.SELECT },
   );

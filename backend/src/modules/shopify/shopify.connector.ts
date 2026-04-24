@@ -17,6 +17,10 @@ const ORDERS_QUERY = `
           id name createdAt displayFinancialStatus displayFulfillmentStatus
           paymentGatewayNames
           totalPriceSet { shopMoney { amount currencyCode } }
+          totalDiscountsSet { shopMoney { amount } }
+          totalShippingPriceSet { shopMoney { amount } }
+          totalTaxSet { shopMoney { amount } }
+          totalRefundedSet { shopMoney { amount } }
           discountCodes
           customer { id email firstName lastName defaultAddress { city province } }
           lineItems(first: 20) {
@@ -32,6 +36,24 @@ const ORDERS_QUERY = `
   }
 `;
 
+const CUSTOMERS_QUERY = `
+  query GetCustomers($cursor: String) {
+    customers(first: 250, after: $cursor, sortKey: CREATED_AT) {
+      pageInfo { hasNextPage endCursor }
+      edges {
+        node {
+          id
+          email
+          firstName
+          lastName
+          createdAt
+          defaultAddress { city province }
+        }
+      }
+    }
+  }
+`;
+
 export interface ShopifyOrder {
   id: string;
   name: string;
@@ -40,6 +62,10 @@ export interface ShopifyOrder {
   displayFulfillmentStatus: string;
   paymentGatewayNames: string[];
   totalPriceSet: { shopMoney: { amount: string; currencyCode: string } };
+  totalDiscountsSet?: { shopMoney: { amount: string } };
+  totalShippingPriceSet?: { shopMoney: { amount: string } };
+  totalTaxSet?: { shopMoney: { amount: string } };
+  totalRefundedSet?: { shopMoney: { amount: string } };
   discountCodes: string[];
   customer?: {
     id: string;
@@ -59,6 +85,18 @@ export interface ShopifyOrder {
       };
     }>;
   };
+}
+
+export interface ShopifyCustomer {
+  id: string;
+  email?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  createdAt?: string | null;
+  defaultAddress?: {
+    city?: string | null;
+    province?: string | null;
+  } | null;
 }
 
 export async function graphqlRequest<T>(
@@ -95,13 +133,39 @@ export async function fetchRecentOrders(updatedAtMin?: string): Promise<ShopifyO
   return allOrders;
 }
 
+export async function fetchCustomers(): Promise<ShopifyCustomer[]> {
+  let allCustomers: ShopifyCustomer[] = [];
+  let cursor: string | null = null;
+  let hasNextPage = true;
+
+  type CustomersEdge = { node: ShopifyCustomer };
+  type CustomersResponse = {
+    customers: { edges: Array<CustomersEdge>; pageInfo: { hasNextPage: boolean; endCursor: string } };
+  };
+
+  while (hasNextPage) {
+    const data: CustomersResponse = await graphqlRequest<CustomersResponse>(CUSTOMERS_QUERY, { cursor });
+    allCustomers = allCustomers.concat(data.customers.edges.map((e: CustomersEdge) => e.node));
+    hasNextPage = data.customers.pageInfo.hasNextPage;
+    cursor = data.customers.pageInfo.endCursor;
+    if (hasNextPage) await new Promise((r) => setTimeout(r, 500));
+  }
+
+  return allCustomers;
+}
+
 function buildBulkOrdersQuery(): string {
   const since = environment.shopify.syncStartDate;
   return `
   mutation {
     bulkOperationRunQuery(query: """{ orders(query: "created_at:>=${since}") { edges { node {
       id name createdAt displayFinancialStatus displayFulfillmentStatus paymentGatewayNames
-      totalPriceSet { shopMoney { amount } } discountCodes
+      totalPriceSet { shopMoney { amount } }
+      totalDiscountsSet { shopMoney { amount } }
+      totalShippingPriceSet { shopMoney { amount } }
+      totalTaxSet { shopMoney { amount } }
+      totalRefundedSet { shopMoney { amount } }
+      discountCodes
       customer { id email defaultAddress { city province } }
       lineItems { edges { node { sku title quantity originalUnitPriceSet { shopMoney { amount } } }}}
     }}}}""") { bulkOperation { id status } userErrors { field message } }

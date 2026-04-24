@@ -17,41 +17,48 @@ const getNoParams = <T>(url: string) =>
 
 const safe = <T>(p: Promise<T>, fallback: T | null): Promise<T | null> => p.catch(() => fallback);
 
+function utcTodayYmd(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function shiftUtcDays(ymd: string, deltaDays: number): string {
+  const d = new Date(`${ymd}T00:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() + deltaDays);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Same-length block immediately before [startYmd, endYmd] (inclusive), UTC calendar days. */
+function previousEquivalentRange(startYmd: string, endYmd: string): { startDate: string; endDate: string } {
+  const start = new Date(`${startYmd}T00:00:00.000Z`);
+  const end = new Date(`${endYmd}T00:00:00.000Z`);
+  const daySpan = Math.floor((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+  const prevEnd = new Date(start);
+  prevEnd.setUTCDate(prevEnd.getUTCDate() - 1);
+  const prevStart = new Date(prevEnd);
+  prevStart.setUTCDate(prevStart.getUTCDate() - (daySpan - 1));
+  return {
+    startDate: prevStart.toISOString().slice(0, 10),
+    endDate: prevEnd.toISOString().slice(0, 10),
+  };
+}
+
 function buildPrevPeriodParams(range: RangeState): Record<string, string> | null {
   // full-period presets have no meaningful prior-period delta
   if (range.preset === 'all' || range.preset === 'fytd' || range.preset === 'fqtd') return null;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  let days: number;
-  let currentSince: Date;
-
   if (range.preset === 'custom' && range.startDate && range.endDate) {
-    currentSince = new Date(range.startDate);
-    const currentUntil = new Date(range.endDate);
-    days = Math.round((currentUntil.getTime() - currentSince.getTime()) / 86400000);
-  } else if (range.preset === '7d') {
-    days = 7;
-    currentSince = new Date(today);
-    currentSince.setDate(today.getDate() - 7);
-  } else {
-    // '30d'
-    days = 30;
-    currentSince = new Date(today);
-    currentSince.setDate(today.getDate() - 30);
+    return previousEquivalentRange(range.startDate, range.endDate);
   }
 
-  // Previous window: the same-length period immediately before the current window
-  const prevUntil = new Date(currentSince);
-  prevUntil.setDate(prevUntil.getDate() - 1);
-  const prevSince = new Date(prevUntil);
-  prevSince.setDate(prevSince.getDate() - (days - 1));
+  const todayYmd = utcTodayYmd();
+  if (range.preset === '7d') {
+    const startYmd = shiftUtcDays(todayYmd, -6);
+    return previousEquivalentRange(startYmd, todayYmd);
+  }
 
-  return {
-    startDate: prevSince.toISOString().split('T')[0],
-    endDate:   prevUntil.toISOString().split('T')[0],
-  };
+  // '30d' — 30 inclusive UTC days ending today (aligned with backend resolveDateRange + GA4 strip)
+  const startYmd = shiftUtcDays(todayYmd, -29);
+  return previousEquivalentRange(startYmd, todayYmd);
 }
 
 export async function fetchAllDashboard(range: RangeState) {

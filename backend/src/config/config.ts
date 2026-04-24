@@ -27,7 +27,7 @@ const envSchema = z.object({
   SHOPIFY_ACCESS_TOKEN: z.string().min(1, 'SHOPIFY_ACCESS_TOKEN is required'),
   SHOPIFY_API_VERSION: z.string().default('2026-01'),
   SHOPIFY_WEBHOOK_SECRET: z.string().default(''),
-  SHOPIFY_SYNC_START_DATE: z.string().default('2025-01-01'),
+  SHOPIFY_SYNC_START_DATE: z.string().default('2023-01-01'),
   // Meta Ads
   META_USER_TOKEN: z.string().min(1, 'META_USER_TOKEN is required'),
   META_AD_ACCOUNT_ID: z.string().min(1, 'META_AD_ACCOUNT_ID is required'),
@@ -82,7 +82,7 @@ export const environment = {
     accessToken: env.SHOPIFY_ACCESS_TOKEN,
     apiVersion: env.SHOPIFY_API_VERSION,
     webhookSecret: env.SHOPIFY_WEBHOOK_SECRET,
-    syncStartDate: env.SHOPIFY_SYNC_START_DATE || '2025-01-01',
+    syncStartDate: env.SHOPIFY_SYNC_START_DATE || '2023-01-01',
   },
   meta: {
     userToken: env.META_USER_TOKEN,

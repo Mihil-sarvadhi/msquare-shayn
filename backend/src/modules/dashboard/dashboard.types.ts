@@ -117,10 +117,14 @@ export interface AllReviewsQuery {
 }
 
 export interface RecentOrderRow {
+  order_id: string;
   order_name: string;
   revenue: number;
+  financial_status: string;
+  fulfillment_status: string;
   customer_city: string;
   created_at: string;
+  products: string[];
 }
 
 export interface RevenueVsSpendRow {

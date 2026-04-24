@@ -84,6 +84,16 @@ function niceMax(v: number): number {
   return Math.ceil((v * 1.15) / step) * step;
 }
 
+function formatINRFull(value: number | string | null | undefined): string {
+  const num = Number(value ?? 0);
+  if (Number.isNaN(num)) return '₹0';
+  return `₹${num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function prettyStatus(status?: string): string {
+  return (status ?? '').toLowerCase().replace(/_/g, ' ').trim() || 'n/a';
+}
+
 function fmtAxisINR(v: number): string {
   if (v >= 10000000) return `₹${(v / 10000000).toFixed(1)}Cr`;
   if (v >= 100000)   return `₹${(v / 100000).toFixed(1)}L`;
@@ -225,14 +235,46 @@ function LiveActivityFeed({ orders, kpis, prevKpis }: { orders: RecentOrder[]; k
       )}
       <div className="space-y-0">
         {orders.slice(0, 5).map((o, i) => (
-          <div key={i} className="flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
-            <div>
-              <p className="text-xs font-medium text-[var(--text)]">{o.order_name}</p>
-              <p className="text-xs text-[var(--text-subtle)]">{o.customer_city}</p>
+          <div key={o.order_id || i} className="group relative flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-[var(--text)] truncate">{o.order_name}</p>
+              <p className="text-xs text-[var(--text-subtle)] truncate">{o.customer_city}</p>
+              <div className="mt-1 flex items-center gap-1.5">
+                <span className={cn(
+                  'px-1.5 py-0.5 rounded-full text-[10px] font-medium capitalize',
+                  prettyStatus(o.financial_status).includes('paid') ? 'bg-[var(--pos-soft)] text-[var(--pos)]' : 'bg-[var(--warn-soft)] text-[var(--warn)]',
+                )}>
+                  {prettyStatus(o.financial_status)}
+                </span>
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium capitalize bg-[var(--surface-2)] text-[var(--text-muted)]">
+                  {prettyStatus(o.fulfillment_status)}
+                </span>
+              </div>
             </div>
             <div className="text-right">
-              <p className="text-xs font-semibold text-[var(--accent)]">{formatINR(o.revenue)}</p>
+              <p className="text-xs font-semibold text-[var(--accent)]">{formatINRFull(o.revenue)}</p>
               <p className="text-xs text-[var(--text-subtle)]">{formatDate(o.created_at)}</p>
+            </div>
+            <div className="pointer-events-none absolute left-0 top-full z-20 mt-1 hidden w-[320px] rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2 shadow-lg group-hover:block">
+              <p className="text-[11px] font-semibold text-[var(--text)] mb-1">{o.order_name}</p>
+              <p className="text-[10px] text-[var(--text-subtle)] mb-1.5">
+                {new Date(o.created_at).toLocaleString('en-IN', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </p>
+              <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)] mb-1">Products</p>
+              <ul className="space-y-0.5">
+                {(o.products ?? []).slice(0, 4).map((product) => (
+                  <li key={product} className="text-[11px] text-[var(--text)] truncate">• {product}</li>
+                ))}
+                {(o.products ?? []).length === 0 && (
+                  <li className="text-[11px] text-[var(--text-subtle)]">No product data</li>
+                )}
+              </ul>
             </div>
           </div>
         ))}
@@ -661,7 +703,7 @@ function ActiveUsersCountryMapCard({ data, loading, subtitle }: { data: GA4Count
             tooltipBgColor="#1A1208"
             tooltipTextColor="#FDFAF4"
             data={mapPoints}
-            tooltipTextFunction={({ countryName, countryValue }) => `${countryName}: ${formatNum(countryValue ?? 0)} users`}
+            tooltipTextFunction={({ countryName, countryValue }: { countryName: string; countryValue?: number | null }) => `${countryName}: ${formatNum(countryValue ?? 0)} users`}
           />
         </div>
         <div className="flex flex-col">
@@ -822,7 +864,6 @@ export function DashboardPage() {
               label="Bounce Rate"
               value={`${(bounce * 100).toFixed(1)}%`}
               delta={ga4Insights?.bounce_rate_delta_pct}
-              invertDelta
               sub={bounce > 0.6 ? 'High — fix landing pages' : bounce > 0.4 ? 'Moderate' : 'Healthy'}
               loading={ga4Loading}
             />

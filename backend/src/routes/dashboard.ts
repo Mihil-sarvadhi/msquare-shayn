@@ -1,27 +1,12 @@
 import { Router, Request, Response } from 'express';
 import db from '../config/database';
+import { resolveDateRange } from '@utils/resolveDateRange';
+import type { DateRangeQuery } from '@utils/resolveDateRange';
 
 const router = Router();
 
 function getDateRange(req: Request): { since: string; until: string } {
-  const { range, startDate, endDate } = req.query as { range?: string; startDate?: string; endDate?: string };
-  const today = new Date().toISOString().split('T')[0];
-
-  if (startDate && endDate) {
-    return { since: startDate, until: endDate };
-  }
-
-  const start = new Date();
-  if (range === '7d') start.setDate(start.getDate() - 7);
-  else if (range === '30d') start.setDate(start.getDate() - 30);
-  else if (range === 'mtd') start.setDate(1);
-  else if (range === 'all') return { since: '2020-01-01', until: today };
-  else start.setDate(start.getDate() - 30);
-
-  return {
-    since: start.toISOString().split('T')[0],
-    until: today,
-  };
+  return resolveDateRange(req.query as DateRangeQuery);
 }
 
 router.get('/kpis', async (req: Request, res: Response) => {

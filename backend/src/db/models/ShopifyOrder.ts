@@ -7,6 +7,11 @@ interface ShopifyOrderAttributes {
   created_at?: Date;
   channel?: string;
   revenue?: number;
+  gross_sales?: number;
+  total_discounts?: number;
+  total_tax?: number;
+  total_shipping?: number;
+  total_refunded?: number;
   payment_mode?: string;
   financial_status?: string;
   fulfillment_status?: string;
@@ -25,6 +30,11 @@ type ShopifyOrderCreationAttributes = Optional<
   | 'created_at'
   | 'channel'
   | 'revenue'
+  | 'gross_sales'
+  | 'total_discounts'
+  | 'total_tax'
+  | 'total_shipping'
+  | 'total_refunded'
   | 'payment_mode'
   | 'financial_status'
   | 'fulfillment_status'
@@ -46,6 +56,11 @@ export class ShopifyOrder
   declare created_at?: Date;
   declare channel?: string;
   declare revenue?: number;
+  declare gross_sales?: number;
+  declare total_discounts?: number;
+  declare total_tax?: number;
+  declare total_shipping?: number;
+  declare total_refunded?: number;
   declare payment_mode?: string;
   declare financial_status?: string;
   declare fulfillment_status?: string;
@@ -65,6 +80,11 @@ ShopifyOrder.init(
     created_at: DataTypes.DATE,
     channel: DataTypes.TEXT,
     revenue: DataTypes.DECIMAL(12, 2),
+    gross_sales: DataTypes.DECIMAL(12, 2),
+    total_discounts: DataTypes.DECIMAL(12, 2),
+    total_tax: DataTypes.DECIMAL(12, 2),
+    total_shipping: DataTypes.DECIMAL(12, 2),
+    total_refunded: DataTypes.DECIMAL(12, 2),
     payment_mode: DataTypes.TEXT,
     financial_status: DataTypes.TEXT,
     fulfillment_status: DataTypes.TEXT,

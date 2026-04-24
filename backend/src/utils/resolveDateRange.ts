@@ -11,6 +11,13 @@ export interface DateRangeQuery {
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
+/** Move a UTC calendar day (YYYY-MM-DD) by `deltaDays` (matches frontend GA4 presets). */
+function shiftUtcDays(ymd: string, deltaDays: number): string {
+  const d = new Date(`${ymd}T00:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() + deltaDays);
+  return d.toISOString().slice(0, 10);
+}
+
 export function resolveDateRange(query: DateRangeQuery): DateRange {
   const today = new Date().toISOString().split('T')[0];
 
@@ -24,17 +31,21 @@ export function resolveDateRange(query: DateRangeQuery): DateRange {
     return { since: query.startDate, until: query.endDate };
   }
 
-  const start = new Date();
   if (query.range === '7d') {
-    start.setDate(start.getDate() - 7);
-  } else if (query.range === 'all') {
-    return { since: '2020-01-01', until: today }; // SHAYN brand launch floor year
-  } else {
-    start.setDate(start.getDate() - 30);
+    return { since: shiftUtcDays(today, -6), until: today };
   }
 
-  return {
-    since: start.toISOString().split('T')[0],
-    until: today,
-  };
+  if (query.range === 'all') {
+    return { since: '2020-01-01', until: today }; // SHAYN brand launch floor year
+  }
+
+  if (query.range === 'mtd') {
+    const d = new Date(`${today}T00:00:00.000Z`);
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+    return { since: `${y}-${m}-01`, until: today };
+  }
+
+  // 30d and any other preset without explicit dates — exactly 30 inclusive UTC days ending today
+  return { since: shiftUtcDays(today, -29), until: today };
 }
