@@ -8,6 +8,7 @@ import syncOrchestratorRoutes from '@modules/sync-orchestrator/sync-orchestrator
 import webhookRoutes from '@modules/webhook/webhook.routes';
 import analyticsRoutes from '@modules/analytics/analytics.routes';
 import ga4Routes from '@modules/ga4/ga4.routes';
+import financeRoutes from '@modules/finance/finance.routes';
 
 export const router = Router();
 
@@ -18,4 +19,5 @@ router.use('/sync', syncRoutes);
 router.use('/sync', syncOrchestratorRoutes);
 router.use('/analytics', analyticsRoutes);
 router.use('/analytics/ga4', ga4Routes);
+router.use('/finance', financeRoutes);
 router.use('/webhooks/shopify', express.raw({ type: 'application/json' }), webhookRoutes);
