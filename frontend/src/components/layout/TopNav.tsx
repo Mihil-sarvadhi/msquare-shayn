@@ -40,6 +40,7 @@ function useConnectorHealth() {
 
 const NAV = [
   { label: 'Dashboard',  to: '/dashboard'  },
+  { label: 'Finance',    to: '/finance'    },
   { label: 'Marketing',  to: '/marketing'  },
   { label: 'Customers',  to: '/customers'  },
   { label: 'Operations', to: '/operations' },

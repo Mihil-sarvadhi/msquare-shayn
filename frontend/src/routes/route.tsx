@@ -7,6 +7,7 @@ const ReviewsPage = lazy(() => import('@pages/reviews/page').then((m) => ({ defa
 const MarketingPage = lazy(() => import('@pages/marketing/page').then((m) => ({ default: m.MarketingPage })));
 const CustomersPage = lazy(() => import('@pages/customers/page').then((m) => ({ default: m.CustomersPage })));
 const OperationsPage = lazy(() => import('@pages/operations/page').then((m) => ({ default: m.OperationsPage })));
+const FinancePage = lazy(() => import('@pages/finance/page').then((m) => ({ default: m.FinancePage })));
 const AuthPage = lazy(() => import('@pages/auth/page').then((m) => ({ default: m.AuthPage })));
 
 function protect(element: React.ReactElement) {
@@ -20,5 +21,6 @@ export const routes: RouteObject[] = [
   { path: '/marketing', element: protect(<MarketingPage />) },
   { path: '/customers', element: protect(<CustomersPage />) },
   { path: '/operations', element: protect(<OperationsPage />) },
+  { path: '/finance', element: protect(<FinancePage />) },
   { path: '/', element: protect(<DashboardPage />) },
 ];
