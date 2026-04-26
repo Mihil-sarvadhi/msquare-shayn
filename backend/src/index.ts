@@ -5,6 +5,7 @@ import { GlobalErrorHandler } from '@middleware';
 import { connectDatabase } from '@db/sequelize';
 import { logger } from '@logger/logger';
 import { startScheduler } from '@modules/jobs/scheduler';
+import { registerFinanceResources } from '@modules/finance';
 
 // BigInt serialization for JSON responses
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -27,6 +28,9 @@ const startServer = async () => {
     );
     process.exit(1);
   }
+
+  registerFinanceResources();
+  logger.info('Finance resource handlers registered.');
 
   startScheduler();
 
