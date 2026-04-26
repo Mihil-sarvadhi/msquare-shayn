@@ -9,6 +9,8 @@ export { IthinkShipment } from './IthinkShipment';
 export { IthinkRemittance } from './IthinkRemittance';
 export { IthinkRemittanceDetail } from './IthinkRemittanceDetail';
 export { ConnectorHealth } from './ConnectorHealth';
+export { SyncCursor } from './SyncCursor';
+export type { SyncCursorStatus } from './SyncCursor';
 export { JudgemeReview } from './JudgemeReview';
 export { JudgemeProduct } from './JudgemeProduct';
 export { JudgemeStoreSummary } from './JudgemeStoreSummary';
