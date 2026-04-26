@@ -1,0 +1,27 @@
+# Shayn MIS Backend — Cursor Rules
+
+## Architecture
+- Controller → Service → Repository. Never skip layers.
+- Controllers: only HTTP. No db imports, no business logic.
+- Services: orchestration and business rules. No res/req.
+- Repositories: Sequelize only. Reads = sequelize.query(), Writes = Model methods.
+
+## TypeScript
+- strict: true. Zero `any`. Explicit return types on all exports.
+- import type for type-only imports.
+- Use path aliases: @db/*, @modules/*, @utils/*, @config/*, @constant, @middleware, @logger/*
+
+## Patterns
+- All env vars via environment object from @config/config (Zod-validated)
+- All logging via logger from @logger/logger (Winston). Never console.log.
+- Errors via AppError + handleErrorResponse. Never throw raw Error in controllers.
+- Responses via handleApiResponse(res, { data }). Never res.json() directly.
+
+## Database
+- Reads: sequelize.query<T>(sql, { type: QueryTypes.SELECT, replacements: { :named } })
+- Writes: Model.upsert(), Model.update(), Model.create(), Model.findOrCreate()
+- Named params only: :paramName — never $1/$2 pg-style
+
+## Modules
+Each connector module has: connector.ts + sync.ts + backfill.ts
+Each API module has: controller.ts + service.ts + repository.ts + routes.ts + types.ts

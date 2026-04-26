@@ -66,26 +66,32 @@ export interface ShopifyOrder {
   };
 }
 
-export async function graphqlRequest<T>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
+export async function graphqlRequest<T>(
+  query: string,
+  variables: Record<string, unknown> = {},
+): Promise<T> {
   const response = await axios.post(SHOPIFY_ENDPOINT, { query, variables }, { headers });
   if (response.data.errors) throw new Error(JSON.stringify(response.data.errors));
   return response.data.data as T;
 }
 
 export async function fetchRecentOrders(updatedAtMin?: string): Promise<ShopifyOrder[]> {
-  const queryStr = updatedAtMin
-    ? `updated_at:>='${updatedAtMin}'`
-    : 'created_at:>=2025-04-01';
+  const queryStr = updatedAtMin ? `updated_at:>='${updatedAtMin}'` : 'created_at:>=2025-04-01';
   let allOrders: ShopifyOrder[] = [];
   let cursor: string | null = null;
   let hasNextPage = true;
 
-  type OrdersResponse = { orders: { edges: Array<{ node: ShopifyOrder }>; pageInfo: { hasNextPage: boolean; endCursor: string } } };
+  type OrdersResponse = {
+    orders: {
+      edges: Array<{ node: ShopifyOrder }>;
+      pageInfo: { hasNextPage: boolean; endCursor: string };
+    };
+  };
   while (hasNextPage) {
-    const data: OrdersResponse = await graphqlRequest<OrdersResponse>(
-      ORDERS_QUERY,
-      { query: queryStr, cursor }
-    );
+    const data: OrdersResponse = await graphqlRequest<OrdersResponse>(ORDERS_QUERY, {
+      query: queryStr,
+      cursor,
+    });
     const { edges, pageInfo } = data.orders;
     allOrders = allOrders.concat(edges.map((e) => e.node));
     hasNextPage = pageInfo.hasNextPage;
@@ -139,17 +145,23 @@ export async function startBulkBackfill(): Promise<{ id: string; status: string 
     throw new Error(`Shopify bulk operation error: ${userErrors.map((e) => e.message).join(', ')}`);
   }
   if (!bulkOperation) {
-    throw new Error('Shopify returned null bulkOperation — another operation may already be running. Check your Shopify admin.');
+    throw new Error(
+      'Shopify returned null bulkOperation — another operation may already be running. Check your Shopify admin.',
+    );
   }
 
   return bulkOperation;
 }
 
-export async function checkBulkStatus(operationId: string): Promise<{ id: string; status: string; url?: string; errorCode?: string }> {
+export async function checkBulkStatus(
+  operationId: string,
+): Promise<{ id: string; status: string; url?: string; errorCode?: string }> {
   const query = `
     query { bulkOperation(id: "${operationId}") { id status url errorCode } }
   `;
-  const data = await graphqlRequest<{ bulkOperation: { id: string; status: string; url?: string; errorCode?: string } }>(query);
+  const data = await graphqlRequest<{
+    bulkOperation: { id: string; status: string; url?: string; errorCode?: string };
+  }>(query);
   return data.bulkOperation;
 }
 
@@ -177,6 +189,8 @@ export async function fetchAbandonedCheckouts(): Promise<AbandonedCheckout[]> {
       }
     }
   `;
-  const data = await graphqlRequest<{ abandonedCheckouts: { edges: Array<{ node: AbandonedCheckout }> } }>(query);
+  const data = await graphqlRequest<{
+    abandonedCheckouts: { edges: Array<{ node: AbandonedCheckout }> };
+  }>(query);
   return data.abandonedCheckouts.edges.map((e) => e.node);
 }

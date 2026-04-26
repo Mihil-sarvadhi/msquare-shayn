@@ -5,7 +5,7 @@ import db from '../config/database';
 import { getOrderDetails, IthinkOrder } from '../connectors/ithink';
 
 async function backfillIthink(): Promise<void> {
-  console.log('[iThink Backfill] Starting 12-month pull...');
+  console.error('[iThink Backfill] Starting 12-month pull...');
 
   const months: Array<{ start: string; end: string }> = [];
   for (let i = 11; i >= 0; i--) {
@@ -22,12 +22,19 @@ async function backfillIthink(): Promise<void> {
 
   let totalInserted = 0;
   for (const { start, end } of months) {
-    console.log(`[iThink Backfill] Fetching ${start} → ${end}...`);
+    console.error(`[iThink Backfill] Fetching ${start} → ${end}...`);
     try {
       const res = await getOrderDetails(start, end);
-      if (!res) { console.log(`[iThink Backfill] No data for ${start}`); continue; }
+      if (!res) {
+        console.error(`[iThink Backfill] No data for ${start}`);
+        continue;
+      }
       if (res.status !== 'success') {
-        console.error(`[iThink Backfill] API error for ${start}: ${(res as unknown as Record<string,string>).html_message || res.status}`);
+        console.error(
+          `[iThink Backfill] API error for ${start}: ${
+            (res as unknown as Record<string, string>).html_message || res.status
+          }`,
+        );
         continue;
       }
       if (!res.data) continue;
@@ -61,7 +68,7 @@ async function backfillIthink(): Promise<void> {
             order.customer_state,
             order.customer_city,
             order.customer_pincode,
-          ]
+          ],
         );
         totalInserted++;
       }
@@ -71,7 +78,7 @@ async function backfillIthink(): Promise<void> {
     await new Promise((r) => setTimeout(r, 1000));
   }
 
-  console.log(`[iThink Backfill] Done. Inserted ${totalInserted} shipments.`);
+  console.error(`[iThink Backfill] Done. Inserted ${totalInserted} shipments.`);
   await db.end();
 }
 

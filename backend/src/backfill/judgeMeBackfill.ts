@@ -2,25 +2,27 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 import db from '../config/database';
-import { fetchAllReviews, fetchAllProducts, fetchStoreSummary, JudgeMeReview, JudgeMeProduct } from '../connectors/judgeMe';
+import { fetchAllReviews, fetchAllProducts, fetchStoreSummary } from '../connectors/judgeMe';
 
 async function judgeMeBackfill(): Promise<void> {
-  console.log('[Judge.me Backfill] Pulling ALL historical reviews...');
+  console.error('[Judge.me Backfill] Pulling ALL historical reviews...');
 
   // 1. Store summary
   try {
     const summary = await fetchStoreSummary();
     await db.query(
       `INSERT INTO judgeme_store_summary (average_rating, total_reviews) VALUES ($1, $2)`,
-      [summary.rating, summary.count]
+      [summary.rating, summary.count],
     );
-    console.log(`[Judge.me Backfill] Store summary: ${summary.rating}★ across ${summary.count} reviews`);
+    console.error(
+      `[Judge.me Backfill] Store summary: ${summary.rating}★ across ${summary.count} reviews`,
+    );
   } catch (err) {
     console.error('[Judge.me Backfill] Store summary error:', (err as Error).message);
   }
 
   // 2. Products
-  console.log('[Judge.me Backfill] Fetching products...');
+  console.error('[Judge.me Backfill] Fetching products...');
   const products = await fetchAllProducts();
   for (const p of products) {
     await db.query(
@@ -31,13 +33,13 @@ async function judgeMeBackfill(): Promise<void> {
          average_rating = EXCLUDED.average_rating,
          reviews_count = EXCLUDED.reviews_count,
          synced_at = NOW()`,
-      [p.id, p.external_id, p.handle, p.title, p.average_rating, p.reviews_count, p.updated_at]
+      [p.id, p.external_id, p.handle, p.title, p.average_rating, p.reviews_count, p.updated_at],
     );
   }
-  console.log(`[Judge.me Backfill] Inserted ${products.length} products`);
+  console.error(`[Judge.me Backfill] Inserted ${products.length} products`);
 
   // 3. All reviews (no date limit)
-  console.log('[Judge.me Backfill] Fetching all reviews...');
+  console.error('[Judge.me Backfill] Fetching all reviews...');
   const reviews = await fetchAllReviews();
   let inserted = 0;
   for (const r of reviews) {
@@ -61,9 +63,12 @@ async function judgeMeBackfill(): Promise<void> {
         r.published ?? true,
         !!r.verified,
         r.pictures?.length > 0,
-        r.pictures?.map((p) => p.urls?.original).filter(Boolean).join(',') || null,
+        r.pictures
+          ?.map((p) => p.urls?.original)
+          .filter(Boolean)
+          .join(',') || null,
         r.source || null,
-      ]
+      ],
     );
     inserted++;
   }
@@ -73,10 +78,12 @@ async function judgeMeBackfill(): Promise<void> {
     `UPDATE connector_health
      SET last_sync_at = NOW(), status = 'green', records_synced = $1, error_message = NULL
      WHERE connector_name = 'judgeme'`,
-    [inserted]
+    [inserted],
   );
 
-  console.log(`[Judge.me Backfill] Done. Inserted ${inserted} reviews, ${products.length} products.`);
+  console.error(
+    `[Judge.me Backfill] Done. Inserted ${inserted} reviews, ${products.length} products.`,
+  );
   await db.end();
 }
 

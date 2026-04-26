@@ -5,9 +5,19 @@ const AD_ACCOUNT = process.env.META_AD_ACCOUNT_ID as string;
 const TOKEN = process.env.META_USER_TOKEN as string;
 
 const INSIGHT_FIELDS = [
-  'campaign_id', 'campaign_name', 'objective',
-  'spend', 'impressions', 'reach', 'clicks', 'ctr', 'cpm', 'cpc',
-  'actions', 'action_values', 'purchase_roas',
+  'campaign_id',
+  'campaign_name',
+  'objective',
+  'spend',
+  'impressions',
+  'reach',
+  'clicks',
+  'ctr',
+  'cpm',
+  'cpc',
+  'actions',
+  'action_values',
+  'purchase_roas',
 ].join(',');
 
 export interface MetaInsight {
@@ -40,7 +50,8 @@ export async function fetchCampaignInsights(since: string, until: string): Promi
   type InsightsPage = { data: MetaInsight[]; paging?: { next?: string } };
   let allInsights: MetaInsight[] = [];
   let nextUrl: string | null = null;
-  const firstRes: InsightsPage = (await axios.get(`${BASE}/${AD_ACCOUNT}/insights`, { params })).data as InsightsPage;
+  const firstRes: InsightsPage = (await axios.get(`${BASE}/${AD_ACCOUNT}/insights`, { params }))
+    .data as InsightsPage;
   allInsights = allInsights.concat(firstRes.data);
   nextUrl = firstRes.paging?.next || null;
 
@@ -65,7 +76,9 @@ export async function startAsyncInsightsJob(since: string, until: string): Promi
   return res.data.report_run_id as string;
 }
 
-export async function checkAsyncJobStatus(reportRunId: string): Promise<{ id: string; async_status: string; async_percent_completion: number }> {
+export async function checkAsyncJobStatus(
+  reportRunId: string,
+): Promise<{ id: string; async_status: string; async_percent_completion: number }> {
   const res = await axios.get(`${BASE}/${reportRunId}`, {
     params: { access_token: TOKEN },
   });
@@ -81,7 +94,7 @@ export async function fetchAsyncJobResults(reportRunId: string): Promise<MetaIns
 
 export function parseActions(
   actions: Array<{ action_type: string; value: string }> = [],
-  actionValues: Array<{ action_type: string; value: string }> = []
+  actionValues: Array<{ action_type: string; value: string }> = [],
 ): { purchases: number; purchaseValue: number } {
   const purchases = actions.find((a) => a.action_type === 'purchase')?.value || '0';
   const purchaseValue = actionValues.find((a) => a.action_type === 'purchase')?.value || '0';

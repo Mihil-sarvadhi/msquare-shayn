@@ -1,0 +1,5 @@
+{"type":"server-started","port":55876,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:55876","screen_dir":"/Users/apple/Documents/Projects/Shayn/.superpowers/brainstorm/10276-1776686089/content","state_dir":"/Users/apple/Documents/Projects/Shayn/.superpowers/brainstorm/10276-1776686089/state"}
+{"type":"screen-added","file":"/Users/apple/Documents/Projects/Shayn/.superpowers/brainstorm/10276-1776686089/content/layout-options.html"}
+{"type":"screen-added","file":"/Users/apple/Documents/Projects/Shayn/.superpowers/brainstorm/10276-1776686089/content/date-filter.html"}
+{"type":"screen-added","file":"/Users/apple/Documents/Projects/Shayn/.superpowers/brainstorm/10276-1776686089/content/waiting-1.html"}
+{"type":"server-stopped","reason":"idle timeout"}

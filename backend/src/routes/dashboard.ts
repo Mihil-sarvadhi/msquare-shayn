@@ -1,20 +1,12 @@
 import { Router, Request, Response } from 'express';
 import db from '../config/database';
+import { resolveDateRange } from '@utils/resolveDateRange';
+import type { DateRangeQuery } from '@utils/resolveDateRange';
 
 const router = Router();
 
 function getDateRange(req: Request): { since: string; until: string } {
-  const { range } = req.query as { range?: string };
-  const end = new Date();
-  const start = new Date();
-  if (range === '7d') start.setDate(start.getDate() - 7);
-  else if (range === '30d') start.setDate(start.getDate() - 30);
-  else if (range === 'mtd') start.setDate(1);
-  else start.setDate(start.getDate() - 30);
-  return {
-    since: start.toISOString().split('T')[0],
-    until: end.toISOString().split('T')[0],
-  };
+  return resolveDateRange(req.query as DateRangeQuery);
 }
 
 router.get('/kpis', async (req: Request, res: Response) => {
@@ -32,7 +24,7 @@ router.get('/kpis', async (req: Request, res: Response) => {
         FROM shopify_orders
         WHERE created_at::date BETWEEN $1 AND $2
           AND financial_status != 'voided'`,
-        [since, until]
+        [since, until],
       ),
       db.query(
         `SELECT
@@ -44,7 +36,7 @@ router.get('/kpis', async (req: Request, res: Response) => {
           CASE WHEN SUM(spend) > 0 THEN SUM(purchase_value) / SUM(spend) ELSE 0 END AS roas
         FROM meta_daily_insights
         WHERE date BETWEEN $1 AND $2`,
-        [since, until]
+        [since, until],
       ),
       db.query(
         `SELECT
@@ -55,7 +47,7 @@ router.get('/kpis', async (req: Request, res: Response) => {
           SUM(CASE WHEN current_status = 'Undelivered' THEN 1 ELSE 0 END) AS ndr
         FROM ithink_shipments
         WHERE order_date BETWEEN $1 AND $2`,
-        [since, until]
+        [since, until],
       ),
     ]);
 
@@ -105,7 +97,7 @@ router.get('/revenue-trend', async (req: Request, res: Response) => {
          AND financial_status != 'voided'
        GROUP BY created_at::date
        ORDER BY date ASC`,
-      [since, until]
+      [since, until],
     );
     res.json(rows);
   } catch (err) {
@@ -126,7 +118,7 @@ router.get('/meta-funnel', async (req: Request, res: Response) => {
         CASE WHEN SUM(spend) > 0 THEN SUM(purchase_value) / SUM(spend) ELSE 0 END AS roas
        FROM meta_daily_insights
        WHERE date BETWEEN $1 AND $2`,
-      [since, until]
+      [since, until],
     );
     res.json(rows[0]);
   } catch (err) {
@@ -151,7 +143,7 @@ router.get('/campaigns', async (req: Request, res: Response) => {
        GROUP BY campaign_id, campaign_name, objective
        ORDER BY spend DESC
        LIMIT 20`,
-      [since, until]
+      [since, until],
     );
     res.json(rows);
   } catch (err) {
@@ -176,7 +168,7 @@ router.get('/top-products', async (req: Request, res: Response) => {
        GROUP BY li.product_id, li.title
        ORDER BY revenue DESC
        LIMIT 5`,
-      [since, until]
+      [since, until],
     );
     res.json(rows);
   } catch (err) {
@@ -189,14 +181,26 @@ router.get('/logistics', async (req: Request, res: Response) => {
   try {
     const { rows } = await db.query(
       `SELECT
-        current_status,
-        current_status_code,
+        CASE
+          WHEN current_status_code = 'DL' THEN 'Delivered'
+          WHEN current_status_code LIKE 'RT%' THEN 'RTO'
+          WHEN current_status_code = 'UD' AND current_status ILIKE '%Out For Delivery%' THEN 'Out For Delivery'
+          WHEN current_status ILIKE '%Undelivered%' THEN 'NDR'
+          ELSE 'In Transit'
+        END AS current_status,
+        CASE
+          WHEN current_status_code = 'DL' THEN 'delivered'
+          WHEN current_status_code LIKE 'RT%' THEN 'rto'
+          WHEN current_status_code = 'UD' AND current_status ILIKE '%Out For Delivery%' THEN 'out_for_delivery'
+          WHEN current_status ILIKE '%Undelivered%' THEN 'ndr'
+          ELSE 'in_transit'
+        END AS current_status_code,
         COUNT(*) AS count
        FROM ithink_shipments
        WHERE order_date BETWEEN $1 AND $2
-       GROUP BY current_status, current_status_code
+       GROUP BY 1, 2
        ORDER BY count DESC`,
-      [since, until]
+      [since, until],
     );
     res.json(rows);
   } catch (err) {
@@ -215,7 +219,7 @@ router.get('/abandoned-carts', async (req: Request, res: Response) => {
        FROM shopify_abandoned_checkouts
        WHERE created_at::date BETWEEN $1 AND $2
          AND recovered = FALSE`,
-      [since, until]
+      [since, until],
     );
     res.json(rows[0]);
   } catch (err) {
@@ -238,7 +242,7 @@ router.get('/reviews-summary', async (_req: Request, res: Response) => {
         COUNT(*) FILTER (WHERE has_photos = TRUE) AS with_photos,
         COUNT(*) FILTER (WHERE verified = TRUE) AS verified_count
        FROM judgeme_reviews
-       WHERE published = TRUE`
+       WHERE published = TRUE`,
     );
     res.json(rows[0]);
   } catch (err) {
@@ -259,7 +263,7 @@ router.get('/reviews-trend', async (req: Request, res: Response) => {
          AND created_at BETWEEN $1 AND $2
        GROUP BY created_at
        ORDER BY date ASC`,
-      [since, until]
+      [since, until],
     );
     res.json(rows);
   } catch (err) {
@@ -275,13 +279,12 @@ router.get('/top-rated-products', async (_req: Request, res: Response) => {
         ROUND(AVG(r.rating)::numeric, 2) AS average_rating,
         COUNT(r.review_id) AS reviews_count
        FROM judgeme_products p
-       JOIN judgeme_reviews r ON r.product_external_id = p.external_id
-          OR r.product_handle = p.handle
+       JOIN judgeme_reviews r ON r.product_id::text = p.external_id
        WHERE r.published = TRUE
        GROUP BY p.product_id, p.handle, p.title
        HAVING COUNT(r.review_id) > 0
        ORDER BY average_rating DESC, COUNT(r.review_id) DESC
-       LIMIT 5`
+       LIMIT 5`,
     );
     res.json(rows);
   } catch (err) {
@@ -289,19 +292,24 @@ router.get('/top-rated-products', async (_req: Request, res: Response) => {
   }
 });
 
-router.get('/recent-reviews', async (_req: Request, res: Response) => {
+router.get('/recent-reviews', async (req: Request, res: Response) => {
+  const { since, until } = getDateRange(req);
+  const limitParam = parseInt((req.query.limit as string) || '50', 10);
+  const limit = Math.min(Math.max(1, limitParam), 1000);
   try {
     const { rows } = await db.query(
       `SELECT
         r.review_id, r.rating, r.title, r.body, r.reviewer_name,
         r.created_at, r.has_photos, r.verified, r.picture_urls,
         (SELECT p.title FROM judgeme_products p
-         WHERE p.external_id = r.product_external_id OR p.handle = r.product_handle
+         WHERE p.external_id = r.product_id::text
          LIMIT 1) AS product_title
        FROM judgeme_reviews r
        WHERE r.published = TRUE
+         AND r.created_at BETWEEN $1 AND $2
        ORDER BY r.created_at DESC
-       LIMIT 10`
+       LIMIT $3`,
+      [since, until, limit],
     );
     res.json(rows);
   } catch (err) {
@@ -310,7 +318,7 @@ router.get('/recent-reviews', async (_req: Request, res: Response) => {
 });
 
 router.get('/all-reviews', async (req: Request, res: Response) => {
-  const page  = Math.max(1, parseInt((req.query.page  as string) || '1', 10));
+  const page = Math.max(1, parseInt((req.query.page as string) || '1', 10));
   const limit = Math.min(50, Math.max(1, parseInt((req.query.limit as string) || '20', 10)));
   const rating = parseInt((req.query.rating as string) || '0', 10);
   const search = ((req.query.search as string) || '').trim();
@@ -320,8 +328,17 @@ router.get('/all-reviews', async (req: Request, res: Response) => {
   const params: (string | number)[] = [];
   let idx = 1;
 
-  if (rating >= 1 && rating <= 5) { conditions.push(`r.rating = $${idx++}`); params.push(rating); }
-  if (search) { conditions.push(`(r.title ILIKE $${idx} OR r.body ILIKE $${idx} OR r.reviewer_name ILIKE $${idx})`); params.push(`%${search}%`); idx++; }
+  if (rating >= 1 && rating <= 5) {
+    conditions.push(`r.rating = $${idx++}`);
+    params.push(rating);
+  }
+  if (search) {
+    conditions.push(
+      `(r.title ILIKE $${idx} OR r.body ILIKE $${idx} OR r.reviewer_name ILIKE $${idx})`,
+    );
+    params.push(`%${search}%`);
+    idx++;
+  }
 
   const where = conditions.join(' AND ');
 
@@ -337,12 +354,9 @@ router.get('/all-reviews', async (req: Request, res: Response) => {
          WHERE ${where}
          ORDER BY r.created_at DESC
          LIMIT $${idx} OFFSET $${idx + 1}`,
-        [...params, limit, offset]
+        [...params, limit, offset],
       ),
-      db.query(
-        `SELECT COUNT(*) AS total FROM judgeme_reviews r WHERE ${where}`,
-        params
-      ),
+      db.query(`SELECT COUNT(*) AS total FROM judgeme_reviews r WHERE ${where}`, params),
     ]);
     res.json({ reviews: dataRes.rows, total: parseInt(countRes.rows[0].total, 10), page, limit });
   } catch (err) {

@@ -36,10 +36,28 @@
       "Bash(PGPASSWORD=mihil psql -U shayn_user -d shayn_mis -c \"SELECT review_id, created_at, has_photos FROM judgeme_reviews WHERE published = TRUE ORDER BY created_at DESC LIMIT 20;\")",
       "Bash(curl -s \"http://localhost:4000/api/dashboard/recent-reviews\")",
       "Bash(python3 -c ' *)",
-      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('count:', len\\(d\\)\\)\")"
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('count:', len\\(d\\)\\)\")",
+      "Read(//Users/apple/Documents/Projects/react-node-template-main/**)",
+      "Bash(xargs ls *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(npx husky *)",
+      "Bash(cp /Users/apple/Documents/Projects/Shayn/.claude-new/HOW-TO-USE.md /Users/apple/Documents/Projects/Shayn/.claude/HOW-TO-USE.md)",
+      "Bash(cp /Users/apple/Documents/Projects/Shayn/.claude-new/PROGRESS.md /Users/apple/Documents/Projects/Shayn/.claude/PROGRESS.md)",
+      "Bash(cp /Users/apple/Documents/Projects/Shayn/.claude-new/QUESTIONS.md /Users/apple/Documents/Projects/Shayn/.claude/QUESTIONS.md)",
+      "Bash(cp /Users/apple/Documents/Projects/Shayn/.claude-new/TASKS.md /Users/apple/Documents/Projects/Shayn/.claude/TASKS.md)",
+      "Bash(cp -r /Users/apple/Documents/Projects/Shayn/.claude-new/rules /Users/apple/Documents/Projects/Shayn/.claude/)",
+      "Read(//Users/apple/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.7/skills/subagent-driven-development/**)",
+      "Read(//Users/apple/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.7/skills/brainstorming/**)",
+      "Bash(/Users/apple/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.7/skills/brainstorming/scripts/start-server.sh --project-dir /Users/apple/Documents/Projects/Shayn)",
+      "Bash(npm list *)",
+      "Bash(DATABASE_URL='postgresql://shayn_user:mihil@localhost:5432/shayn_mis' NODE_ENV=local npx sequelize-cli db:migrate)",
+      "Bash(DATABASE_URL='postgresql://shayn_user:mihil@localhost:5432/shayn_mis' NODE_ENV=local npx sequelize-cli db:seed:all)"
     ],
     "additionalDirectories": [
-      "/private/tmp"
+      "/private/tmp",
+      "/Users/apple/Documents/Projects/Shayn/docs/superpowers",
+      "/Users/apple/Documents/Projects/Shayn/docs/superpowers/specs"
     ]
   }
 }

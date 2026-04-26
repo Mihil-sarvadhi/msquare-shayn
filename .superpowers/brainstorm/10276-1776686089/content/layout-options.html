@@ -1,0 +1,156 @@
+<style>
+  .layout-grid { display: flex; flex-direction: column; gap: 6px; padding: 12px; background: #FDFAF4; border-radius: 10px; border: 1px solid #E8E0D0; }
+  .layout-row { display: flex; gap: 6px; }
+  .block { border-radius: 6px; padding: 8px 10px; font-size: 11px; font-weight: 600; text-align: center; display: flex; align-items: center; justify-content: center; min-height: 36px; color: white; letter-spacing: 0.03em; }
+  .gold { background: #B8860B; }
+  .green { background: #2D7D46; }
+  .ruby { background: #9B2235; }
+  .slate { background: #4B5563; }
+  .indigo { background: #4F46E5; }
+  .teal { background: #0D9488; }
+  .amber { background: #B45309; }
+  .muted { background: #9CA3AF; }
+  .layout-label { font-size: 10px; color: #8C7B64; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; }
+  .divider { height: 1px; background: #E8E0D0; margin: 4px 0; }
+  .tag { display: inline-block; font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 600; letter-spacing: 0.04em; }
+  .tag-new { background: #D1FAE5; color: #065F46; }
+  .tag-moved { background: #FEF3C7; color: #92400E; }
+  .tag-same { background: #F3F4F6; color: #6B7280; }
+  .legend { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #4B3E2E; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+  .reasoning { background: #FFF9EC; border: 1px solid #E8D9A0; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; font-size: 12px; color: #5C4A1E; line-height: 1.6; }
+  .reasoning strong { color: #B8860B; }
+</style>
+
+<h2>Dashboard Layout Restructuring</h2>
+<p class="subtitle">Two layout proposals — based on what a D2C brand manager needs first</p>
+
+<div class="reasoning">
+  <strong>First-principles logic:</strong> A D2C jewelry brand manager opens this dashboard to answer 3 questions in order:
+  (1) <strong>How much are we making?</strong> → Revenue + Orders KPIs
+  (2) <strong>Is our marketing working?</strong> → ROAS, Ad Spend, Campaign performance
+  (3) <strong>Are orders being fulfilled cleanly?</strong> → Logistics, RTO, COD split
+  Reviews and product insights are reference data — important but not urgent on arrival.
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#D1FAE5; border:1px solid #065F46"></div> Moved up</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#F3F4F6; border:1px solid #9CA3AF"></div> Same position</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#FEF3C7; border:1px solid #92400E"></div> Moved down / consolidated</div>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Marketing-First</h3>
+      <p>Campaigns moved to row 3 — right after Revenue trend. Ops and reviews pushed below.</p>
+      <div style="margin-top:12px">
+        <div class="layout-grid">
+          <div class="layout-label">Row 1 — Top-line KPIs</div>
+          <div class="layout-row">
+            <div class="block gold" style="flex:1">Revenue</div>
+            <div class="block green" style="flex:1">Orders</div>
+            <div class="block gold" style="flex:1">AOV</div>
+            <div class="block ruby" style="flex:1">Ad Spend</div>
+            <div class="block green" style="flex:1">ROAS</div>
+            <div class="block ruby" style="flex:1">RTO Rate</div>
+          </div>
+          <div class="divider"></div>
+          <div class="layout-label">Row 2 — Revenue & Marketing Funnel <span class="tag tag-same">same</span></div>
+          <div class="layout-row">
+            <div class="block gold" style="flex:2; min-height:44px">Revenue Trend</div>
+            <div class="block indigo" style="flex:1; min-height:44px">Meta Ads Funnel</div>
+          </div>
+          <div class="divider"></div>
+          <div class="layout-label">Row 3 — Campaign Performance <span class="tag tag-new">↑ moved up from row 5</span></div>
+          <div class="layout-row">
+            <div class="block indigo" style="flex:2; min-height:44px">Meta Campaigns Performance</div>
+            <div class="block slate" style="flex:1; min-height:44px">Order Status</div>
+          </div>
+          <div class="divider"></div>
+          <div class="layout-label">Row 4 — Operations <span class="tag tag-moved">consolidated</span></div>
+          <div class="layout-row">
+            <div class="block slate" style="flex:1">COD vs Prepaid</div>
+            <div class="block teal" style="flex:1">Logistics</div>
+            <div class="block amber" style="flex:1">Abandoned Carts</div>
+          </div>
+          <div class="layout-row" style="margin-top:6px">
+            <div class="block green" style="flex:1">Customer Metrics</div>
+            <div class="block amber" style="flex:1">Platform Orders</div>
+            <div class="block gold" style="flex:1">Top 5 Products</div>
+          </div>
+          <div class="divider"></div>
+          <div class="layout-label">Row 5 — Reviews (consolidated) <span class="tag tag-moved">was rows 4+5</span></div>
+          <div class="layout-row">
+            <div class="block muted" style="flex:1; min-height:36px">Review Summary</div>
+            <div class="block muted" style="flex:1; min-height:36px">Top Rated Products</div>
+            <div class="block muted" style="flex:2; min-height:36px">Recent Reviews</div>
+          </div>
+          <div class="divider"></div>
+          <div class="layout-label">Row 6 — Data & Status</div>
+          <div class="layout-row">
+            <div class="block slate" style="flex:2; min-height:32px">Top 10 SKUs by Revenue</div>
+            <div class="block muted" style="flex:1; min-height:32px">Connector Status</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Balanced Operations</h3>
+      <p>Ops + marketing on same row. More compact middle rows, reviews and products together at the bottom.</p>
+      <div style="margin-top:12px">
+        <div class="layout-grid">
+          <div class="layout-label">Row 1 — Top-line KPIs</div>
+          <div class="layout-row">
+            <div class="block gold" style="flex:1">Revenue</div>
+            <div class="block green" style="flex:1">Orders</div>
+            <div class="block gold" style="flex:1">AOV</div>
+            <div class="block ruby" style="flex:1">Ad Spend</div>
+            <div class="block green" style="flex:1">ROAS</div>
+            <div class="block ruby" style="flex:1">RTO Rate</div>
+          </div>
+          <div class="divider"></div>
+          <div class="layout-label">Row 2 — Revenue & Marketing Funnel <span class="tag tag-same">same</span></div>
+          <div class="layout-row">
+            <div class="block gold" style="flex:2; min-height:44px">Revenue Trend</div>
+            <div class="block indigo" style="flex:1; min-height:44px">Meta Ads Funnel</div>
+          </div>
+          <div class="divider"></div>
+          <div class="layout-label">Row 3 — Order Intelligence <span class="tag tag-moved">restructured</span></div>
+          <div class="layout-row">
+            <div class="block slate" style="flex:1">Order Status</div>
+            <div class="block slate" style="flex:1">COD vs Prepaid</div>
+            <div class="block amber" style="flex:1">Abandoned Carts</div>
+            <div class="block teal" style="flex:1">Logistics Overview</div>
+          </div>
+          <div class="divider"></div>
+          <div class="layout-label">Row 4 — Campaigns + Customers <span class="tag tag-new">↑ campaigns moved up</span></div>
+          <div class="layout-row">
+            <div class="block indigo" style="flex:2; min-height:44px">Meta Campaigns Performance</div>
+            <div class="block green" style="flex:1; min-height:44px">Customer Metrics + Platform</div>
+          </div>
+          <div class="divider"></div>
+          <div class="layout-label">Row 5 — Reviews (consolidated) <span class="tag tag-moved">was rows 4+5</span></div>
+          <div class="layout-row">
+            <div class="block muted" style="flex:1; min-height:36px">Review Summary</div>
+            <div class="block muted" style="flex:1; min-height:36px">Top Rated</div>
+            <div class="block muted" style="flex:2; min-height:36px">Recent Reviews</div>
+          </div>
+          <div class="divider"></div>
+          <div class="layout-label">Row 6 — Products + Status</div>
+          <div class="layout-row">
+            <div class="block gold" style="flex:1; min-height:32px">Top 5 Products</div>
+            <div class="block gold" style="flex:2; min-height:32px">Top 10 SKUs by Revenue</div>
+            <div class="block muted" style="flex:1; min-height:32px">Connector Status</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

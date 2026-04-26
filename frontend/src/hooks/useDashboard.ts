@@ -150,7 +150,7 @@ export function useDashboard(range = '30d'): {
     setLoading(true);
     setError(null);
 
-    const safe = (p: Promise<any>, fallback: any) => p.catch(() => ({ data: fallback }));
+    const safe = (p: Promise<{ data: unknown }>, fallback: unknown) => p.catch(() => ({ data: fallback }));
 
     Promise.all([
       api.get('/dashboard/kpis', { params }),

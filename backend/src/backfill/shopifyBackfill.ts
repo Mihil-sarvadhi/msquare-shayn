@@ -8,18 +8,25 @@ import axios from 'axios';
 async function cancelExistingBulkOperation(): Promise<void> {
   const checkQuery = `query { currentBulkOperation { id status } }`;
   try {
-    const data = await graphqlRequest<{ currentBulkOperation: { id: string; status: string } | null }>(checkQuery);
+    const data = await graphqlRequest<{
+      currentBulkOperation: { id: string; status: string } | null;
+    }>(checkQuery);
     const current = data.currentBulkOperation;
     if (current && ['CREATED', 'RUNNING'].includes(current.status)) {
-      console.log(`[Shopify Backfill] Cancelling existing bulk operation ${current.id} (status: ${current.status})...`);
+      console.error(
+        `[Shopify Backfill] Cancelling existing bulk operation ${current.id} (status: ${current.status})...`,
+      );
       const cancelMutation = `mutation { bulkOperationCancel(id: "${current.id}") { bulkOperation { id status } userErrors { message } } }`;
       await graphqlRequest(cancelMutation);
       // Wait for cancellation to complete
       await new Promise((r) => setTimeout(r, 5000));
-      console.log('[Shopify Backfill] Existing operation cancelled.');
+      console.error('[Shopify Backfill] Existing operation cancelled.');
     }
   } catch (err) {
-    console.warn('[Shopify Backfill] Could not check/cancel existing operation:', (err as Error).message);
+    console.error(
+      '[Shopify Backfill] Could not check/cancel existing operation:',
+      (err as Error).message,
+    );
   }
 }
 
@@ -57,16 +64,28 @@ async function downloadAndInsertBulkData(url: string): Promise<number> {
         order.id,
         order.name,
         order.createdAt,
-        parseFloat(((order.totalPriceSet as Record<string, Record<string, string>>)?.shopMoney?.amount) || '0'),
+        parseFloat(
+          (order.totalPriceSet as Record<string, Record<string, string>>)?.shopMoney?.amount || '0',
+        ),
         isCOD ? 'COD' : 'Prepaid',
         order.displayFinancialStatus,
         order.displayFulfillmentStatus,
         (order.customer as Record<string, string>)?.id || null,
         (order.customer as Record<string, string>)?.email || null,
-        ((order.customer as Record<string, Record<string, string>>)?.defaultAddress as Record<string, string>)?.city || null,
-        ((order.customer as Record<string, Record<string, string>>)?.defaultAddress as Record<string, string>)?.province || null,
+        (
+          (order.customer as Record<string, Record<string, string>>)?.defaultAddress as Record<
+            string,
+            string
+          >
+        )?.city || null,
+        (
+          (order.customer as Record<string, Record<string, string>>)?.defaultAddress as Record<
+            string,
+            string
+          >
+        )?.province || null,
         (order.discountCodes as string) || null,
-      ]
+      ],
     );
     inserted++;
   }
@@ -82,8 +101,11 @@ async function downloadAndInsertBulkData(url: string): Promise<number> {
         item.sku,
         item.title,
         item.quantity,
-        parseFloat(((item.originalUnitPriceSet as Record<string, Record<string, string>>)?.shopMoney?.amount) || '0'),
-      ]
+        parseFloat(
+          (item.originalUnitPriceSet as Record<string, Record<string, string>>)?.shopMoney
+            ?.amount || '0',
+        ),
+      ],
     );
   }
 
@@ -91,22 +113,22 @@ async function downloadAndInsertBulkData(url: string): Promise<number> {
 }
 
 async function shopifyBackfill(): Promise<void> {
-  console.log('[Shopify Backfill] Starting bulk operation...');
+  console.error('[Shopify Backfill] Starting bulk operation...');
 
   await cancelExistingBulkOperation();
   const op = await startBulkBackfill();
-  console.log(`[Shopify Backfill] Bulk operation started: ${op.id}`);
+  console.error(`[Shopify Backfill] Bulk operation started: ${op.id}`);
 
   let status = op.status;
   while (status !== 'COMPLETED' && status !== 'FAILED') {
     await new Promise((r) => setTimeout(r, 10000));
     const current = await checkBulkStatus(op.id);
     status = current.status;
-    console.log(`[Shopify Backfill] Status: ${status}`);
+    console.error(`[Shopify Backfill] Status: ${status}`);
 
     if (status === 'COMPLETED' && current.url) {
       const count = await downloadAndInsertBulkData(current.url);
-      console.log(`[Shopify Backfill] Done. Inserted ${count} orders.`);
+      console.error(`[Shopify Backfill] Done. Inserted ${count} orders.`);
     }
   }
 

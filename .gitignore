@@ -7,4 +7,5 @@ build/
 
 .env
 backend/.env
-frontend/.env
+frontend/.env.claude/
+ga4-credentials.json

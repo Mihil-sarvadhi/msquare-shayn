@@ -17,7 +17,9 @@ function monthChunks(since: Date, until: Date): Array<{ since: string; until: st
   return chunks;
 }
 
-async function upsertInsights(insights: Awaited<ReturnType<typeof fetchCampaignInsights>>): Promise<number> {
+async function upsertInsights(
+  insights: Awaited<ReturnType<typeof fetchCampaignInsights>>,
+): Promise<number> {
   let count = 0;
   for (const insight of insights) {
     const { purchases, purchaseValue } = parseActions(insight.actions, insight.action_values);
@@ -43,7 +45,7 @@ async function upsertInsights(insights: Awaited<ReturnType<typeof fetchCampaignI
         purchases,
         purchaseValue,
         parseFloat(roas),
-      ]
+      ],
     );
     count++;
   }
@@ -56,18 +58,20 @@ async function metaBackfill(): Promise<void> {
   since.setMonth(since.getMonth() - 12);
 
   const chunks = monthChunks(since, until);
-  console.log(`[Meta Backfill] Fetching ${chunks.length} monthly chunks (${since.toISOString().split('T')[0]} → ${until.toISOString().split('T')[0]})`);
+  console.error(
+    `[Meta Backfill] Fetching ${chunks.length} monthly chunks (${since.toISOString().split('T')[0]} → ${until.toISOString().split('T')[0]})`,
+  );
 
   let total = 0;
   for (const chunk of chunks) {
-    console.log(`[Meta Backfill] Fetching ${chunk.since} → ${chunk.until} …`);
+    console.error(`[Meta Backfill] Fetching ${chunk.since} → ${chunk.until} …`);
     const insights = await fetchCampaignInsights(chunk.since, chunk.until);
     const inserted = await upsertInsights(insights);
     total += inserted;
-    console.log(`  → ${inserted} rows (${insights.length} insights)`);
+    console.error(`  → ${inserted} rows (${insights.length} insights)`);
   }
 
-  console.log(`[Meta Backfill] Done. Total inserted: ${total} rows.`);
+  console.error(`[Meta Backfill] Done. Total inserted: ${total} rows.`);
   await db.end();
 }
 

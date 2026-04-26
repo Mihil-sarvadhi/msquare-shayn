@@ -10,7 +10,7 @@ async function post<T>(endpoint: string, data: Record<string, unknown>): Promise
   const res = await axios.post(
     `${BASE}${endpoint}`,
     { data: { ...AUTH, ...data } },
-    { headers: { 'Content-Type': 'application/json' } }
+    { headers: { 'Content-Type': 'application/json' } },
   );
   return res.data as T;
 }
@@ -64,7 +64,10 @@ export interface IthinkRemittanceResponse {
   }>;
 }
 
-export async function getOrderDetails(startDate: string, endDate: string): Promise<IthinkOrderResponse> {
+export async function getOrderDetails(
+  startDate: string,
+  endDate: string,
+): Promise<IthinkOrderResponse> {
   return post<IthinkOrderResponse>('/api_v3/order/get_details.json', {
     awb_number_list: '',
     start_date: startDate,
@@ -72,7 +75,9 @@ export async function getOrderDetails(startDate: string, endDate: string): Promi
   });
 }
 
-export async function trackOrders(awbList: string[]): Promise<Record<string, IthinkTrackingResponse>> {
+export async function trackOrders(
+  awbList: string[],
+): Promise<Record<string, IthinkTrackingResponse>> {
   const results: Record<string, IthinkTrackingResponse> = {};
   const chunks: string[][] = [];
   for (let i = 0; i < awbList.length; i += 10) {
@@ -81,7 +86,7 @@ export async function trackOrders(awbList: string[]): Promise<Record<string, Ith
   for (const chunk of chunks) {
     const res = await post<{ data?: Record<string, IthinkTrackingResponse> }>(
       '/api_v3/order/track.json',
-      { awb_number_list: chunk.join(',') }
+      { awb_number_list: chunk.join(',') },
     );
     Object.assign(results, res.data || {});
     await new Promise((r) => setTimeout(r, 200));

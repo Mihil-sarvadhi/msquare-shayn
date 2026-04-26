@@ -1,0 +1,154 @@
+<style>
+  .section { margin-bottom: 28px; }
+  .mockup-nav {
+    background: white;
+    border: 1px solid #F0EBE0;
+    border-radius: 10px;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    height: 52px;
+    gap: 20px;
+    font-family: system-ui, sans-serif;
+    margin-bottom: 8px;
+  }
+  .nav-logo { display: flex; align-items: center; gap: 6px; }
+  .nav-star { width: 26px; height: 26px; background: #B8860B; border-radius: 7px; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; }
+  .nav-brand { font-weight: 700; color: #B8860B; font-size: 13px; letter-spacing: 0.08em; }
+  .nav-mis { font-size: 9px; color: #8C7B64; text-transform: uppercase; letter-spacing: 0.1em; }
+  .nav-tabs { display: flex; gap: 2px; flex: 1; height: 100%; }
+  .nav-tab { padding: 0 12px; font-size: 12px; display: flex; align-items: center; border-bottom: 2px solid transparent; color: #8C7B64; }
+  .nav-tab.active { border-bottom-color: #B8860B; color: #1A1208; font-weight: 600; }
+  .nav-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+  .range-group { display: flex; gap: 2px; background: #F5F0E8; border-radius: 8px; padding: 3px; }
+  .range-btn { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 500; color: #8C7B64; cursor: pointer; }
+  .range-btn.active { background: white; color: #1A1208; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: 600; }
+  .custom-btn { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 500; border: 1px dashed #B8860B; color: #B8860B; cursor: pointer; background: white; display: flex; align-items: center; gap: 4px; }
+  .custom-btn.active { background: #B8860B; color: white; border-style: solid; }
+  .sync-btn { background: #B8860B; color: white; border-radius: 7px; padding: 5px 10px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+  .popover { background: white; border: 1px solid #E8E0D0; border-radius: 10px; padding: 14px 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); width: 260px; margin-top: 6px; }
+  .popover-label { font-size: 10px; font-weight: 700; color: #8C7B64; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+  .date-inputs { display: flex; gap: 8px; margin-bottom: 12px; }
+  .date-field { flex: 1; }
+  .date-field label { font-size: 10px; color: #8C7B64; display: block; margin-bottom: 3px; font-weight: 600; }
+  .date-input { width: 100%; border: 1px solid #E8E0D0; border-radius: 6px; padding: 5px 8px; font-size: 12px; color: #1A1208; background: #FDFAF4; box-sizing: border-box; }
+  .apply-btn { width: 100%; background: #B8860B; color: white; border-radius: 6px; padding: 7px; font-size: 12px; font-weight: 600; text-align: center; }
+  .caption { font-size: 11px; color: #8C7B64; margin-top: 6px; font-style: italic; }
+  .badge { display: inline-block; font-size: 10px; background: #D1FAE5; color: #065F46; border-radius: 4px; padding: 2px 6px; font-weight: 700; margin-left: 6px; }
+  .badge-warn { background: #FEF3C7; color: #92400E; }
+  .state-diagram { display: flex; gap: 8px; align-items: center; font-size: 11px; color: #4B3E2E; flex-wrap: wrap; }
+  .state-box { background: #F5F0E8; border: 1px solid #E8D9B0; border-radius: 6px; padding: 5px 10px; font-weight: 600; }
+  .arrow { color: #B8860B; font-weight: 700; }
+</style>
+
+<h2>Date Range Filter Design</h2>
+<p class="subtitle">Replacing "All Time" with a custom date picker — applied globally via TopNav</p>
+
+<div class="section">
+  <h3>Where it lives <span class="badge">Global — TopNav</span></h3>
+  <p class="caption" style="margin-bottom:10px">The range selector moves from the per-page sub-header into the TopNav, so one filter controls all pages consistently.</p>
+
+  <!-- State A: 30 Days active -->
+  <div class="mockup-header" style="margin-bottom:4px; font-size:10px; color:#8C7B64; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;">Default state (30 Days selected)</div>
+  <div class="mockup-nav">
+    <div class="nav-logo">
+      <div class="nav-star">★</div>
+      <div><div class="nav-brand">SHAYN</div><div class="nav-mis">MIS</div></div>
+    </div>
+    <div class="nav-tabs">
+      <div class="nav-tab active">Dashboard</div>
+      <div class="nav-tab">Marketing</div>
+      <div class="nav-tab">Customers</div>
+      <div class="nav-tab">Operations</div>
+      <div class="nav-tab">Reviews</div>
+    </div>
+    <div class="nav-right">
+      <div class="range-group">
+        <div class="range-btn">7 Days</div>
+        <div class="range-btn active">30 Days</div>
+        <div class="custom-btn">📅 Custom</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;font-size:11px;color:#8C7B64;">
+        <span>● Ithink</span><span>● Meta Ads</span>
+      </div>
+      <div class="sync-btn">↻ Sync All</div>
+    </div>
+  </div>
+
+  <!-- State B: Custom active with popover -->
+  <div class="mockup-header" style="margin:16px 0 4px; font-size:10px; color:#8C7B64; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;">Custom date selected — with picker popover open</div>
+  <div class="mockup-nav">
+    <div class="nav-logo">
+      <div class="nav-star">★</div>
+      <div><div class="nav-brand">SHAYN</div><div class="nav-mis">MIS</div></div>
+    </div>
+    <div class="nav-tabs">
+      <div class="nav-tab active">Dashboard</div>
+      <div class="nav-tab">Marketing</div>
+      <div class="nav-tab">Customers</div>
+      <div class="nav-tab">Operations</div>
+      <div class="nav-tab">Reviews</div>
+    </div>
+    <div class="nav-right">
+      <div class="range-group">
+        <div class="range-btn">7 Days</div>
+        <div class="range-btn">30 Days</div>
+        <div class="custom-btn active">📅 Apr 01 → Apr 20</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;font-size:11px;color:#8C7B64;">
+        <span>● Ithink</span><span>● Meta Ads</span>
+      </div>
+      <div class="sync-btn">↻ Sync All</div>
+    </div>
+  </div>
+  <!-- Popover shown below nav -->
+  <div style="display:flex; justify-content:flex-end; padding-right:110px;">
+    <div class="popover">
+      <div class="popover-label">Select date range</div>
+      <div class="date-inputs">
+        <div class="date-field">
+          <label>From</label>
+          <input class="date-input" type="text" value="2024-04-01" readonly />
+        </div>
+        <div class="date-field">
+          <label>To</label>
+          <input class="date-input" type="text" value="2024-04-20" readonly />
+        </div>
+      </div>
+      <div class="apply-btn">Apply Range</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>What changes under the hood</h3>
+  <div class="state-diagram">
+    <div class="state-box">7 Days → <code>?range=7d</code></div>
+    <div class="arrow">|</div>
+    <div class="state-box">30 Days → <code>?range=30d</code></div>
+    <div class="arrow">|</div>
+    <div class="state-box">Custom → <code>?startDate=2024-04-01&endDate=2024-04-20</code></div>
+  </div>
+  <p class="caption" style="margin-top:10px">The backend needs to handle the two new query params (<code>startDate</code> + <code>endDate</code>) on all dashboard and analytics endpoints. The range param is omitted when custom dates are set.</p>
+</div>
+
+<div class="section">
+  <h3>One global range vs. per-page range</h3>
+  <div class="options" style="margin-top:8px">
+    <div class="option" data-choice="global" onclick="toggleSelect(this)">
+      <div class="letter">G</div>
+      <div class="content">
+        <h3>Global — one filter rules all pages</h3>
+        <p>Single Redux state. Switching from Dashboard → Marketing keeps your date selection. Changing range on any page changes it everywhere. Simpler, more coherent experience.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="perpage" onclick="toggleSelect(this)">
+      <div class="letter">P</div>
+      <div class="content">
+        <h3>Per-page — each page remembers its own range</h3>
+        <p>Dashboard and Analytics slices stay separate. You can compare "7 Days" on Dashboard vs "30 Days" on Marketing. More flexible, but adds complexity and can confuse users about which range is active.</p>
+      </div>
+    </div>
+  </div>
+  <p class="caption">My recommendation: <strong>Global</strong>. A D2C manager usually wants to compare metrics across pages for the same time window.</p>
+</div>
