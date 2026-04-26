@@ -293,3 +293,429 @@ export async function fetchAbandonedCheckouts(): Promise<AbandonedCheckout[]> {
   }>(query);
   return data.abandonedCheckouts.edges.map((e) => e.node);
 }
+
+/* ============================================================================
+ * Phase 2 — Finance domain fetch methods
+ * ========================================================================= */
+
+export interface ShopifyLocation {
+  id: string;
+  name: string;
+  isActive: boolean;
+  fulfillsOnlineOrders: boolean;
+  address: Record<string, string | null>;
+}
+
+const LOCATIONS_QUERY = `
+  query Locations($cursor: String) {
+    locations(first: 50, after: $cursor) {
+      edges {
+        cursor
+        node {
+          id name isActive fulfillsOnlineOrders
+          address { address1 address2 city province country zip phone }
+        }
+      }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+`;
+
+export async function fetchLocations(): Promise<ShopifyLocation[]> {
+  const all: ShopifyLocation[] = [];
+  let cursor: string | null = null;
+  let hasNextPage = true;
+  type Resp = {
+    locations: {
+      edges: { node: ShopifyLocation }[];
+      pageInfo: { hasNextPage: boolean; endCursor: string };
+    };
+  };
+  while (hasNextPage) {
+    const data: Resp = await graphqlRequest<Resp>(LOCATIONS_QUERY, { cursor });
+    all.push(...data.locations.edges.map((e) => e.node));
+    hasNextPage = data.locations.pageInfo.hasNextPage;
+    cursor = data.locations.pageInfo.endCursor;
+    if (hasNextPage) await new Promise((r) => setTimeout(r, 300));
+  }
+  return all;
+}
+
+export interface ShopifyPayout {
+  id: string;
+  issuedAt: string;
+  status: string;
+  net: { amount: string; currencyCode: string };
+  summary: {
+    chargesGross: { amount: string };
+    refundsGross: { amount: string };
+    adjustmentsGross: { amount: string };
+    chargesFee: { amount: string };
+    refundsFee: { amount: string };
+    adjustmentsFee: { amount: string };
+  };
+  bankAccount: {
+    accountNumberLastDigits: string | null;
+    bankName: string | null;
+    routingNumber: string | null;
+  } | null;
+}
+
+const PAYOUTS_QUERY = `
+  query Payouts($cursor: String) {
+    shopifyPaymentsAccount {
+      payouts(first: 50, after: $cursor) {
+        edges {
+          cursor
+          node {
+            id issuedAt status
+            net { amount currencyCode }
+            summary {
+              chargesGross { amount }
+              refundsGross { amount }
+              adjustmentsGross { amount }
+              chargesFee { amount }
+              refundsFee { amount }
+              adjustmentsFee { amount }
+            }
+            bankAccount { accountNumberLastDigits bankName routingNumber }
+          }
+        }
+        pageInfo { hasNextPage endCursor }
+      }
+    }
+  }
+`;
+
+export async function fetchPayouts(sinceDate: Date | null): Promise<ShopifyPayout[]> {
+  const all: ShopifyPayout[] = [];
+  let cursor: string | null = null;
+  let hasNextPage = true;
+  type Resp = {
+    shopifyPaymentsAccount: {
+      payouts: {
+        edges: { node: ShopifyPayout }[];
+        pageInfo: { hasNextPage: boolean; endCursor: string };
+      };
+    } | null;
+  };
+  while (hasNextPage) {
+    const data: Resp = await graphqlRequest<Resp>(PAYOUTS_QUERY, { cursor });
+    if (!data.shopifyPaymentsAccount) break;
+    const nodes = data.shopifyPaymentsAccount.payouts.edges.map((e) => e.node);
+    if (sinceDate) {
+      const filtered = nodes.filter((p) => new Date(p.issuedAt) >= sinceDate);
+      all.push(...filtered);
+      if (filtered.length < nodes.length) break;
+    } else {
+      all.push(...nodes);
+    }
+    hasNextPage = data.shopifyPaymentsAccount.payouts.pageInfo.hasNextPage;
+    cursor = data.shopifyPaymentsAccount.payouts.pageInfo.endCursor;
+    if (hasNextPage) await new Promise((r) => setTimeout(r, 300));
+  }
+  return all;
+}
+
+export interface ShopifyBalanceTransaction {
+  id: string;
+  type: string;
+  test: boolean;
+  transactionDate: string;
+  amount: { amount: string };
+  fee: { amount: string };
+  net: { amount: string };
+  associatedPayout: { id: string } | null;
+  associatedOrder: { id: string } | null;
+  sourceId: string | null;
+  sourceType: string | null;
+  sourceOrderTransactionId: string | null;
+}
+
+const BALANCE_TX_QUERY = `
+  query BalanceTransactions($cursor: String) {
+    shopifyPaymentsAccount {
+      balanceTransactions(first: 100, after: $cursor) {
+        edges {
+          cursor
+          node {
+            id type test transactionDate
+            amount { amount }
+            fee { amount }
+            net { amount }
+            associatedPayout { id }
+            associatedOrder { id }
+            sourceId sourceType sourceOrderTransactionId
+          }
+        }
+        pageInfo { hasNextPage endCursor }
+      }
+    }
+  }
+`;
+
+export async function fetchBalanceTransactions(
+  sinceDate: Date | null,
+): Promise<ShopifyBalanceTransaction[]> {
+  const all: ShopifyBalanceTransaction[] = [];
+  let cursor: string | null = null;
+  let hasNextPage = true;
+  type Resp = {
+    shopifyPaymentsAccount: {
+      balanceTransactions: {
+        edges: { node: ShopifyBalanceTransaction }[];
+        pageInfo: { hasNextPage: boolean; endCursor: string };
+      };
+    } | null;
+  };
+  while (hasNextPage) {
+    const data: Resp = await graphqlRequest<Resp>(BALANCE_TX_QUERY, { cursor });
+    if (!data.shopifyPaymentsAccount) break;
+    const nodes = data.shopifyPaymentsAccount.balanceTransactions.edges.map((e) => e.node);
+    if (sinceDate) {
+      const filtered = nodes.filter((t) => new Date(t.transactionDate) >= sinceDate);
+      all.push(...filtered);
+      if (filtered.length < nodes.length) break;
+    } else {
+      all.push(...nodes);
+    }
+    hasNextPage = data.shopifyPaymentsAccount.balanceTransactions.pageInfo.hasNextPage;
+    cursor = data.shopifyPaymentsAccount.balanceTransactions.pageInfo.endCursor;
+    if (hasNextPage) await new Promise((r) => setTimeout(r, 300));
+  }
+  return all;
+}
+
+export interface ShopifyRefundLineItem {
+  quantity: number;
+  restockType: string | null;
+  subtotalSet: { shopMoney: { amount: string } };
+  lineItem: { sku: string | null } | null;
+}
+
+export interface ShopifyRefund {
+  id: string;
+  createdAt: string;
+  note: string | null;
+  totalRefundedSet: { shopMoney: { amount: string; currencyCode: string } };
+  refundLineItems: { edges: { node: ShopifyRefundLineItem }[] };
+}
+
+export interface ShopifyOrderWithRefunds {
+  id: string;
+  refunds: ShopifyRefund[];
+}
+
+const REFUNDS_DELTA_QUERY = `
+  query RefundsDelta($queryStr: String!, $cursor: String) {
+    orders(first: 100, after: $cursor, query: $queryStr) {
+      edges {
+        cursor
+        node {
+          id
+          refunds {
+            id createdAt note
+            totalRefundedSet { shopMoney { amount currencyCode } }
+            refundLineItems(first: 50) {
+              edges { node {
+                quantity restockType
+                subtotalSet { shopMoney { amount } }
+                lineItem { sku }
+              }}
+            }
+          }
+        }
+      }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+`;
+
+export async function fetchRefundsDelta(sinceDate: Date): Promise<ShopifyOrderWithRefunds[]> {
+  const sinceStr = sinceDate.toISOString().slice(0, 10);
+  const queryStr = `updated_at:>=${sinceStr} financial_status:partially_refunded,refunded`;
+  const all: ShopifyOrderWithRefunds[] = [];
+  let cursor: string | null = null;
+  let hasNextPage = true;
+  type Resp = {
+    orders: {
+      edges: { node: ShopifyOrderWithRefunds }[];
+      pageInfo: { hasNextPage: boolean; endCursor: string };
+    };
+  };
+  while (hasNextPage) {
+    const data: Resp = await graphqlRequest<Resp>(REFUNDS_DELTA_QUERY, { queryStr, cursor });
+    all.push(...data.orders.edges.map((e) => e.node));
+    hasNextPage = data.orders.pageInfo.hasNextPage;
+    cursor = data.orders.pageInfo.endCursor;
+    if (hasNextPage) await new Promise((r) => setTimeout(r, 300));
+  }
+  return all;
+}
+
+export interface ShopifyTransaction {
+  id: string;
+  kind: string;
+  status: string;
+  gateway: string | null;
+  amountSet: { shopMoney: { amount: string; currencyCode: string } };
+  processedAt: string | null;
+  parentTransaction: { id: string } | null;
+  paymentDetails?: { paymentMethodName?: string } | null;
+}
+
+export interface ShopifyOrderWithTransactions {
+  id: string;
+  transactions: ShopifyTransaction[];
+}
+
+const TRANSACTIONS_DELTA_QUERY = `
+  query TxDelta($queryStr: String!, $cursor: String) {
+    orders(first: 100, after: $cursor, query: $queryStr) {
+      edges {
+        cursor
+        node {
+          id
+          transactions {
+            id kind status gateway
+            amountSet { shopMoney { amount currencyCode } }
+            processedAt
+            parentTransaction { id }
+          }
+        }
+      }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+`;
+
+export async function fetchTransactionsDelta(
+  sinceDate: Date,
+): Promise<ShopifyOrderWithTransactions[]> {
+  const sinceStr = sinceDate.toISOString().slice(0, 10);
+  const queryStr = `updated_at:>=${sinceStr}`;
+  const all: ShopifyOrderWithTransactions[] = [];
+  let cursor: string | null = null;
+  let hasNextPage = true;
+  type Resp = {
+    orders: {
+      edges: { node: ShopifyOrderWithTransactions }[];
+      pageInfo: { hasNextPage: boolean; endCursor: string };
+    };
+  };
+  while (hasNextPage) {
+    const data: Resp = await graphqlRequest<Resp>(TRANSACTIONS_DELTA_QUERY, { queryStr, cursor });
+    all.push(...data.orders.edges.map((e) => e.node));
+    hasNextPage = data.orders.pageInfo.hasNextPage;
+    cursor = data.orders.pageInfo.endCursor;
+    if (hasNextPage) await new Promise((r) => setTimeout(r, 300));
+  }
+  return all;
+}
+
+/**
+ * Submit a bulk operation that fetches all orders+refunds since 2023-01-01.
+ * Returns the operation id; caller must poll checkBulkStatus until COMPLETED,
+ * then download from the URL and parse JSONL line-by-line.
+ */
+export async function startRefundsBulkBackfill(): Promise<{ id: string; status: string }> {
+  const bulkBody = `
+    {
+      orders(query: "updated_at:>=2023-01-01") {
+        edges {
+          node {
+            id
+            refunds {
+              id createdAt note
+              totalRefundedSet { shopMoney { amount currencyCode } }
+              refundLineItems {
+                edges { node {
+                  quantity restockType
+                  subtotalSet { shopMoney { amount } }
+                  lineItem { sku }
+                }}
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+  const mutation = `
+    mutation {
+      bulkOperationRunQuery(query: """${bulkBody}""") {
+        bulkOperation { id status }
+        userErrors { field message }
+      }
+    }
+  `;
+  const data = await graphqlRequest<{
+    bulkOperationRunQuery: {
+      bulkOperation: { id: string; status: string } | null;
+      userErrors: Array<{ field: string; message: string }>;
+    };
+  }>(mutation);
+  const { bulkOperation, userErrors } = data.bulkOperationRunQuery;
+  if (userErrors?.length)
+    throw new Error(`Shopify bulk op error: ${userErrors.map((e) => e.message).join(', ')}`);
+  if (!bulkOperation) throw new Error('Shopify returned null bulkOperation for refunds');
+  return bulkOperation;
+}
+
+export async function startTransactionsBulkBackfill(): Promise<{ id: string; status: string }> {
+  const bulkBody = `
+    {
+      orders(query: "updated_at:>=2023-01-01") {
+        edges {
+          node {
+            id
+            transactions {
+              id kind status gateway
+              amountSet { shopMoney { amount currencyCode } }
+              processedAt
+              parentTransaction { id }
+            }
+          }
+        }
+      }
+    }
+  `;
+  const mutation = `
+    mutation {
+      bulkOperationRunQuery(query: """${bulkBody}""") {
+        bulkOperation { id status }
+        userErrors { field message }
+      }
+    }
+  `;
+  const data = await graphqlRequest<{
+    bulkOperationRunQuery: {
+      bulkOperation: { id: string; status: string } | null;
+      userErrors: Array<{ field: string; message: string }>;
+    };
+  }>(mutation);
+  const { bulkOperation, userErrors } = data.bulkOperationRunQuery;
+  if (userErrors?.length)
+    throw new Error(`Shopify bulk op error: ${userErrors.map((e) => e.message).join(', ')}`);
+  if (!bulkOperation) throw new Error('Shopify returned null bulkOperation for transactions');
+  return bulkOperation;
+}
+
+/**
+ * Poll currentBulkOperation until COMPLETED (or fail). Up to 30 minutes.
+ * Returns the JSONL download URL.
+ */
+export async function waitForBulkOperationUrl(operationId: string): Promise<string> {
+  for (let i = 0; i < 360; i++) {
+    await new Promise((r) => setTimeout(r, 5000));
+    const status = await checkBulkStatus(operationId);
+    if (status.status === 'COMPLETED') {
+      if (!status.url) throw new Error('Bulk op COMPLETED but no URL');
+      return status.url;
+    }
+    if (['FAILED', 'CANCELED', 'EXPIRED'].includes(status.status)) {
+      throw new Error(`Bulk op ${status.status}: ${status.errorCode ?? 'no errorCode'}`);
+    }
+  }
+  throw new Error('Bulk op did not complete within 30 minutes');
+}
