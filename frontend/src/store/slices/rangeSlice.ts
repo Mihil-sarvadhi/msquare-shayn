@@ -7,6 +7,7 @@ export interface RangeState {
   preset: RangePreset;
   startDate: string;
   endDate: string;
+  label?: string;
 }
 
 const initialState: RangeState = { preset: '30d', startDate: '', endDate: '' };
@@ -19,11 +20,13 @@ const rangeSlice = createSlice({
       state.preset = action.payload;
       state.startDate = '';
       state.endDate = '';
+      state.label = undefined;
     },
-    setCustomRange(state, action: PayloadAction<{ startDate: string; endDate: string }>) {
+    setCustomRange(state, action: PayloadAction<{ startDate: string; endDate: string; label?: string }>) {
       state.preset = 'custom';
       state.startDate = action.payload.startDate;
       state.endDate = action.payload.endDate;
+      state.label = action.payload.label;
     },
   },
 });

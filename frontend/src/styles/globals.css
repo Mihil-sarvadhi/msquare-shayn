@@ -36,6 +36,14 @@
   50% { transform: scale(1.12); opacity: 1; }
 }
 
+@keyframes antd-spin-rotate {
+  to { transform: rotate(405deg); }
+}
+
+@keyframes antd-spin-fade {
+  to { opacity: 1; }
+}
+
 @layer base {
   html {
     zoom: 1.1;

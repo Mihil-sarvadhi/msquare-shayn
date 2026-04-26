@@ -2,6 +2,7 @@ import axios from 'axios';
 import { ShopifyOrder, ShopifyOrderLineitem } from '@db/models';
 import { startBulkBackfill, checkBulkStatus, graphqlRequest } from './shopify.connector';
 import { syncShopifyCustomers } from './shopify.sync';
+import { mapBulkOrder } from './shopify.mapper';
 import { logger } from '@logger/logger';
 
 async function cancelExistingBulkOperation(): Promise<void> {
@@ -45,69 +46,25 @@ async function downloadAndInsertBulkData(url: string): Promise<number> {
 
   let inserted = 0;
   for (const order of Object.values(orders)) {
-    const paymentGateways = (order.paymentGatewayNames as string[]) || [];
-    const isCOD =
-      paymentGateways.includes('cash on delivery') ||
-      paymentGateways.some((g) => g.toLowerCase().includes('cod'));
-    const priceSet = order.totalPriceSet as { shopMoney: { amount: string } } | undefined;
-    const discountsSet = order.totalDiscountsSet as { shopMoney: { amount: string } } | undefined;
-    const shippingSet = order.totalShippingPriceSet as { shopMoney: { amount: string } } | undefined;
-    const taxSet = order.totalTaxSet as { shopMoney: { amount: string } } | undefined;
-    const refundedSet = order.totalRefundedSet as { shopMoney: { amount: string } } | undefined;
-    const totalRevenue = parseFloat(priceSet?.shopMoney?.amount || '0');
-    const totalDiscounts = parseFloat(discountsSet?.shopMoney?.amount || '0');
-    const totalShipping = parseFloat(shippingSet?.shopMoney?.amount || '0');
-    const totalTax = parseFloat(taxSet?.shopMoney?.amount || '0');
-    const totalRefunded = parseFloat(refundedSet?.shopMoney?.amount || '0');
-    const grossSales = totalRevenue + totalDiscounts + totalRefunded - totalTax - totalShipping;
-
-    await ShopifyOrder.upsert({
-      order_id: order.id as string,
-      order_name: order.name as string,
-      created_at: new Date(order.createdAt as string),
-      revenue: totalRevenue,
-      gross_sales: grossSales,
-      total_discounts: totalDiscounts,
-      total_tax: totalTax,
-      total_shipping: totalShipping,
-      total_refunded: totalRefunded,
-      payment_mode: isCOD ? 'COD' : 'Prepaid',
-      financial_status: order.displayFinancialStatus as string,
-      fulfillment_status: order.displayFulfillmentStatus as string,
-      customer_id: (order.customer as Record<string, string> | undefined)?.id || undefined,
-      customer_email: (order.customer as Record<string, string> | undefined)?.email || undefined,
-      customer_city:
-        (order.customer as { defaultAddress?: Record<string, string> } | undefined)?.defaultAddress
-          ?.city || undefined,
-      customer_state:
-        (order.customer as { defaultAddress?: Record<string, string> } | undefined)?.defaultAddress
-          ?.province || undefined,
-      discount_code:
-        (order.discountCodes as Array<{ code: string }> | undefined)?.[0]?.code || undefined,
-    });
-
+    await ShopifyOrder.upsert(mapBulkOrder(order));
     inserted++;
+  }
+
+  const orderIds = Object.keys(orders);
+  if (orderIds.length > 0) {
+    await ShopifyOrderLineitem.destroy({ where: { order_id: orderIds } });
   }
 
   for (const item of lineItems) {
     const orderId = item.__parentId as string;
     if (!orders[orderId]) continue;
     const price = item.originalUnitPriceSet as { shopMoney: { amount: string } } | undefined;
-    const sku = (item.sku as string | undefined) || undefined;
-    const title = item.title as string;
-    const where = sku
-      ? { order_id: orderId, sku, title }
-      : { order_id: orderId, title };
-
-    await ShopifyOrderLineitem.findOrCreate({
-      where,
-      defaults: {
-        order_id: orderId,
-        sku,
-        title,
-        quantity: item.quantity as number,
-        unit_price: parseFloat(price?.shopMoney?.amount || '0'),
-      },
+    await ShopifyOrderLineitem.create({
+      order_id: orderId,
+      sku: (item.sku as string | undefined) || undefined,
+      title: item.title as string,
+      quantity: item.quantity as number,
+      unit_price: parseFloat(price?.shopMoney?.amount || '0'),
     });
   }
 

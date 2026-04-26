@@ -31,6 +31,7 @@ function fmtDate(ymd: string): string {
 }
 
 export function rangeLabel(range: RangeState): string {
+  if (range.label) return range.label;
   if (range.preset === 'custom' && range.startDate && range.endDate) {
     const sy = range.startDate.slice(0, 4);
     const ey = range.endDate.slice(0, 4);

@@ -1,13 +1,13 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { NavLink } from 'react-router-dom';
-import { RefreshCw, /* CalendarDays, */ Loader2, AlertCircle, Check } from 'lucide-react';
+import { RefreshCw, CalendarDays, Loader2, AlertCircle, Check, ChevronDown } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '@store/hooks';
-import { setPreset, /* setCustomRange, */ } from '@store/slices/rangeSlice';
-import type { RangePreset } from '@store/slices/rangeSlice';
+import { setCustomRange } from '@store/slices/rangeSlice';
 import {
   useSyncAll, useSyncShopify, useSyncMeta, useSyncIthink, useSyncJudgeme, useSyncGA4,
 } from '@services/dashboard/dashboard.query';
-// import { DateRangePicker } from '@components/ui/DateRangePicker'; // re-enable with Custom date button
+import { DateRangePicker } from '@components/ui/DateRangePicker';
+import { rangeLabel } from '@utils/common-functions/buildRangeParams';
 import { cn } from '@/lib/utils';
 import type { ConnectorHealth } from '@app/types/dashboard';
 import baseService from '@services/configs/baseService';
@@ -185,15 +185,10 @@ export function TopNav() {
   const [localSyncAt,     setLocalSyncAt]     = useState<Record<string, number>>({});
   const [syncAllCooldown, setSyncAllCooldown] = useState(false);
 
-  const handlePreset = useCallback((p: Exclude<RangePreset, 'custom'>) => {
-    dispatch(setPreset(p));
+  const handleApply = useCallback((payload: { startDate: string; endDate: string; label: string }) => {
+    dispatch(setCustomRange(payload));
     setShowPicker(false);
   }, [dispatch]);
-
-  /* const handleApply = useCallback((start: string, end: string) => {
-    dispatch(setCustomRange({ startDate: start, endDate: end }));
-    setShowPicker(false);
-  }, [dispatch]); // re-enable with Custom date button */
 
   /* Per-connector state machine — guards against stale timeouts overwriting newer states */
   const setConnState = useCallback((key: string, state: ConnSyncState) => {
@@ -305,52 +300,32 @@ export function TopNav() {
       {/* Right controls */}
       <div className="flex items-center gap-3 ml-auto shrink-0">
 
-        {/* Range selector */}
-        <div className="flex gap-1 bg-[#F5F0E8] rounded-lg p-1">
-          {([
-            { key: '7d',  label: '7D'  },
-            { key: '30d', label: '30D' },
-            { key: 'all', label: 'All' },
-          ] as { key: Exclude<RangePreset, 'custom'>; label: string }[]).map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => handlePreset(key)}
-              className={cn(
-                'px-2.5 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap',
-                range.preset === key
-                  ? 'bg-white text-[#1A1208] shadow-sm font-semibold'
-                  : 'text-[#8C7B64] hover:text-[#1A1208]',
-              )}
-            >
-              {label}
-            </button>
-          ))}
-
-          {/* Custom date — temporarily hidden, uncomment to re-enable */}
-          {/* <div className="relative" ref={pickerRef}>
-            <button
-              onClick={() => setShowPicker((v) => !v)}
-              className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
-                range.preset === 'custom'
-                  ? 'bg-[#B8860B] text-white font-semibold'
-                  : 'text-[#8C7B64] hover:text-[#1A1208]',
-              )}
-            >
-              <CalendarDays size={11} strokeWidth={1.5} />
-              {customLabel}
-            </button>
-            {showPicker && (
-              <div className="absolute top-full right-0 mt-2 z-50">
-                <DateRangePicker
-                  startDate={range.startDate}
-                  endDate={range.endDate}
-                  onApply={handleApply}
-                  onClose={() => setShowPicker(false)}
-                />
-              </div>
+        {/* Date range picker */}
+        <div className="relative" ref={pickerRef}>
+          <button
+            type="button"
+            onClick={() => setShowPicker((v) => !v)}
+            className={cn(
+              'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all',
+              showPicker
+                ? 'border-[#B8860B] text-[#B8860B] bg-[#FDF8F0]'
+                : 'border-[#E8E0D0] text-[#1A1208] hover:border-[#B8860B] hover:text-[#B8860B]',
             )}
-          </div> */}
+          >
+            <CalendarDays size={13} strokeWidth={1.75} />
+            <span className="whitespace-nowrap">{rangeLabel(range)}</span>
+            <ChevronDown size={12} strokeWidth={2} className={cn('transition-transform', showPicker && 'rotate-180')} />
+          </button>
+          {showPicker && (
+            <div className="absolute top-full right-0 mt-2 z-50">
+              <DateRangePicker
+                startDate={range.startDate}
+                endDate={range.endDate}
+                onApply={handleApply}
+                onClose={() => setShowPicker(false)}
+              />
+            </div>
+          )}
         </div>
 
         {/* Sync Status button + dropdown */}

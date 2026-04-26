@@ -8,21 +8,38 @@ const headers = {
   'X-Shopify-Access-Token': environment.shopify.accessToken,
 };
 
+const ORDER_NODE_FIELDS = `
+  id name email phone createdAt updatedAt processedAt cancelledAt cancelReason
+  closed closedAt confirmed test tags note
+  displayFinancialStatus displayFulfillmentStatus returnStatus
+  paymentGatewayNames
+  sourceName sourceIdentifier
+  physicalLocation { id }
+  currencyCode presentmentCurrencyCode customerAcceptsMarketing
+  risk { assessments { riskLevel } }
+  shippingLine { title }
+  totalPriceSet { shopMoney { amount currencyCode } }
+  subtotalPriceSet { shopMoney { amount } }
+  totalDiscountsSet { shopMoney { amount } }
+  totalShippingPriceSet { shopMoney { amount } }
+  totalTaxSet { shopMoney { amount } }
+  totalRefundedSet { shopMoney { amount } }
+  totalTipReceivedSet { shopMoney { amount } }
+  discountCodes
+  shippingAddress {
+    address1 address2 city province country countryCode zip phone
+  }
+  billingAddress { city province country zip }
+  customer { id email firstName lastName defaultAddress { city province } }
+`;
+
 const ORDERS_QUERY = `
   query GetOrders($query: String, $cursor: String) {
-    orders(first: 250, query: $query, after: $cursor, sortKey: CREATED_AT) {
+    orders(first: 250, query: $query, after: $cursor, sortKey: UPDATED_AT) {
       pageInfo { hasNextPage endCursor }
       edges {
         node {
-          id name createdAt displayFinancialStatus displayFulfillmentStatus
-          paymentGatewayNames
-          totalPriceSet { shopMoney { amount currencyCode } }
-          totalDiscountsSet { shopMoney { amount } }
-          totalShippingPriceSet { shopMoney { amount } }
-          totalTaxSet { shopMoney { amount } }
-          totalRefundedSet { shopMoney { amount } }
-          discountCodes
-          customer { id email firstName lastName defaultAddress { city province } }
+          ${ORDER_NODE_FIELDS}
           lineItems(first: 20) {
             edges { node {
               sku title quantity
@@ -54,19 +71,58 @@ const CUSTOMERS_QUERY = `
   }
 `;
 
+interface MoneySet {
+  shopMoney: { amount: string; currencyCode?: string };
+}
+interface Address {
+  address1?: string | null;
+  address2?: string | null;
+  city?: string | null;
+  province?: string | null;
+  country?: string | null;
+  countryCode?: string | null;
+  zip?: string | null;
+  phone?: string | null;
+}
+
 export interface ShopifyOrder {
   id: string;
   name: string;
+  email?: string | null;
+  phone?: string | null;
   createdAt: string;
+  updatedAt?: string | null;
+  processedAt?: string | null;
+  cancelledAt?: string | null;
+  cancelReason?: string | null;
+  closed?: boolean | null;
+  closedAt?: string | null;
+  confirmed?: boolean | null;
+  test?: boolean | null;
+  tags?: string[] | null;
+  note?: string | null;
   displayFinancialStatus: string;
   displayFulfillmentStatus: string;
+  returnStatus?: string | null;
   paymentGatewayNames: string[];
-  totalPriceSet: { shopMoney: { amount: string; currencyCode: string } };
-  totalDiscountsSet?: { shopMoney: { amount: string } };
-  totalShippingPriceSet?: { shopMoney: { amount: string } };
-  totalTaxSet?: { shopMoney: { amount: string } };
-  totalRefundedSet?: { shopMoney: { amount: string } };
+  sourceName?: string | null;
+  sourceIdentifier?: string | null;
+  physicalLocation?: { id: string } | null;
+  currencyCode?: string | null;
+  presentmentCurrencyCode?: string | null;
+  customerAcceptsMarketing?: boolean | null;
+  risk?: { assessments?: Array<{ riskLevel?: string | null }> } | null;
+  shippingLine?: { title?: string | null } | null;
+  totalPriceSet: MoneySet;
+  subtotalPriceSet?: MoneySet;
+  totalDiscountsSet?: MoneySet;
+  totalShippingPriceSet?: MoneySet;
+  totalTaxSet?: MoneySet;
+  totalRefundedSet?: MoneySet;
+  totalTipReceivedSet?: MoneySet;
   discountCodes: string[];
+  shippingAddress?: Address | null;
+  billingAddress?: Address | null;
   customer?: {
     id: string;
     email: string;
@@ -109,9 +165,13 @@ export async function graphqlRequest<T>(
 }
 
 export async function fetchRecentOrders(updatedAtMin?: string): Promise<ShopifyOrder[]> {
-  const queryStr = updatedAtMin
-    ? `updated_at:>='${updatedAtMin}'`
-    : `created_at:>=${environment.shopify.syncStartDate}`;
+  let since = updatedAtMin;
+  if (!since) {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    since = d.toISOString();
+  }
+  const queryStr = `updated_at:>='${since}'`;
   let allOrders: ShopifyOrder[] = [];
   let cursor: string | null = null;
   let hasNextPage = true;
@@ -140,11 +200,16 @@ export async function fetchCustomers(): Promise<ShopifyCustomer[]> {
 
   type CustomersEdge = { node: ShopifyCustomer };
   type CustomersResponse = {
-    customers: { edges: Array<CustomersEdge>; pageInfo: { hasNextPage: boolean; endCursor: string } };
+    customers: {
+      edges: Array<CustomersEdge>;
+      pageInfo: { hasNextPage: boolean; endCursor: string };
+    };
   };
 
   while (hasNextPage) {
-    const data: CustomersResponse = await graphqlRequest<CustomersResponse>(CUSTOMERS_QUERY, { cursor });
+    const data: CustomersResponse = await graphqlRequest<CustomersResponse>(CUSTOMERS_QUERY, {
+      cursor,
+    });
     allCustomers = allCustomers.concat(data.customers.edges.map((e: CustomersEdge) => e.node));
     hasNextPage = data.customers.pageInfo.hasNextPage;
     cursor = data.customers.pageInfo.endCursor;
@@ -159,14 +224,25 @@ function buildBulkOrdersQuery(): string {
   return `
   mutation {
     bulkOperationRunQuery(query: """{ orders(query: "created_at:>=${since}") { edges { node {
-      id name createdAt displayFinancialStatus displayFulfillmentStatus paymentGatewayNames
+      id name email phone createdAt updatedAt processedAt cancelledAt cancelReason
+      closed closedAt confirmed test tags note
+      displayFinancialStatus displayFulfillmentStatus returnStatus paymentGatewayNames
+      sourceName sourceIdentifier
+      physicalLocation { id }
+      currencyCode presentmentCurrencyCode customerAcceptsMarketing
+      risk { assessments { riskLevel } }
+      shippingLine { title }
       totalPriceSet { shopMoney { amount } }
+      subtotalPriceSet { shopMoney { amount } }
       totalDiscountsSet { shopMoney { amount } }
       totalShippingPriceSet { shopMoney { amount } }
       totalTaxSet { shopMoney { amount } }
       totalRefundedSet { shopMoney { amount } }
+      totalTipReceivedSet { shopMoney { amount } }
       discountCodes
-      customer { id email defaultAddress { city province } }
+      shippingAddress { address1 address2 city province country countryCode zip phone }
+      billingAddress { city province country zip }
+      customer { id email firstName lastName defaultAddress { city province } }
       lineItems { edges { node { sku title quantity originalUnitPriceSet { shopMoney { amount } } }}}
     }}}}""") { bulkOperation { id status } userErrors { field message } }
   }

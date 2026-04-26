@@ -6,29 +6,48 @@ interface ModernLoaderProps {
   size?: 'sm' | 'md' | 'lg';
 }
 
-const SIZE_MAP: Record<NonNullable<ModernLoaderProps['size']>, string> = {
-  sm: 'h-2 w-2',
-  md: 'h-2.5 w-2.5',
-  lg: 'h-3 w-3',
+const SIZE_MAP: Record<NonNullable<ModernLoaderProps['size']>, { box: number; dot: number }> = {
+  sm: { box: 18, dot: 6 },
+  md: { box: 28, dot: 9 },
+  lg: { box: 40, dot: 13 },
 };
 
 export function ModernLoader({ label = 'Loading...', className, size = 'md' }: ModernLoaderProps) {
+  const { box, dot } = SIZE_MAP[size];
+  const positions = [
+    { top: 0,     left: 0     },
+    { top: 0,     right: 0    },
+    { bottom: 0,  right: 0    },
+    { bottom: 0,  left: 0     },
+  ];
+
   return (
-    <div className={cn('flex flex-col items-center gap-1.5 text-[var(--accent)]', className)}>
-      <div className="grid grid-cols-2 gap-1">
-        {[0, 1, 2, 3].map((idx) => (
+    <div className={cn('flex flex-col items-center gap-3', className)}>
+      <span
+        className="relative inline-block"
+        style={{
+          width: box,
+          height: box,
+          animation: 'antd-spin-rotate 1.2s infinite linear',
+          transform: 'rotate(45deg)',
+        }}
+      >
+        {positions.map((pos, i) => (
           <span
-            key={idx}
-            className={cn(
-              'rounded-full bg-[var(--accent)] animate-[loader-pop_0.95s_ease-in-out_infinite]',
-              SIZE_MAP[size],
-              idx % 2 === 1 && 'bg-[var(--warn)]',
-            )}
-            style={{ animationDelay: `${idx * 0.12}s` }}
+            key={i}
+            className="absolute rounded-full bg-[var(--accent)]"
+            style={{
+              width: dot,
+              height: dot,
+              opacity: 0.3,
+              animation: 'antd-spin-fade 1s infinite linear alternate',
+              animationDelay: `${i * 0.4}s`,
+              ...pos,
+            }}
           />
         ))}
-      </div>
-      <span className="text-xs font-medium tracking-wide">{label}</span>
+      </span>
+      <span className="text-xs font-medium tracking-wide text-[var(--text-muted)]">{label}</span>
     </div>
   );
 }

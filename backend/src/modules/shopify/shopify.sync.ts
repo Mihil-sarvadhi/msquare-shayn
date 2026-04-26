@@ -14,6 +14,7 @@ import {
   type ShopifyOrder as ShopifyOrderData,
   type ShopifyCustomer as ShopifyCustomerData,
 } from './shopify.connector';
+import { mapShopifyOrder } from './shopify.mapper';
 import { logger } from '@logger/logger';
 
 export async function syncShopifyCustomers(): Promise<number> {
@@ -49,56 +50,17 @@ export async function syncShopifyOrders(): Promise<void> {
     let count = 0;
 
     for (const order of orders) {
-      const isCOD =
-        order.paymentGatewayNames?.includes('cash on delivery') ||
-        order.paymentGatewayNames?.some((g) => g.toLowerCase().includes('cod'));
-      const paymentMode = isCOD ? 'COD' : 'Prepaid';
+      await ShopifyOrder.upsert(mapShopifyOrder(order));
 
-      const totalRevenue = parseFloat(order.totalPriceSet?.shopMoney?.amount || '0');
-      const totalDiscounts = parseFloat(order.totalDiscountsSet?.shopMoney?.amount || '0');
-      const totalShipping = parseFloat(order.totalShippingPriceSet?.shopMoney?.amount || '0');
-      const totalTax = parseFloat(order.totalTaxSet?.shopMoney?.amount || '0');
-      const totalRefunded = parseFloat(order.totalRefundedSet?.shopMoney?.amount || '0');
-      const grossSales = totalRevenue + totalDiscounts + totalRefunded - totalTax - totalShipping;
-
-      await ShopifyOrder.upsert({
-        order_id: order.id,
-        order_name: order.name,
-        created_at: new Date(order.createdAt),
-        revenue: totalRevenue,
-        gross_sales: grossSales,
-        total_discounts: totalDiscounts,
-        total_tax: totalTax,
-        total_shipping: totalShipping,
-        total_refunded: totalRefunded,
-        payment_mode: paymentMode,
-        financial_status: order.displayFinancialStatus,
-        fulfillment_status: order.displayFulfillmentStatus,
-        customer_id: order.customer?.id || undefined,
-        customer_email: order.customer?.email || undefined,
-        customer_name: order.customer
-          ? [order.customer.firstName, order.customer.lastName].filter(Boolean).join(' ') ||
-            undefined
-          : undefined,
-        customer_city: order.customer?.defaultAddress?.city || undefined,
-        customer_state: order.customer?.defaultAddress?.province || undefined,
-        discount_code: order.discountCodes?.[0] || undefined,
-      });
-
+      await ShopifyOrderLineitem.destroy({ where: { order_id: order.id } });
       for (const { node: item } of order.lineItems?.edges || []) {
-        const lineWhere = item.sku
-          ? { order_id: order.id, sku: item.sku, title: item.title }
-          : { order_id: order.id, title: item.title };
-        await ShopifyOrderLineitem.findOrCreate({
-          where: lineWhere,
-          defaults: {
-            order_id: order.id,
-            sku: item.sku || undefined,
-            title: item.title,
-            variant: item.variant?.title || undefined,
-            quantity: item.quantity,
-            unit_price: parseFloat(item.originalUnitPriceSet?.shopMoney?.amount || '0'),
-          },
+        await ShopifyOrderLineitem.create({
+          order_id: order.id,
+          sku: item.sku || undefined,
+          title: item.title,
+          variant: item.variant?.title || undefined,
+          quantity: item.quantity,
+          unit_price: parseFloat(item.originalUnitPriceSet?.shopMoney?.amount || '0'),
         });
       }
       count++;
