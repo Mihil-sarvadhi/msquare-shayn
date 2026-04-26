@@ -5,6 +5,8 @@ import { syncIthinkShipments, syncDailyRemittance } from '@modules/ithink/ithink
 import { syncJudgeMe } from '@modules/judgeme/judgeme.sync';
 import { syncGA4Data, syncGA4Realtime } from '@modules/ga4/ga4.sync';
 import { refreshTokenJob } from '@modules/ga4/ga4.token';
+import { runIncrementalAll } from '@modules/sync-orchestrator/sync-orchestrator.service';
+import { SOURCE } from '@constant';
 import { logger } from '@logger/logger';
 
 const TZ = { timezone: 'Asia/Kolkata' };
@@ -16,6 +18,21 @@ export function startScheduler(): void {
     await syncShopifyOrders();
     await syncAbandonedCheckouts();
   }, TZ);
+
+  // Every 15 min — Phase 2 orchestrator (finance + future slices)
+  cron.schedule(
+    '*/15 * * * *',
+    async () => {
+      logger.info('[Cron] Running orchestrator incremental for shopify...');
+      try {
+        const results = await runIncrementalAll(SOURCE.SHOPIFY);
+        logger.info(`[Cron] Orchestrator synced ${results.length} resources`);
+      } catch (err) {
+        logger.error(`[Cron] Orchestrator failure: ${(err as Error).message}`);
+      }
+    },
+    TZ,
+  );
 
   // Every 6 hours — Meta Ads insights
   cron.schedule('0 */6 * * *', async () => {
