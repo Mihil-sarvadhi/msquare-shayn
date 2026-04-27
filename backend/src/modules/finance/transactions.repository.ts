@@ -22,6 +22,7 @@ export async function upsertTransactions(
       'synced_at',
       'updated_at',
     ],
+    conflictAttributes: ['source', 'source_transaction_id'],
   });
   return rows.length;
 }

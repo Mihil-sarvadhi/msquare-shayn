@@ -6,7 +6,12 @@ export interface DateRangePickerProps {
   startDate: string;
   endDate: string;
   presetKey?: string | null;
-  onApply: (payload: { startDate: string; endDate: string; label: string }) => void;
+  onApply: (payload: {
+    startDate: string;
+    endDate: string;
+    label: string;
+    presetKey: string | null;
+  }) => void;
   onClose: () => void;
 }
 
@@ -343,8 +348,13 @@ export function DateRangePicker({ startDate, endDate, presetKey, onApply, onClos
 
   const handleApply = useCallback(() => {
     if (!canApply) return;
-    onApply({ startDate: selStart, endDate: selEnd, label: appliedLabel });
-  }, [canApply, selStart, selEnd, appliedLabel, onApply]);
+    onApply({
+      startDate: selStart,
+      endDate: selEnd,
+      label: appliedLabel,
+      presetKey: activeKey,
+    });
+  }, [canApply, selStart, selEnd, appliedLabel, activeKey, onApply]);
 
   const [startDraft, setStartDraft] = useState<string | null>(null);
   const [endDraft, setEndDraft]     = useState<string | null>(null);

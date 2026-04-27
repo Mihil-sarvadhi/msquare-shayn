@@ -24,6 +24,9 @@ export type ShopifyOrderRow = {
   total_tax?: number;
   total_shipping?: number;
   total_refunded?: number;
+  total_received?: number;
+  total_outstanding?: number;
+  current_total_price?: number;
   total_tips?: number;
   currency?: string;
   presentment_currency?: string;
@@ -66,9 +69,16 @@ export function mapShopifyOrder(order: ShopifyOrderData): ShopifyOrderRow {
   const shipping = n(order.totalShippingPriceSet?.shopMoney?.amount);
   const tax = n(order.totalTaxSet?.shopMoney?.amount);
   const refunded = n(order.totalRefundedSet?.shopMoney?.amount);
+  const received = n(order.totalReceivedSet?.shopMoney?.amount);
+  const outstanding = n(order.totalOutstandingSet?.shopMoney?.amount);
+  const currentTotalPrice = n(order.currentTotalPriceSet?.shopMoney?.amount);
   const tips = n(order.totalTipReceivedSet?.shopMoney?.amount);
   const subtotal = n(order.subtotalPriceSet?.shopMoney?.amount);
-  const grossSales = revenue + discounts + refunded - tax - shipping;
+  // Gross sales = item price × qty before discounts. subtotalPriceSet is items
+  // after line-item discounts, so adding total_discounts back yields gross.
+  // For Indian (tax-inclusive) stores subtotal already includes GST, which matches
+  // how Shopify Analytics reports gross sales.
+  const grossSales = subtotal + discounts;
 
   const ship = order.shippingAddress;
   const bill = order.billingAddress;
@@ -100,6 +110,9 @@ export function mapShopifyOrder(order: ShopifyOrderData): ShopifyOrderRow {
     total_tax: tax,
     total_shipping: shipping,
     total_refunded: refunded,
+    total_received: received,
+    total_outstanding: outstanding,
+    current_total_price: currentTotalPrice,
     total_tips: tips,
     currency: opt(order.currencyCode) || undefined,
     presentment_currency: opt(order.presentmentCurrencyCode) || undefined,
@@ -145,9 +158,12 @@ export function mapBulkOrder(raw: Record<string, unknown>): ShopifyOrderRow {
   const shipping = money('totalShippingPriceSet');
   const tax = money('totalTaxSet');
   const refunded = money('totalRefundedSet');
+  const received = money('totalReceivedSet');
+  const outstanding = money('totalOutstandingSet');
+  const currentTotalPrice = money('currentTotalPriceSet');
   const tips = money('totalTipReceivedSet');
   const subtotal = money('subtotalPriceSet');
-  const grossSales = revenue + discounts + refunded - tax - shipping;
+  const grossSales = subtotal + discounts;
 
   const ship = raw.shippingAddress as Record<string, string | undefined> | undefined;
   const bill = raw.billingAddress as Record<string, string | undefined> | undefined;
@@ -198,6 +214,9 @@ export function mapBulkOrder(raw: Record<string, unknown>): ShopifyOrderRow {
     total_tax: tax,
     total_shipping: shipping,
     total_refunded: refunded,
+    total_received: received,
+    total_outstanding: outstanding,
+    current_total_price: currentTotalPrice,
     total_tips: tips,
     currency: (raw.currencyCode as string | undefined) || undefined,
     presentment_currency: (raw.presentmentCurrencyCode as string | undefined) || undefined,

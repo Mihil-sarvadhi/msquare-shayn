@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@store/hooks';
-import { fetchFinanceOverview } from '@store/slices/financeSlice';
+import {
+  fetchFinanceOverview,
+  fetchSalesBreakdownOnly,
+  setSalesBreakdownMode,
+} from '@store/slices/financeSlice';
 import { fetchPayouts, fetchPayoutDetail, closeDetail, setPage } from '@store/slices/payoutsSlice';
 import { fetchRefunds, setRefundsPage } from '@store/slices/refundsSlice';
 import { KpiCard } from '@components/shared/KpiCard';
@@ -496,6 +500,184 @@ function RefundsBreakdown() {
   );
 }
 
+/* ─────────────────── Sales Breakdown (Shopify-spec) ─────────────────── */
+function SalesBreakdownPanel() {
+  const dispatch = useAppDispatch();
+  const range = useAppSelector((s) => s.range);
+  const sb = useAppSelector((s) => s.finance.salesBreakdown);
+  const mode = useAppSelector((s) => s.finance.salesBreakdownMode);
+  const loadingSB = useAppSelector((s) => s.finance.loadingSalesBreakdown);
+
+  const handleToggle = (): void => {
+    const next = mode === 'shopify_native' ? 'computed' : 'shopify_native';
+    dispatch(setSalesBreakdownMode(next));
+    dispatch(fetchSalesBreakdownOnly({ range, mode: next }));
+  };
+
+  if (!sb) {
+    return (
+      <div className="h-32 flex items-center justify-center text-sm text-[var(--text-muted)]">
+        No sales data.
+      </div>
+    );
+  }
+  const cur = sb.current.totals;
+  const prev = sb.previous.totals;
+  const deltaPct = (a: number, b: number): string => {
+    if (b === 0) return '—';
+    const v = ((a - b) / Math.abs(b)) * 100;
+    return `${v >= 0 ? '↑' : '↓'} ${Math.abs(v).toFixed(1)}%`;
+  };
+  const deltaClass = (a: number, b: number, neg = false): string => {
+    if (b === 0) return 'text-[var(--text-subtle)]';
+    const v = a - b;
+    const positive = neg ? v <= 0 : v >= 0;
+    return positive ? 'text-[var(--pos)]' : 'text-[var(--neg)]';
+  };
+
+  // Prepare daily rows aligned with prior-period rows (by index for now since spec just shows
+  // current daily; prior totals are summary-only).
+  const daily = sb.current.daily;
+
+  const COLS: { key: keyof typeof cur; label: string; sign: 1 | -1 }[] = [
+    { key: 'gross_sales',      label: 'Gross sales',     sign: 1  },
+    { key: 'discounts',        label: 'Discounts',       sign: -1 },
+    { key: 'returns',          label: 'Returns',         sign: -1 },
+    { key: 'net_sales',        label: 'Net sales',       sign: 1  },
+    { key: 'shipping_charges', label: 'Shipping',        sign: 1  },
+    { key: 'return_fees',      label: 'Return fees',     sign: -1 },
+    { key: 'taxes',            label: 'Taxes',           sign: 1  },
+    { key: 'total_sales',      label: 'Total sales',     sign: 1  },
+  ];
+
+  const fmt = (n: number, sign: 1 | -1) => {
+    const v = Math.abs(n);
+    return `${sign === -1 && n > 0 ? '−' : ''}${formatINR(v)}`;
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between text-xs text-[var(--text-muted)] gap-3">
+        <span>
+          <strong className="text-[var(--text)]">Current:</strong> {sb.current.from} → {sb.current.to}
+          {' · '}
+          <strong className="text-[var(--text)]">Previous:</strong> {sb.previous.from} → {sb.previous.to}
+        </span>
+        <button
+          type="button"
+          onClick={handleToggle}
+          disabled={loadingSB}
+          title="Toggle between locally-computed numbers and Shopify Analytics' exact numbers"
+          className={cn(
+            'flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide px-2.5 py-1 rounded-full border transition-colors disabled:opacity-50',
+            mode === 'shopify_native'
+              ? 'bg-[var(--pos-soft)] text-[var(--pos)] border-[var(--pos)]'
+              : 'bg-[var(--bg)] text-[var(--text-muted)] border-[var(--border)] hover:text-[var(--text)]',
+          )}
+        >
+          <span
+            className={cn(
+              'w-1.5 h-1.5 rounded-full',
+              mode === 'shopify_native' ? 'bg-[var(--pos)]' : 'bg-[var(--text-subtle)]',
+            )}
+          />
+          {loadingSB
+            ? 'Refreshing...'
+            : mode === 'shopify_native'
+              ? 'Verified'
+              : 'Verify with Shopify'}
+        </button>
+      </div>
+
+      {/* Summary row */}
+      <div className="border border-[var(--border)] rounded-lg overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-[var(--bg)]">
+            <tr>
+              <th className="text-left p-2.5 text-xs font-semibold uppercase tracking-wide w-32">Metric</th>
+              <th className="text-right p-2.5 text-xs font-semibold uppercase tracking-wide">Current</th>
+              <th className="text-right p-2.5 text-xs font-semibold uppercase tracking-wide">Previous</th>
+              <th className="text-right p-2.5 text-xs font-semibold uppercase tracking-wide">% Change</th>
+            </tr>
+          </thead>
+          <tbody>
+            {COLS.map((c) => {
+              const isTotal = c.key === 'total_sales' || c.key === 'net_sales';
+              return (
+                <tr
+                  key={c.key}
+                  className={cn('border-t border-[var(--border)]', isTotal && 'bg-[var(--bg)] font-semibold')}
+                >
+                  <td className="p-2.5">{c.label}</td>
+                  <td className={cn('p-2.5 text-right tabular-nums', c.sign === -1 && cur[c.key] > 0 && 'text-[var(--neg)]')}>
+                    {fmt(cur[c.key], c.sign)}
+                  </td>
+                  <td className={cn('p-2.5 text-right tabular-nums text-[var(--text-muted)]', c.sign === -1 && prev[c.key] > 0 && 'text-[var(--neg)]')}>
+                    {fmt(prev[c.key], c.sign)}
+                  </td>
+                  <td className={cn('p-2.5 text-right tabular-nums text-xs', deltaClass(cur[c.key], prev[c.key], c.sign === -1))}>
+                    {deltaPct(cur[c.key], prev[c.key])}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Daily rows */}
+      <details className="border border-[var(--border)] rounded-lg overflow-hidden" open>
+        <summary className="bg-[var(--bg)] p-2.5 text-xs font-semibold uppercase tracking-wide cursor-pointer">
+          Daily breakdown ({daily.length} days)
+        </summary>
+        <div className="overflow-x-auto max-h-[480px] overflow-y-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-[var(--bg)] sticky top-0">
+              <tr>
+                <th className="text-left p-2 text-xs font-semibold uppercase tracking-wide">Date</th>
+                {COLS.map((c) => (
+                  <th key={c.key} className="text-right p-2 text-xs font-semibold uppercase tracking-wide">
+                    {c.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {daily.map((row) => (
+                <tr key={row.date} className="border-t border-[var(--border)] hover:bg-[var(--bg)]">
+                  <td className="p-2 font-medium whitespace-nowrap">{row.date}</td>
+                  {COLS.map((c) => {
+                    const v = (row as unknown as Record<string, number>)[c.key] ?? 0;
+                    return (
+                      <td
+                        key={c.key}
+                        className={cn(
+                          'p-2 text-right tabular-nums',
+                          c.sign === -1 && v > 0 && 'text-[var(--neg)]',
+                          c.key === 'total_sales' && 'font-semibold',
+                        )}
+                      >
+                        {fmt(v, c.sign)}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+              {daily.length === 0 && (
+                <tr>
+                  <td colSpan={COLS.length + 1} className="p-6 text-center text-[var(--text-muted)]">
+                    No sales in this range.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </div>
+  );
+}
+
 /* ─────────────────── PAGE ─────────────────── */
 export function FinancePage() {
   const dispatch = useAppDispatch();
@@ -545,7 +727,6 @@ export function FinancePage() {
     );
   }
 
-  const kpis = finance.kpis;
   return (
     <>
       {showPageLoader && <PageLoader overlay />}
@@ -562,40 +743,114 @@ export function FinancePage() {
             </div>
           </div>
 
-          {/* Row 1: 6 KPI tiles */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-            <KpiCard
-              label="Gross Revenue"
-              value={formatINR(kpis?.gross_revenue)}
-              sub={`${formatNum(kpis?.order_count)} orders`}
-              loading={finance.loading}
-            />
-            <KpiCard
-              label="Discounts"
-              value={formatINR(kpis?.total_discounts)}
-              loading={finance.loading}
-            />
-            <KpiCard label="Tax" value={formatINR(kpis?.total_tax)} loading={finance.loading} />
-            <KpiCard
-              label="Shipping"
-              value={formatINR(kpis?.total_shipping)}
-              loading={finance.loading}
-            />
-            <KpiCard
-              label="Refunds"
-              value={formatINR(kpis?.total_refunds)}
-              sub={`${formatNum(kpis?.refund_count)} refunds`}
-              loading={finance.loading}
-            />
-            <div className="bg-gradient-to-br from-[var(--pos-soft)] to-white rounded-xl border-2 border-[var(--pos)] px-5 py-4 flex flex-col justify-center">
-              <span className="text-xs text-[var(--pos)] uppercase tracking-wide font-semibold">
-                Net Revenue
-              </span>
-              <p className="text-2xl font-bold text-[var(--pos)] leading-tight mt-1">
-                {formatINR(kpis?.net_revenue)}
-              </p>
+          {/* Total Sales Breakdown — 8 KPI tiles (Shopify-spec, with vs-prev deltas) */}
+          {finance.salesBreakdown && (
+            <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] px-5 py-4">
+              <div className="flex items-center justify-between mb-3 gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-[var(--text)]">Total Sales Breakdown</h3>
+                  <p className="text-[11px] text-[var(--text-subtle)] mt-0.5">
+                    {finance.salesBreakdownMode === 'shopify_native'
+                      ? 'Verified by Shopify Analytics · '
+                      : 'Computed from synced orders · '}
+                    vs prior {finance.salesBreakdown.previous.from} → {finance.salesBreakdown.previous.to}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next =
+                      finance.salesBreakdownMode === 'shopify_native' ? 'computed' : 'shopify_native';
+                    dispatch(setSalesBreakdownMode(next));
+                    dispatch(fetchSalesBreakdownOnly({ range, mode: next }));
+                  }}
+                  disabled={finance.loadingSalesBreakdown}
+                  title="Toggle between locally-computed numbers and Shopify Analytics' exact numbers"
+                  className={cn(
+                    'flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide px-2.5 py-1 rounded-full border transition-colors disabled:opacity-50',
+                    finance.salesBreakdownMode === 'shopify_native'
+                      ? 'bg-[var(--pos-soft)] text-[var(--pos)] border-[var(--pos)]'
+                      : 'bg-[var(--bg)] text-[var(--text-muted)] border-[var(--border)] hover:text-[var(--text)]',
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'w-1.5 h-1.5 rounded-full',
+                      finance.salesBreakdownMode === 'shopify_native'
+                        ? 'bg-[var(--pos)]'
+                        : 'bg-[var(--text-subtle)]',
+                    )}
+                  />
+                  {finance.salesBreakdownMode === 'shopify_native' ? 'Verified' : 'Verify with Shopify'}
+                </button>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+                {[
+                  { key: 'gross_sales', label: 'Gross sales', sign: 1 as const },
+                  { key: 'discounts', label: 'Discounts', sign: -1 as const },
+                  { key: 'returns', label: 'Returns', sign: -1 as const },
+                  { key: 'net_sales', label: 'Net sales', sign: 1 as const },
+                  { key: 'shipping_charges', label: 'Shipping', sign: 1 as const },
+                  { key: 'return_fees', label: 'Return fees', sign: -1 as const },
+                  { key: 'taxes', label: 'Taxes', sign: 1 as const },
+                  { key: 'total_sales', label: 'Total sales', sign: 1 as const, highlight: true },
+                ].map((row) => {
+                  const cur =
+                    (finance.salesBreakdown!.current.totals as unknown as Record<string, number>)[row.key] ?? 0;
+                  const prev =
+                    (finance.salesBreakdown!.previous.totals as unknown as Record<string, number>)[row.key] ?? 0;
+                  const deltaPct = prev !== 0 ? ((cur - prev) / Math.abs(prev)) * 100 : null;
+                  return (
+                    <div
+                      key={row.key}
+                      className={cn(
+                        'rounded-lg border px-3 py-2',
+                        row.highlight
+                          ? 'border-[var(--pos)] bg-[var(--pos-soft)]'
+                          : 'border-[var(--border)] bg-[var(--bg)]',
+                      )}
+                    >
+                      <p
+                        className={cn(
+                          'text-[10px] uppercase tracking-wide font-semibold',
+                          row.highlight ? 'text-[var(--pos)]' : 'text-[var(--text-subtle)]',
+                        )}
+                      >
+                        {row.label}
+                      </p>
+                      <p
+                        className={cn(
+                          'text-base font-semibold tabular-nums mt-0.5',
+                          row.sign === -1 ? 'text-[var(--neg)]' : 'text-[var(--text)]',
+                        )}
+                      >
+                        {row.sign === -1 && cur > 0 ? '−' : ''}
+                        {formatINR(Math.abs(cur))}
+                      </p>
+                      {deltaPct !== null && (
+                        <p
+                          className={cn(
+                            'text-[10px] mt-0.5',
+                            deltaPct >= 0 ? 'text-[var(--pos)]' : 'text-[var(--neg)]',
+                          )}
+                        >
+                          {deltaPct >= 0 ? '↑' : '↓'} {Math.abs(deltaPct).toFixed(1)}% vs prev
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Sales Breakdown — detailed table view */}
+          <Panel
+            title="Sales Breakdown"
+            subtitle="Shopify analytics formula · current vs previous period"
+          >
+            <SalesBreakdownPanel />
+          </Panel>
 
           {/* Row 2: Revenue breakdown chart + Payment-method donut */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

@@ -25,6 +25,9 @@ interface ShopifyOrderAttributes {
   total_tax?: number;
   total_shipping?: number;
   total_refunded?: number;
+  total_received?: number;
+  total_outstanding?: number;
+  current_total_price?: number;
   total_tips?: number;
   currency?: string;
   presentment_currency?: string;
@@ -86,6 +89,9 @@ export class ShopifyOrder
   declare total_tax?: number;
   declare total_shipping?: number;
   declare total_refunded?: number;
+  declare total_received?: number;
+  declare total_outstanding?: number;
+  declare current_total_price?: number;
   declare total_tips?: number;
   declare currency?: string;
   declare presentment_currency?: string;
@@ -140,6 +146,9 @@ ShopifyOrder.init(
     total_tax: DataTypes.DECIMAL(12, 2),
     total_shipping: DataTypes.DECIMAL(12, 2),
     total_refunded: DataTypes.DECIMAL(12, 2),
+    total_received: DataTypes.DECIMAL(12, 2),
+    total_outstanding: DataTypes.DECIMAL(12, 2),
+    current_total_price: DataTypes.DECIMAL(12, 2),
     total_tips: DataTypes.DECIMAL(10, 2),
     currency: DataTypes.TEXT,
     presentment_currency: DataTypes.TEXT,

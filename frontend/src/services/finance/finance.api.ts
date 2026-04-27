@@ -9,6 +9,7 @@ import type {
   RefundRowApi,
   RefundsSummaryApi,
   RevenueBreakdownPointApi,
+  SalesBreakdownApi,
   TxRowApi,
 } from '@app/types/finance-api';
 
@@ -40,6 +41,11 @@ export const financeApi = {
       .get<ApiEnvelope<RevenueBreakdownPointApi[]>>(API_ENDPOINTS.finance.revenueBreakdown, {
         params,
       })
+      .then((r) => r.data.data),
+
+  getSalesBreakdown: (params: RangeParams & { mode?: 'computed' | 'shopify_native' }) =>
+    baseService
+      .get<ApiEnvelope<SalesBreakdownApi>>(API_ENDPOINTS.finance.salesBreakdown, { params })
       .then((r) => r.data.data),
 
   getPaymentMethodSplit: (params: RangeParams) =>
@@ -77,13 +83,17 @@ export const financeApi = {
   /**
    * Convenience: fetch all overview data in parallel for the finance dashboard.
    */
-  fetchOverview: async (params: RangeParams) => {
-    const [kpis, breakdown, paymentSplit, refundsSummary] = await Promise.all([
-      financeApi.getKpis(params),
-      financeApi.getRevenueBreakdown({ ...params, group_by: 'day' }),
-      financeApi.getPaymentMethodSplit(params),
-      financeApi.getRefundsSummary(params),
+  fetchOverview: async (
+    params: RangeParams & { salesBreakdownMode?: 'computed' | 'shopify_native' },
+  ) => {
+    const { salesBreakdownMode, ...rangeOnly } = params;
+    const [kpis, breakdown, paymentSplit, refundsSummary, salesBreakdown] = await Promise.all([
+      financeApi.getKpis(rangeOnly),
+      financeApi.getRevenueBreakdown({ ...rangeOnly, group_by: 'day' }),
+      financeApi.getPaymentMethodSplit(rangeOnly),
+      financeApi.getRefundsSummary(rangeOnly),
+      financeApi.getSalesBreakdown({ ...rangeOnly, mode: salesBreakdownMode ?? 'computed' }),
     ]);
-    return { kpis, breakdown, paymentSplit, refundsSummary };
+    return { kpis, breakdown, paymentSplit, refundsSummary, salesBreakdown };
   },
 };

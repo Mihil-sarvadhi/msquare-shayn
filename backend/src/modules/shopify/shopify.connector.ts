@@ -24,6 +24,9 @@ const ORDER_NODE_FIELDS = `
   totalShippingPriceSet { shopMoney { amount } }
   totalTaxSet { shopMoney { amount } }
   totalRefundedSet { shopMoney { amount } }
+  totalReceivedSet { shopMoney { amount } }
+  totalOutstandingSet { shopMoney { amount } }
+  currentTotalPriceSet { shopMoney { amount } }
   totalTipReceivedSet { shopMoney { amount } }
   discountCodes
   shippingAddress {
@@ -119,6 +122,9 @@ export interface ShopifyOrder {
   totalShippingPriceSet?: MoneySet;
   totalTaxSet?: MoneySet;
   totalRefundedSet?: MoneySet;
+  totalReceivedSet?: MoneySet;
+  totalOutstandingSet?: MoneySet;
+  currentTotalPriceSet?: MoneySet;
   totalTipReceivedSet?: MoneySet;
   discountCodes: string[];
   shippingAddress?: Address | null;
@@ -283,15 +289,38 @@ export interface AbandonedCheckout {
 }
 
 export async function fetchAbandonedCheckouts(): Promise<AbandonedCheckout[]> {
-  const query = `query { abandonedCheckouts(first: 250) { edges { node {
-    id createdAt abandonedCheckoutUrl totalPriceSet { shopMoney { amount } }
-    customer { email }
-    lineItems(first: 5) { edges { node { title quantity } }}
-  }}}}`;
-  const data = await graphqlRequest<{
-    abandonedCheckouts: { edges: Array<{ node: AbandonedCheckout }> };
-  }>(query);
-  return data.abandonedCheckouts.edges.map((e) => e.node);
+  const query = `query AbandonedCheckouts($cursor: String) {
+    abandonedCheckouts(first: 250, after: $cursor, sortKey: CREATED_AT, reverse: true) {
+      edges {
+        cursor
+        node {
+          id createdAt abandonedCheckoutUrl
+          totalPriceSet { shopMoney { amount } }
+          customer { email }
+          lineItems(first: 5) { edges { node { title quantity } } }
+        }
+      }
+      pageInfo { hasNextPage endCursor }
+    }
+  }`;
+  type Resp = {
+    abandonedCheckouts: {
+      edges: Array<{ node: AbandonedCheckout }>;
+      pageInfo: { hasNextPage: boolean; endCursor: string };
+    };
+  };
+  const all: AbandonedCheckout[] = [];
+  let cursor: string | null = null;
+  let hasNextPage = true;
+  // Cap at 20 pages = 5000 records to avoid runaway calls.
+  for (let page = 0; page < 20 && hasNextPage; page++) {
+    const data: Resp = await graphqlRequest<Resp>(query, { cursor });
+    all.push(...data.abandonedCheckouts.edges.map((e) => e.node));
+    hasNextPage = data.abandonedCheckouts.pageInfo.hasNextPage;
+    cursor = data.abandonedCheckouts.pageInfo.endCursor;
+    if (hasNextPage) await new Promise((r) => setTimeout(r, 300));
+  }
+  return all;
 }
 
 /* ============================================================================
@@ -348,7 +377,6 @@ export interface ShopifyPayout {
   net: { amount: string; currencyCode: string };
   summary: {
     chargesGross: { amount: string };
-    refundsGross: { amount: string };
     adjustmentsGross: { amount: string };
     chargesFee: { amount: string };
     refundsFee: { amount: string };
@@ -357,7 +385,6 @@ export interface ShopifyPayout {
   bankAccount: {
     accountNumberLastDigits: string | null;
     bankName: string | null;
-    routingNumber: string | null;
   } | null;
 }
 
@@ -372,13 +399,12 @@ const PAYOUTS_QUERY = `
             net { amount currencyCode }
             summary {
               chargesGross { amount }
-              refundsGross { amount }
               adjustmentsGross { amount }
               chargesFee { amount }
               refundsFee { amount }
               adjustmentsFee { amount }
             }
-            bankAccount { accountNumberLastDigits bankName routingNumber }
+            bankAccount { accountNumberLastDigits bankName }
           }
         }
         pageInfo { hasNextPage endCursor }
@@ -553,6 +579,119 @@ export async function fetchRefundsDelta(sinceDate: Date): Promise<ShopifyOrderWi
   return all;
 }
 
+/* ============================================================================
+ * Shopify Returns workflow — separate from refunds. Returns are the inbound
+ * "items coming back" workflow; refunds are the financial transaction. For
+ * brands with high RTO, the value of returns is far larger than refunds (COD
+ * orders that never paid still flow through returns). Shopify Analytics' "Returns"
+ * line in the Total Sales Breakdown reflects this combined value.
+ * ========================================================================= */
+
+export interface ShopifyReturnLineItem {
+  quantity: number;
+  returnReason: string | null;
+  // ReturnLineItemType is an interface; pricing fields live on the ReturnLineItem
+  // concrete implementor and are reached via the inline fragment in the query.
+  fulfillmentLineItem: {
+    lineItem: {
+      sku: string | null;
+      discountedUnitPriceSet: { shopMoney: { amount: string; currencyCode: string } };
+      originalUnitPriceSet: { shopMoney: { amount: string } };
+    } | null;
+  } | null;
+}
+
+export interface ShopifyReturnShippingFee {
+  amountSet: { shopMoney: { amount: string } };
+}
+
+export interface ShopifyReturn {
+  id: string;
+  name: string | null;
+  status: string;
+  totalQuantity: number;
+  createdAt: string | null;
+  closedAt: string | null;
+  requestApprovedAt: string | null;
+  returnLineItems: { edges: { node: ShopifyReturnLineItem }[] };
+  returnShippingFees: ShopifyReturnShippingFee[];
+}
+
+export interface ShopifyOrderWithReturns {
+  id: string;
+  returns: ShopifyReturn[];
+}
+
+// Page sizes are tuned to keep query cost under Shopify's 1000-point ceiling.
+// 25 orders × 5 returns × 25 lineItems = ~625 base + nested money fields.
+const RETURNS_DELTA_QUERY = `
+  query ReturnsDelta($queryStr: String!, $cursor: String) {
+    orders(first: 25, after: $cursor, query: $queryStr) {
+      edges {
+        cursor
+        node {
+          id
+          returns(first: 5) {
+            edges { node {
+              id name status totalQuantity createdAt closedAt requestApprovedAt
+              returnLineItems(first: 25) {
+                edges { node {
+                  quantity returnReason
+                  ... on ReturnLineItem {
+                    fulfillmentLineItem {
+                      lineItem {
+                        sku
+                        discountedUnitPriceSet { shopMoney { amount currencyCode } }
+                        originalUnitPriceSet { shopMoney { amount } }
+                      }
+                    }
+                  }
+                }}
+              }
+              returnShippingFees { amountSet { shopMoney { amount } } }
+            }}
+          }
+        }
+      }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+`;
+
+interface ShopifyReturnEdgeOrder {
+  id: string;
+  returns: { edges: { node: ShopifyReturn }[] };
+}
+
+export async function fetchReturnsDelta(sinceDate: Date): Promise<ShopifyOrderWithReturns[]> {
+  const sinceStr = sinceDate.toISOString().slice(0, 10);
+  // Filter by `return_status:not NO_RETURN` so we only fetch orders that actually
+  // have a return associated. This drastically reduces the page count.
+  const queryStr = `updated_at:>=${sinceStr} return_status:in_progress,returned`;
+  const all: ShopifyOrderWithReturns[] = [];
+  let cursor: string | null = null;
+  let hasNextPage = true;
+  type Resp = {
+    orders: {
+      edges: { node: ShopifyReturnEdgeOrder }[];
+      pageInfo: { hasNextPage: boolean; endCursor: string };
+    };
+  };
+  while (hasNextPage) {
+    const data: Resp = await graphqlRequest<Resp>(RETURNS_DELTA_QUERY, { queryStr, cursor });
+    for (const edge of data.orders.edges) {
+      all.push({
+        id: edge.node.id,
+        returns: edge.node.returns.edges.map((e) => e.node),
+      });
+    }
+    hasNextPage = data.orders.pageInfo.hasNextPage;
+    cursor = data.orders.pageInfo.endCursor;
+    if (hasNextPage) await new Promise((r) => setTimeout(r, 300));
+  }
+  return all;
+}
+
 export interface ShopifyTransaction {
   id: string;
   kind: string;
@@ -576,7 +715,7 @@ const TRANSACTIONS_DELTA_QUERY = `
         cursor
         node {
           id
-          transactions {
+          transactions(first: 50) {
             id kind status gateway
             amountSet { shopMoney { amount currencyCode } }
             processedAt
@@ -669,7 +808,7 @@ export async function startTransactionsBulkBackfill(): Promise<{ id: string; sta
         edges {
           node {
             id
-            transactions {
+            transactions(first: 50) {
               id kind status gateway
               amountSet { shopMoney { amount currencyCode } }
               processedAt
@@ -718,4 +857,587 @@ export async function waitForBulkOperationUrl(operationId: string): Promise<stri
     }
   }
   throw new Error('Bulk op did not complete within 30 minutes');
+}
+
+/* ============================================================================
+ * Phase 2 — Catalog domain fetch methods
+ * ========================================================================= */
+
+export interface ShopifyProductImage {
+  url: string | null;
+}
+
+export interface ShopifyProductVariantNode {
+  id: string;
+  sku: string | null;
+  title: string;
+  price: string;
+  compareAtPrice: string | null;
+  barcode: string | null;
+  position: number;
+  inventoryItem: {
+    id: string;
+    tracked: boolean;
+    harmonizedSystemCode: string | null;
+    countryCodeOfOrigin: string | null;
+    unitCost: { amount: string } | null;
+    measurement: { weight: { value: number; unit: string } | null } | null;
+  } | null;
+}
+
+export interface ShopifyProductNode {
+  id: string;
+  title: string;
+  vendor: string | null;
+  productType: string | null;
+  status: string;
+  tags: string[];
+  handle: string;
+  publishedAt: string | null;
+  featuredImage: ShopifyProductImage | null;
+  totalVariants: number;
+  variants: { edges: { node: ShopifyProductVariantNode }[] };
+}
+
+const PRODUCTS_DELTA_QUERY = `
+  query ProductsDelta($queryStr: String!, $cursor: String) {
+    products(first: 50, after: $cursor, query: $queryStr) {
+      edges {
+        cursor
+        node {
+          id title vendor productType status tags handle publishedAt totalVariants
+          featuredImage { url }
+          variants(first: 100) {
+            edges {
+              node {
+                id sku title price compareAtPrice barcode position
+                inventoryItem {
+                  id tracked harmonizedSystemCode countryCodeOfOrigin
+                  unitCost { amount }
+                  measurement { weight { value unit } }
+                }
+              }
+            }
+          }
+        }
+      }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+`;
+
+export async function fetchProductsDelta(sinceDate: Date | null): Promise<ShopifyProductNode[]> {
+  const queryStr = sinceDate
+    ? `updated_at:>=${sinceDate.toISOString().slice(0, 10)}`
+    : 'updated_at:>=2023-01-01';
+  const all: ShopifyProductNode[] = [];
+  let cursor: string | null = null;
+  let hasNextPage = true;
+  type Resp = {
+    products: {
+      edges: { node: ShopifyProductNode }[];
+      pageInfo: { hasNextPage: boolean; endCursor: string };
+    };
+  };
+  while (hasNextPage) {
+    const data: Resp = await graphqlRequest<Resp>(PRODUCTS_DELTA_QUERY, { queryStr, cursor });
+    all.push(...data.products.edges.map((e) => e.node));
+    hasNextPage = data.products.pageInfo.hasNextPage;
+    cursor = data.products.pageInfo.endCursor;
+    if (hasNextPage) await new Promise((r) => setTimeout(r, 300));
+  }
+  return all;
+}
+
+/**
+ * Submit a bulk operation to backfill all products + variants since 2023-01-01.
+ */
+export async function startProductsBulkBackfill(): Promise<{ id: string; status: string }> {
+  const bulkBody = `
+    {
+      products(query: "updated_at:>=2023-01-01") {
+        edges {
+          node {
+            id title vendor productType status tags handle publishedAt totalVariants
+            featuredImage { url }
+            variants {
+              edges {
+                node {
+                  id sku title price compareAtPrice barcode position
+                  inventoryItem {
+                    id tracked harmonizedSystemCode countryCodeOfOrigin
+                    unitCost { amount }
+                    measurement { weight { value unit } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+  const mutation = `
+    mutation {
+      bulkOperationRunQuery(query: """${bulkBody}""") {
+        bulkOperation { id status }
+        userErrors { field message }
+      }
+    }
+  `;
+  const data = await graphqlRequest<{
+    bulkOperationRunQuery: {
+      bulkOperation: { id: string; status: string } | null;
+      userErrors: Array<{ field: string; message: string }>;
+    };
+  }>(mutation);
+  const { bulkOperation, userErrors } = data.bulkOperationRunQuery;
+  if (userErrors?.length)
+    throw new Error(`Shopify bulk op error: ${userErrors.map((e) => e.message).join(', ')}`);
+  if (!bulkOperation) throw new Error('Shopify returned null bulkOperation for products');
+  return bulkOperation;
+}
+
+export interface ShopifyInventoryLevel {
+  id: string;
+  available: number;
+  item: { id: string };
+  location: { id: string };
+}
+
+const INVENTORY_LEVELS_QUERY = `
+  query InvLevels($cursor: String, $locId: ID!) {
+    location(id: $locId) {
+      id
+      inventoryLevels(first: 250, after: $cursor) {
+        edges {
+          cursor
+          node {
+            id
+            quantities(names: ["available","on_hand","committed"]) { name quantity }
+            item { id }
+          }
+        }
+        pageInfo { hasNextPage endCursor }
+      }
+    }
+  }
+`;
+
+export interface ShopifyInventoryLevelNode {
+  id: string;
+  source_location_id: string;
+  source_inventory_item_id: string;
+  available: number;
+  on_hand: number | null;
+  committed: number | null;
+}
+
+/**
+ * Fetch inventory levels for ALL locations (snapshot).
+ * Caller passes an array of Shopify location GIDs.
+ */
+export async function fetchInventoryLevels(
+  locationGids: string[],
+): Promise<ShopifyInventoryLevelNode[]> {
+  const all: ShopifyInventoryLevelNode[] = [];
+  type LevelEdge = {
+    node: {
+      id: string;
+      quantities: { name: string; quantity: number }[];
+      item: { id: string };
+    };
+  };
+  type Resp = {
+    location: {
+      id: string;
+      inventoryLevels: {
+        edges: LevelEdge[];
+        pageInfo: { hasNextPage: boolean; endCursor: string };
+      };
+    } | null;
+  };
+
+  for (const locId of locationGids) {
+    let cursor: string | null = null;
+    let hasNextPage = true;
+    while (hasNextPage) {
+      const data: Resp = await graphqlRequest<Resp>(INVENTORY_LEVELS_QUERY, { cursor, locId });
+      if (!data.location) break;
+      for (const edge of data.location.inventoryLevels.edges) {
+        const qtyMap = new Map(edge.node.quantities.map((q) => [q.name, q.quantity]));
+        all.push({
+          id: edge.node.id,
+          source_location_id: locId,
+          source_inventory_item_id: edge.node.item.id,
+          available: qtyMap.get('available') ?? 0,
+          on_hand: qtyMap.get('on_hand') ?? null,
+          committed: qtyMap.get('committed') ?? null,
+        });
+      }
+      hasNextPage = data.location.inventoryLevels.pageInfo.hasNextPage;
+      cursor = data.location.inventoryLevels.pageInfo.endCursor;
+      if (hasNextPage) await new Promise((r) => setTimeout(r, 300));
+    }
+  }
+  return all;
+}
+
+/* ============================================================================
+ * Phase 2 — Marketing & Risk fetch methods
+ * ========================================================================= */
+
+export interface ShopifyDiscountNode {
+  id: string;
+  __typename?: string;
+  discount?: {
+    title?: string;
+    startsAt?: string;
+    endsAt?: string | null;
+    usageLimit?: number | null;
+    customerSelection?: { __typename: string };
+    customerGets?: { value: { __typename: string; amount?: { amount: string } | null; percentage?: number } };
+    minimumRequirement?: { __typename: string; greaterThanOrEqualToSubtotal?: { amount: string } };
+    codes?: { edges: { node: { id: string; code: string; asyncUsageCount: number } }[] };
+  };
+}
+
+const DISCOUNTS_QUERY = `
+  query Discounts($cursor: String) {
+    discountNodes(first: 50, after: $cursor) {
+      edges {
+        cursor
+        node {
+          id
+          discount {
+            __typename
+            ... on DiscountCodeBasic {
+              title startsAt endsAt usageLimit
+              customerSelection { __typename }
+              customerGets {
+                value {
+                  __typename
+                  ... on DiscountAmount { amount { amount } }
+                  ... on DiscountPercentage { percentage }
+                }
+              }
+              minimumRequirement {
+                __typename
+                ... on DiscountMinimumSubtotal { greaterThanOrEqualToSubtotal { amount } }
+              }
+              codes(first: 10) { edges { node { id code asyncUsageCount } } }
+            }
+            ... on DiscountAutomaticBasic {
+              title startsAt endsAt
+              customerGets {
+                value {
+                  __typename
+                  ... on DiscountAmount { amount { amount } }
+                  ... on DiscountPercentage { percentage }
+                }
+              }
+              minimumRequirement {
+                __typename
+                ... on DiscountMinimumSubtotal { greaterThanOrEqualToSubtotal { amount } }
+              }
+            }
+          }
+        }
+      }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+`;
+
+export async function fetchDiscountNodes(): Promise<ShopifyDiscountNode[]> {
+  const all: ShopifyDiscountNode[] = [];
+  let cursor: string | null = null;
+  let hasNextPage = true;
+  type Resp = {
+    discountNodes: {
+      edges: { node: ShopifyDiscountNode }[];
+      pageInfo: { hasNextPage: boolean; endCursor: string };
+    };
+  };
+  while (hasNextPage) {
+    const data: Resp = await graphqlRequest<Resp>(DISCOUNTS_QUERY, { cursor });
+    all.push(...data.discountNodes.edges.map((e) => e.node));
+    hasNextPage = data.discountNodes.pageInfo.hasNextPage;
+    cursor = data.discountNodes.pageInfo.endCursor;
+    if (hasNextPage) await new Promise((r) => setTimeout(r, 300));
+  }
+  return all;
+}
+
+export interface ShopifyGiftCard {
+  id: string;
+  maskedCode: string;
+  initialValue: { amount: string; currencyCode: string };
+  balance: { amount: string };
+  enabled: boolean;
+  expiresOn: string | null;
+  customer: { id: string } | null;
+}
+
+const GIFT_CARDS_QUERY = `
+  query GiftCards($cursor: String) {
+    giftCards(first: 100, after: $cursor) {
+      edges {
+        cursor
+        node {
+          id maskedCode enabled expiresOn
+          initialValue { amount currencyCode }
+          balance { amount }
+          customer { id }
+        }
+      }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+`;
+
+export async function fetchGiftCards(): Promise<ShopifyGiftCard[]> {
+  const all: ShopifyGiftCard[] = [];
+  let cursor: string | null = null;
+  let hasNextPage = true;
+  type Resp = {
+    giftCards: {
+      edges: { node: ShopifyGiftCard }[];
+      pageInfo: { hasNextPage: boolean; endCursor: string };
+    };
+  };
+  while (hasNextPage) {
+    const data: Resp = await graphqlRequest<Resp>(GIFT_CARDS_QUERY, { cursor });
+    all.push(...data.giftCards.edges.map((e) => e.node));
+    hasNextPage = data.giftCards.pageInfo.hasNextPage;
+    cursor = data.giftCards.pageInfo.endCursor;
+    if (hasNextPage) await new Promise((r) => setTimeout(r, 300));
+  }
+  return all;
+}
+
+export interface ShopifyDispute {
+  id: string;
+  status: string;
+  reasonDetails: { reason: string; networkReasonCode: string | null } | null;
+  amount: { amount: string; currencyCode: string };
+  evidenceDueBy: string | null;
+  finalizedOn: string | null;
+  order: { id: string } | null;
+}
+
+const DISPUTES_QUERY = `
+  query Disputes($cursor: String) {
+    shopifyPaymentsAccount {
+      disputes(first: 100, after: $cursor) {
+        edges {
+          cursor
+          node {
+            id status evidenceDueBy finalizedOn
+            amount { amount currencyCode }
+            reasonDetails { reason networkReasonCode }
+            order { id }
+          }
+        }
+        pageInfo { hasNextPage endCursor }
+      }
+    }
+  }
+`;
+
+export async function fetchDisputes(): Promise<ShopifyDispute[]> {
+  const all: ShopifyDispute[] = [];
+  let cursor: string | null = null;
+  let hasNextPage = true;
+  type Resp = {
+    shopifyPaymentsAccount: {
+      disputes: {
+        edges: { node: ShopifyDispute }[];
+        pageInfo: { hasNextPage: boolean; endCursor: string };
+      };
+    } | null;
+  };
+  while (hasNextPage) {
+    const data: Resp = await graphqlRequest<Resp>(DISPUTES_QUERY, { cursor });
+    if (!data.shopifyPaymentsAccount) break;
+    all.push(...data.shopifyPaymentsAccount.disputes.edges.map((e) => e.node));
+    hasNextPage = data.shopifyPaymentsAccount.disputes.pageInfo.hasNextPage;
+    cursor = data.shopifyPaymentsAccount.disputes.pageInfo.endCursor;
+    if (hasNextPage) await new Promise((r) => setTimeout(r, 300));
+  }
+  return all;
+}
+
+/* ============================================================================
+ * ShopifyQL — exact-match analytics via Shopify's own query language.
+ * Used by the "Verified by Shopify" toggle on the Sales Breakdown card so
+ * numbers match `Analytics → Reports → Total sales breakdown` 1:1.
+ * Requires `read_analytics` scope.
+ * ========================================================================= */
+
+export interface ShopifyqlSalesBreakdownTotals {
+  gross_sales: number;
+  discounts: number;
+  returns: number;
+  net_sales: number;
+  shipping_charges: number;
+  return_fees: number;
+  taxes: number;
+  total_sales: number;
+}
+
+export interface ShopifyqlSalesBreakdownDailyPoint extends ShopifyqlSalesBreakdownTotals {
+  date: string; // YYYY-MM-DD
+}
+
+export interface ShopifyqlSalesBreakdown {
+  totals: ShopifyqlSalesBreakdownTotals;
+  daily: ShopifyqlSalesBreakdownDailyPoint[];
+}
+
+// Shopify Admin GraphQL 2025-01+ flattened the response: shopifyqlQuery now returns
+// `ShopifyqlQueryResponse` directly (not a `TableResponse | ShopifyqlError` union),
+// `parseErrors` became `[String!]!`, and `rowData` was renamed to `rows: JSON!`
+// (array of objects keyed by column name).
+const SHOPIFYQL_QUERY = `
+  query Q($q: String!) {
+    shopifyqlQuery(query: $q) {
+      parseErrors
+      tableData {
+        columns { name dataType displayName }
+        rows
+      }
+    }
+  }
+`;
+
+type ShopifyqlRow = Record<string, string | number | null>;
+
+interface ShopifyqlResp {
+  shopifyqlQuery: {
+    parseErrors: string[];
+    tableData: {
+      columns: { name: string; dataType: string; displayName: string }[];
+      rows: ShopifyqlRow[];
+    } | null;
+  } | null;
+}
+
+function parseMoney(s: string | null | undefined): number {
+  if (!s) return 0;
+  // ShopifyQL money columns may come back as `"₹1,234.50"` or numeric strings depending on
+  // CURRENCY clause + dataType. Strip everything that isn't a digit/sign/decimal.
+  const cleaned = s.replace(/[^0-9.\-]/g, '');
+  const n = parseFloat(cleaned);
+  return Number.isNaN(n) ? 0 : n;
+}
+
+/**
+ * Run a ShopifyQL "Total sales breakdown" report for the given window.
+ * Returns daily rows + summary totals matching Shopify's Analytics → Reports.
+ */
+export async function fetchSalesBreakdownViaShopifyQL(
+  fromDate: Date,
+  toDate: Date,
+): Promise<ShopifyqlSalesBreakdown> {
+  const fromStr = fromDate.toISOString().slice(0, 10);
+  const toStr = toDate.toISOString().slice(0, 10);
+
+  // ShopifyQL date literals are bare `YYYY-MM-DD` (no quotes). Single-quoted strings
+  // are STRING_ tokens and rejected by the parser. SINCE/UNTIL with bare date literals
+  // are inclusive on both ends, matching the Analytics → Reports UI behaviour.
+  const ql = `
+    FROM sales
+    SHOW gross_sales, discounts, returns, net_sales, shipping_charges, return_fees, taxes, total_sales
+    SINCE ${fromStr} UNTIL ${toStr}
+    GROUP BY day
+    ORDER BY day ASC
+    LIMIT 1000
+  `.trim();
+
+  const resp = await graphqlRequest<ShopifyqlResp>(SHOPIFYQL_QUERY, { q: ql });
+  const r = resp.shopifyqlQuery;
+  if (!r) {
+    throw new Error('ShopifyQL error: empty response');
+  }
+  if (r.parseErrors?.length) {
+    throw new Error(`ShopifyQL parse errors: ${r.parseErrors.join('; ')}`);
+  }
+  if (!r.tableData) {
+    return {
+      daily: [],
+      totals: {
+        gross_sales: 0,
+        discounts: 0,
+        returns: 0,
+        net_sales: 0,
+        shipping_charges: 0,
+        return_fees: 0,
+        taxes: 0,
+        total_sales: 0,
+      },
+    };
+  }
+
+  // Pick the day column name; ShopifyQL labels GROUP BY day as `day` but fall back
+  // to the first column if the schema ever shifts.
+  const dayKey =
+    r.tableData.columns.find((c) => c.name === 'day')?.name ??
+    r.tableData.columns[0]?.name ??
+    'day';
+  const get = (row: ShopifyqlRow, col: string): string => {
+    const v = row[col];
+    if (v === null || v === undefined) return '0';
+    return typeof v === 'number' ? String(v) : v;
+  };
+
+  const daily: ShopifyqlSalesBreakdownDailyPoint[] = r.tableData.rows.map((row) => {
+    const rawDate = String(row[dayKey] ?? '');
+    // Shopify returns ISO timestamps; slice to YYYY-MM-DD for display alignment.
+    const date = rawDate.slice(0, 10);
+    return {
+      date,
+      gross_sales: parseMoney(get(row, 'gross_sales')),
+      discounts: parseMoney(get(row, 'discounts')),
+      returns: parseMoney(get(row, 'returns')),
+      net_sales: parseMoney(get(row, 'net_sales')),
+      shipping_charges: parseMoney(get(row, 'shipping_charges')),
+      return_fees: parseMoney(get(row, 'return_fees')),
+      taxes: parseMoney(get(row, 'taxes')),
+      total_sales: parseMoney(get(row, 'total_sales')),
+    };
+  });
+
+  const totals = daily.reduce<ShopifyqlSalesBreakdownTotals>(
+    (acc, d) => ({
+      gross_sales: acc.gross_sales + d.gross_sales,
+      discounts: acc.discounts + Math.abs(d.discounts), // discounts arrive negative; surface as positive magnitude
+      returns: acc.returns + Math.abs(d.returns),
+      net_sales: acc.net_sales + d.net_sales,
+      shipping_charges: acc.shipping_charges + d.shipping_charges,
+      return_fees: acc.return_fees + Math.abs(d.return_fees),
+      taxes: acc.taxes + d.taxes,
+      total_sales: acc.total_sales + d.total_sales,
+    }),
+    {
+      gross_sales: 0,
+      discounts: 0,
+      returns: 0,
+      net_sales: 0,
+      shipping_charges: 0,
+      return_fees: 0,
+      taxes: 0,
+      total_sales: 0,
+    },
+  );
+
+  // Surface absolute magnitudes per row too (so frontend doesn't need to know the sign convention).
+  const dailyAbs = daily.map((d) => ({
+    ...d,
+    discounts: Math.abs(d.discounts),
+    returns: Math.abs(d.returns),
+    return_fees: Math.abs(d.return_fees),
+  }));
+
+  return { daily: dailyAbs, totals };
 }

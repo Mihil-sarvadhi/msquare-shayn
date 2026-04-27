@@ -5,10 +5,6 @@ export interface FinanceKpis {
   total_shipping: number;
   total_refunds: number;
   net_revenue: number;
-  payouts_received: number;
-  shopify_fees: number;
-  fees_pct: number;
-  refund_rate: number;
   refund_count: number;
   order_count: number;
 }
@@ -64,3 +60,45 @@ export interface PayoutDetail {
 }
 
 export type GroupBy = 'day' | 'week' | 'month';
+
+/**
+ * Sales-Breakdown — mirrors Shopify's "Total sales breakdown" report (Net sales =
+ * gross − discounts − returns; Total sales = net + shipping + taxes − return_fees).
+ */
+export interface SalesBreakdownTotals {
+  gross_sales: number;
+  discounts: number;
+  returns: number;
+  net_sales: number;
+  shipping_charges: number;
+  return_fees: number;
+  taxes: number;
+  total_sales: number;
+  order_count: number;
+}
+
+export interface SalesBreakdownDailyPoint {
+  date: string; // YYYY-MM-DD
+  gross_sales: number;
+  discounts: number;
+  returns: number;
+  net_sales: number;
+  shipping_charges: number;
+  return_fees: number;
+  taxes: number;
+  total_sales: number;
+}
+
+export interface SalesBreakdown {
+  current: {
+    from: string;
+    to: string;
+    totals: SalesBreakdownTotals;
+    daily: SalesBreakdownDailyPoint[];
+  };
+  previous: {
+    from: string;
+    to: string;
+    totals: SalesBreakdownTotals;
+  };
+}

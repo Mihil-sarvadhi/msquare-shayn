@@ -41,6 +41,9 @@ function useConnectorHealth() {
 const NAV = [
   { label: 'Dashboard',  to: '/dashboard'  },
   { label: 'Finance',    to: '/finance'    },
+  { label: 'Catalog',    to: '/catalog'    },
+  { label: 'Promotions', to: '/promotions' },
+  { label: 'Risk',       to: '/risk'       },
   { label: 'Marketing',  to: '/marketing'  },
   { label: 'Customers',  to: '/customers'  },
   { label: 'Operations', to: '/operations' },
@@ -186,10 +189,18 @@ export function TopNav() {
   const [localSyncAt,     setLocalSyncAt]     = useState<Record<string, number>>({});
   const [syncAllCooldown, setSyncAllCooldown] = useState(false);
 
-  const handleApply = useCallback((payload: { startDate: string; endDate: string; label: string }) => {
-    dispatch(setCustomRange(payload));
-    setShowPicker(false);
-  }, [dispatch]);
+  const handleApply = useCallback(
+    (payload: {
+      startDate: string;
+      endDate: string;
+      label: string;
+      presetKey: string | null;
+    }) => {
+      dispatch(setCustomRange(payload));
+      setShowPicker(false);
+    },
+    [dispatch],
+  );
 
   /* Per-connector state machine — guards against stale timeouts overwriting newer states */
   const setConnState = useCallback((key: string, state: ConnSyncState) => {
@@ -322,6 +333,7 @@ export function TopNav() {
               <DateRangePicker
                 startDate={range.startDate}
                 endDate={range.endDate}
+                presetKey={range.presetKey}
                 onApply={handleApply}
                 onClose={() => setShowPicker(false)}
               />

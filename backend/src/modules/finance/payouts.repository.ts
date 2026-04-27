@@ -21,25 +21,9 @@ export async function upsertPayouts(rows: CreationAttributes<Payout>[]): Promise
       'synced_at',
       'updated_at',
     ],
+    conflictAttributes: ['source', 'source_payout_id'],
   });
   return rows.length;
-}
-
-export async function payoutAggregates(
-  from: Date,
-  to: Date,
-): Promise<{ payouts_received: number; shopify_fees: number }> {
-  const result = await sequelize.query<{ payouts_received: string; shopify_fees: string }>(
-    `SELECT COALESCE(SUM(amount),0)::text AS payouts_received,
-            COALESCE(SUM(fees_total),0)::text AS shopify_fees
-       FROM payouts
-       WHERE source = :source AND payout_date BETWEEN :from AND :to`,
-    { type: QueryTypes.SELECT, replacements: { source: SOURCE.SHOPIFY, from, to } },
-  );
-  return {
-    payouts_received: parseFloat(result[0]?.payouts_received ?? '0'),
-    shopify_fees: parseFloat(result[0]?.shopify_fees ?? '0'),
-  };
 }
 
 export interface PayoutsListParams {

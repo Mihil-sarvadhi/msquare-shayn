@@ -16,6 +16,7 @@ export async function upsertLocations(
       'synced_at',
       'updated_at',
     ],
+    conflictAttributes: ['source', 'source_location_id'],
   });
   return rows.length;
 }

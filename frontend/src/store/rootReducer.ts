@@ -8,6 +8,9 @@ import financeReducer   from './slices/financeSlice';
 import payoutsReducer   from './slices/payoutsSlice';
 import refundsReducer   from './slices/refundsSlice';
 import transactionsReducer from './slices/transactionsSlice';
+import catalogReducer from './slices/catalogSlice';
+import marketingReducer from './slices/marketingSlice';
+import riskReducer from './slices/riskSlice';
 
 const rootReducer = combineReducers({
   auth:         authReducer,
@@ -19,6 +22,9 @@ const rootReducer = combineReducers({
   payouts:      payoutsReducer,
   refunds:      refundsReducer,
   transactions: transactionsReducer,
+  catalog:      catalogReducer,
+  marketing:    marketingReducer,
+  risk:         riskReducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;

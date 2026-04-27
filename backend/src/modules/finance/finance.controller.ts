@@ -175,6 +175,27 @@ export async function refundsSummaryHandler(
   }
 }
 
+export async function salesBreakdownHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const schema = rangeSchema.extend({
+      mode: z.enum(['computed', 'shopify_native']).default('computed'),
+    });
+    const parsed = schema.parse(req.query);
+    const data = await service.getSalesBreakdown(
+      new Date(parsed.from),
+      new Date(parsed.to),
+      parsed.mode,
+    );
+    handleApiResponse(res, { data });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function transactionsListHandler(
   req: Request,
   res: Response,

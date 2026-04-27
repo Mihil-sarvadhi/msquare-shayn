@@ -18,6 +18,7 @@ export async function upsertRefunds(rows: CreationAttributes<OrderRefund>[]): Pr
       'synced_at',
       'updated_at',
     ],
+    conflictAttributes: ['source', 'source_refund_id'],
   });
   return rows.length;
 }

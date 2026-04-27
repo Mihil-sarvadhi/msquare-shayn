@@ -4,6 +4,33 @@ import { SOURCE, type SourceType } from '@constant';
 import { getResource, listResources } from './sync-orchestrator.registry';
 import type { SyncResult } from './sync-orchestrator.types';
 
+/**
+ * Sequelize bulkCreate often surfaces a useless "Validation error" string. This
+ * helper digs out the actual per-row constraint failures so logs point at the
+ * real problem (column name, value, rule).
+ */
+function describeError(err: unknown): string {
+  if (!(err instanceof Error)) return String(err);
+  const anyErr = err as Error & {
+    name?: string;
+    errors?: { message: string; path?: string; value?: unknown }[];
+    original?: { message?: string; detail?: string; code?: string };
+    parent?: { message?: string; detail?: string; code?: string };
+  };
+  const parts: string[] = [`${anyErr.name ?? 'Error'}: ${anyErr.message}`];
+  const pgErr = anyErr.original ?? anyErr.parent;
+  if (pgErr?.detail) parts.push(`pg_detail=${pgErr.detail}`);
+  if (pgErr?.code) parts.push(`pg_code=${pgErr.code}`);
+  if (Array.isArray(anyErr.errors) && anyErr.errors.length > 0) {
+    const sample = anyErr.errors.slice(0, 3).map((e) => {
+      const v = typeof e.value === 'object' ? JSON.stringify(e.value) : String(e.value);
+      return `${e.path ?? '?'}=${v.slice(0, 60)} (${e.message})`;
+    });
+    parts.push(`row_errors[${anyErr.errors.length}]: ${sample.join('; ')}`);
+  }
+  return parts.join(' | ');
+}
+
 const BACKFILL_FROM_DATE = new Date('2023-01-01T00:00:00.000Z');
 
 async function setCursorRunning(source: SourceType, resource: string): Promise<void> {
@@ -69,7 +96,7 @@ export async function runBackfill(source: SourceType, resource: string): Promise
     );
     return result;
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = describeError(err);
     await setCursorFailed(source, resource, message);
     logger.error(`[Backfill] Failed ${source}:${resource}: ${message}`);
     throw err;
@@ -107,7 +134,7 @@ export async function runIncremental(source: SourceType, resource: string): Prom
     );
     return result;
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = describeError(err);
     await setCursorFailed(source, resource, message);
     logger.error(`[Incremental] Failed ${source}:${resource}: ${message}`);
     throw err;

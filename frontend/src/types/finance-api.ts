@@ -5,10 +5,6 @@ export interface FinanceKpisApi {
   total_shipping: number;
   total_refunds: number;
   net_revenue: number;
-  payouts_received: number;
-  shopify_fees: number;
-  fees_pct: number;
-  refund_rate: number;
   refund_count: number;
   order_count: number;
 }
@@ -91,4 +87,42 @@ export interface PaginationApi {
   page: number;
   limit: number;
   total: number;
+}
+
+export interface SalesBreakdownTotalsApi {
+  gross_sales: number;
+  discounts: number;
+  returns: number;
+  net_sales: number;
+  shipping_charges: number;
+  return_fees: number;
+  taxes: number;
+  total_sales: number;
+  order_count: number;
+}
+
+export interface SalesBreakdownDailyPointApi {
+  date: string;
+  gross_sales: number;
+  discounts: number;
+  returns: number;
+  net_sales: number;
+  shipping_charges: number;
+  return_fees: number;
+  taxes: number;
+  total_sales: number;
+}
+
+export interface SalesBreakdownApi {
+  current: {
+    from: string;
+    to: string;
+    totals: SalesBreakdownTotalsApi;
+    daily: SalesBreakdownDailyPointApi[];
+  };
+  previous: {
+    from: string;
+    to: string;
+    totals: SalesBreakdownTotalsApi;
+  };
 }

@@ -21,6 +21,7 @@ export async function upsertBalanceTransactions(
       'synced_at',
       'updated_at',
     ],
+    conflictAttributes: ['source', 'source_balance_transaction_id'],
   });
   return rows.length;
 }

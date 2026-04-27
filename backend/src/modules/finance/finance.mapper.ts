@@ -3,6 +3,7 @@ import type {
   ShopifyBalanceTransaction,
   ShopifyLocation,
   ShopifyOrderWithRefunds,
+  ShopifyOrderWithReturns,
   ShopifyOrderWithTransactions,
   ShopifyPayout,
 } from '@modules/shopify/shopify.connector';
@@ -84,7 +85,7 @@ export function mapPayout(p: ShopifyPayout) {
     currency: p.net.currencyCode,
     bank_summary: p.bankAccount,
     charges_gross: num(p.summary.chargesGross.amount),
-    refunds_gross: num(p.summary.refundsGross.amount),
+    refunds_gross: null,
     adjustments_gross: num(p.summary.adjustmentsGross.amount),
     fees_total: fees,
     source_metadata: null,
@@ -133,6 +134,43 @@ export function mapRefunds(orderWithRefunds: ShopifyOrderWithRefunds) {
     synced_at: new Date(),
     updated_at: new Date(),
   }));
+}
+
+export function mapReturns(orderWithReturns: ShopifyOrderWithReturns) {
+  return orderWithReturns.returns.map((r) => {
+    const lineItems = r.returnLineItems.edges.map((e) => {
+      const li = e.node.fulfillmentLineItem?.lineItem;
+      const unitPrice = num(li?.discountedUnitPriceSet?.shopMoney?.amount);
+      return {
+        sku: li?.sku ?? '',
+        quantity: e.node.quantity,
+        total: unitPrice * e.node.quantity,
+        return_reason: e.node.returnReason ?? undefined,
+      };
+    });
+    const totalValue = lineItems.reduce((sum, li) => sum + li.total, 0);
+    const shippingFeeTotal = r.returnShippingFees.reduce(
+      (sum, f) => sum + num(f.amountSet.shopMoney.amount),
+      0,
+    );
+    return {
+      source: SOURCE.SHOPIFY,
+      source_return_id: gid(r.id),
+      order_id: gid(orderWithReturns.id),
+      name: r.name,
+      status: r.status,
+      total_quantity: r.totalQuantity,
+      total_value: totalValue,
+      return_shipping_fee_total: shippingFeeTotal,
+      return_created_at: r.createdAt ? new Date(r.createdAt) : null,
+      request_approved_at: r.requestApprovedAt ? new Date(r.requestApprovedAt) : null,
+      closed_at: r.closedAt ? new Date(r.closedAt) : null,
+      return_line_items: lineItems,
+      source_metadata: null,
+      synced_at: new Date(),
+      updated_at: new Date(),
+    };
+  });
 }
 
 export function mapTransactions(orderWithTx: ShopifyOrderWithTransactions) {

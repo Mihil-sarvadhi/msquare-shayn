@@ -6,11 +6,10 @@ import {
   fetchLocations,
   fetchPayouts,
   fetchRefundsDelta,
+  fetchReturnsDelta,
   fetchTransactionsDelta,
-  startRefundsBulkBackfill,
   startTransactionsBulkBackfill,
   waitForBulkOperationUrl,
-  type ShopifyOrderWithRefunds,
   type ShopifyOrderWithTransactions,
 } from '@modules/shopify/shopify.connector';
 import {
@@ -18,10 +17,12 @@ import {
   mapLocation,
   mapPayout,
   mapRefunds,
+  mapReturns,
   mapTransactions,
 } from './finance.mapper';
 import { upsertLocations } from './locations.repository';
 import { upsertRefunds } from './refunds.repository';
+import { upsertReturns } from './returns.repository';
 import { upsertTransactions } from './transactions.repository';
 import { upsertPayouts } from './payouts.repository';
 import {
@@ -145,31 +146,25 @@ export const balanceTransactionsHandler: ResourceHandler = {
 export const refundsHandler: ResourceHandler = {
   source: SOURCE.SHOPIFY,
   resource: 'refunds',
-  backfill: async (): Promise<SyncResult> => {
+  // Bulk operations reject `refundLineItems { edges }` because Shopify forbids
+  // connection fields inside list fields. Backfill uses the paginated query with
+  // BACKFILL_FROM_DATE instead — slower but it preserves the line-item details.
+  backfill: async ({ fromDate }): Promise<SyncResult> => {
     const start = Date.now();
-    const op = await startRefundsBulkBackfill();
-    logger.info(`[Refunds Backfill] Bulk op submitted: ${op.id}`);
-    const url = await waitForBulkOperationUrl(op.id);
-    const lines = await downloadJsonl(url);
-    const orders = groupBulkOrders<ShopifyOrderWithRefunds['refunds'][number]>(
-      lines,
-      'refunds',
-    );
+    const since = fromDate ?? SHOPIFY_BACKFILL_FROM;
+    const orders = await fetchRefundsDelta(since);
     let total = 0;
-    for (const order of orders.values()) {
-      const mapped = mapRefunds({
-        id: order.id,
-        refunds: order.refunds as ShopifyOrderWithRefunds['refunds'],
-      });
-      total += await upsertRefunds(mapped);
+    for (const order of orders) {
+      total += await upsertRefunds(mapRefunds(order));
     }
-    logger.info(`[Refunds Backfill] op=${op.id} orders=${orders.size} refunds=${total}`);
+    logger.info(
+      `[Refunds Backfill] since=${since.toISOString()} orders=${orders.length} refunds=${total}`,
+    );
     return {
       resource: 'refunds',
       source: SOURCE.SHOPIFY,
       records_synced: total,
       duration_ms: Date.now() - start,
-      bulk_op_id: op.id,
     };
   },
   incremental: async ({ sinceDate }): Promise<SyncResult> => {
@@ -182,6 +177,44 @@ export const refundsHandler: ResourceHandler = {
     }
     return {
       resource: 'refunds',
+      source: SOURCE.SHOPIFY,
+      records_synced: total,
+      duration_ms: Date.now() - start,
+    };
+  },
+};
+
+export const returnsHandler: ResourceHandler = {
+  source: SOURCE.SHOPIFY,
+  resource: 'returns',
+  backfill: async ({ fromDate }): Promise<SyncResult> => {
+    const start = Date.now();
+    const since = fromDate ?? SHOPIFY_BACKFILL_FROM;
+    const orders = await fetchReturnsDelta(since);
+    let total = 0;
+    for (const order of orders) {
+      total += await upsertReturns(mapReturns(order));
+    }
+    logger.info(
+      `[Returns Backfill] since=${since.toISOString()} orders=${orders.length} returns=${total}`,
+    );
+    return {
+      resource: 'returns',
+      source: SOURCE.SHOPIFY,
+      records_synced: total,
+      duration_ms: Date.now() - start,
+    };
+  },
+  incremental: async ({ sinceDate }): Promise<SyncResult> => {
+    const start = Date.now();
+    const since = sinceDate ?? new Date(Date.now() - ONE_DAY_MS);
+    const orders = await fetchReturnsDelta(since);
+    let total = 0;
+    for (const order of orders) {
+      total += await upsertReturns(mapReturns(order));
+    }
+    return {
+      resource: 'returns',
       source: SOURCE.SHOPIFY,
       records_synced: total,
       duration_ms: Date.now() - start,

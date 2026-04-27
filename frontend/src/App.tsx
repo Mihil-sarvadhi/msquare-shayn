@@ -9,12 +9,16 @@ function ScrollToTop() {
   return null;
 }
 
-const DashboardPage  = lazy(() => import('@pages/dashboard/page').then((m) => ({ default: m.DashboardPage })));
-const ReviewsPage    = lazy(() => import('@pages/reviews/page').then((m) => ({ default: m.ReviewsPage })));
-const OperationsPage = lazy(() => import('@pages/operations/page').then((m) => ({ default: m.OperationsPage })));
-const CustomersPage  = lazy(() => import('@pages/customers/page').then((m) => ({ default: m.CustomersPage })));
-const MarketingPage  = lazy(() => import('@pages/marketing/page').then((m) => ({ default: m.MarketingPage })));
-const AuthPage       = lazy(() => import('@pages/auth/page').then((m) => ({ default: m.AuthPage })));
+const DashboardPage          = lazy(() => import('@pages/dashboard/page').then((m) => ({ default: m.DashboardPage })));
+const ReviewsPage            = lazy(() => import('@pages/reviews/page').then((m) => ({ default: m.ReviewsPage })));
+const OperationsPage         = lazy(() => import('@pages/operations/page').then((m) => ({ default: m.OperationsPage })));
+const CustomersPage          = lazy(() => import('@pages/customers/page').then((m) => ({ default: m.CustomersPage })));
+const MarketingPage          = lazy(() => import('@pages/marketing/page').then((m) => ({ default: m.MarketingPage })));
+const FinancePage            = lazy(() => import('@pages/finance/page').then((m) => ({ default: m.FinancePage })));
+const CatalogPage            = lazy(() => import('@pages/catalog/page').then((m) => ({ default: m.CatalogPage })));
+const MarketingFinancePage   = lazy(() => import('@pages/marketing-finance/page').then((m) => ({ default: m.MarketingFinancePage })));
+const RiskPage               = lazy(() => import('@pages/risk/page').then((m) => ({ default: m.RiskPage })));
+const AuthPage               = lazy(() => import('@pages/auth/page').then((m) => ({ default: m.AuthPage })));
 
 export function App() {
   return (
@@ -45,6 +49,10 @@ export function App() {
                     <Route path="/operations" element={<OperationsPage />} />
                     <Route path="/customers"  element={<CustomersPage />} />
                     <Route path="/marketing"  element={<MarketingPage />} />
+                    <Route path="/finance"    element={<FinancePage />} />
+                    <Route path="/catalog"    element={<CatalogPage />} />
+                    <Route path="/promotions" element={<MarketingFinancePage />} />
+                    <Route path="/risk"       element={<RiskPage />} />
                   </Routes>
                 </Suspense>
               </AppShell>

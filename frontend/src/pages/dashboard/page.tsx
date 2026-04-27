@@ -5,7 +5,6 @@ import { useAppDispatch, useAppSelector } from '@store/hooks';
 import { fetchDashboard } from '@store/slices/dashboardSlice';
 import { fetchMarketingData, fetchOperationsData } from '@store/slices/analyticsSlice';
 import { fetchGA4Data, fetchGA4RealtimeWidgetData, refreshGA4Realtime } from '@store/slices/ga4Slice';
-import { fetchFinanceOverview } from '@store/slices/financeSlice';
 import { DrawerProvider } from '@components/shared/DrawerContext';
 import { InfoDrawer } from '@components/shared/InfoDrawer';
 import { KpiCard } from '@components/shared/KpiCard';
@@ -768,7 +767,6 @@ export function DashboardPage() {
     loading: ga4Loading,
   } = useAppSelector((s) => s.ga4);
   const range = useAppSelector((s) => s.range);
-  const finance = useAppSelector((s) => s.finance);
   const navigate = useNavigate();
 
   const [realtimeLocation, setRealtimeLocation] = useState<'country' | 'city'>('country');
@@ -779,7 +777,6 @@ export function DashboardPage() {
     dispatch(fetchMarketingData(range));
     dispatch(fetchOperationsData(range));
     dispatch(fetchGA4Data(range));
-    dispatch(fetchFinanceOverview(range));
   }, [dispatch, range]);
 
   useEffect(() => {
@@ -824,38 +821,6 @@ export function DashboardPage() {
       {showPageLoader && <PageLoader overlay />}
       <div className="bg-[var(--bg)]">
         <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 pt-4 pb-6 space-y-4">
-
-          {/* ═══ ROW 0 · FINANCE TRUTH (4 founder-focused KPIs) ═══ */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <KpiCard
-              label="True Net Revenue"
-              labelTooltip="Gross − discounts − refunds − tax − shipping"
-              value={formatINR(finance.kpis?.net_revenue)}
-              sub={`${formatNum(finance.kpis?.order_count)} orders`}
-              loading={finance.loading}
-            />
-            <KpiCard
-              label="Cash Received"
-              labelTooltip="Total Shopify Payments deposits to bank"
-              value={formatINR(finance.kpis?.payouts_received)}
-              sub="payouts settled"
-              loading={finance.loading}
-            />
-            <KpiCard
-              label="Shopify Fees %"
-              labelTooltip="Fees as a percentage of payouts received"
-              value={`${(finance.kpis?.fees_pct ?? 0).toFixed(2)}%`}
-              sub={formatINR(finance.kpis?.shopify_fees)}
-              loading={finance.loading}
-            />
-            <KpiCard
-              label="Refund Rate"
-              labelTooltip="Refund count ÷ order count"
-              value={`${(finance.kpis?.refund_rate ?? 0).toFixed(2)}%`}
-              sub={`${formatNum(finance.kpis?.refund_count)} refunds`}
-              loading={finance.loading}
-            />
-          </div>
 
           {/* ═══ ROW 1 · KPI STRIP (6 cards) ═══ */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">

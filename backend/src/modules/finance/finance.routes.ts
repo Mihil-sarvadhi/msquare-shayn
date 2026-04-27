@@ -8,6 +8,7 @@ import {
   refundsListHandler,
   refundsSummaryHandler,
   revenueBreakdownHandler,
+  salesBreakdownHandler,
   transactionsListHandler,
 } from './finance.controller';
 
@@ -17,6 +18,7 @@ router.use(authenticate);
 
 router.get('/kpis', kpisHandler);
 router.get('/revenue-breakdown', revenueBreakdownHandler);
+router.get('/sales-breakdown', salesBreakdownHandler);
 router.get('/payment-method-split', paymentMethodSplitHandler);
 router.get('/payouts', payoutsListHandler);
 router.get('/payouts/:id', payoutDetailHandler);

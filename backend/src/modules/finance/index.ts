@@ -4,6 +4,7 @@ import {
   locationsHandler,
   payoutsHandler,
   refundsHandler,
+  returnsHandler,
   transactionsHandler,
 } from './finance.handlers';
 
@@ -12,6 +13,7 @@ export function registerFinanceResources(): void {
   registerResource(payoutsHandler);
   registerResource(balanceTransactionsHandler);
   registerResource(refundsHandler);
+  registerResource(returnsHandler);
   registerResource(transactionsHandler);
 }
 

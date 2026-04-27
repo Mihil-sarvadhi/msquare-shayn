@@ -184,15 +184,16 @@ export async function getLogistics(since: string, until: string): Promise<Logist
 }
 
 export async function getAbandonedCarts(
-  _since: string,
-  _until: string,
+  since: string,
+  until: string,
 ): Promise<AbandonedCartsRow> {
   const rows = await sequelize.query<AbandonedCartsRow>(
     `SELECT COUNT(*) AS count, COALESCE(SUM(cart_value), 0) AS total_value,
             COALESCE(AVG(cart_value), 0) AS avg_value
      FROM shopify_abandoned_checkouts
-     WHERE recovered = FALSE`,
-    { type: QueryTypes.SELECT, replacements: {} },
+     WHERE recovered = FALSE
+       AND created_at BETWEEN :since AND :until`,
+    { type: QueryTypes.SELECT, replacements: { since, until } },
   );
   return rows[0];
 }
