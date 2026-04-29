@@ -8,6 +8,7 @@ import { setCustomRange } from '@store/slices/rangeSlice';
 import { logout } from '@store/slices/authSlice';
 import {
   useSyncAll, useSyncShopify, useSyncMeta, useSyncIthink, useSyncJudgeme, useSyncGA4,
+  useSyncUnicommerce,
 } from '@services/dashboard/dashboard.query';
 import { DateRangePicker } from '@components/ui/DateRangePicker';
 import { rangeLabel } from '@utils/common-functions/buildRangeParams';
@@ -40,21 +41,23 @@ function useConnectorHealth() {
 }
 
 const NAV = [
-  { label: 'Dashboard',  to: '/dashboard'  },
-  { label: 'Finance',    to: '/finance'    },
-  { label: 'Catalog',    to: '/catalog'    },
-  { label: 'Marketing',  to: '/marketing'  },
-  { label: 'Customers',  to: '/customers'  },
-  { label: 'Operations', to: '/operations' },
-  { label: 'Reviews',    to: '/reviews'    },
+  { label: 'Dashboard',   to: '/dashboard'  },
+  { label: 'Finance',     to: '/finance'    },
+  { label: 'Catalog',     to: '/catalog'    },
+  { label: 'Marketing',   to: '/marketing'  },
+  { label: 'Marketplace', to: '/marketplace' },
+  { label: 'Customers',   to: '/customers'  },
+  { label: 'Operations',  to: '/operations' },
+  { label: 'Reviews',     to: '/reviews'    },
 ];
 
 const CONNECTOR_META: Record<string, { label: string }> = {
-  shopify:  { label: 'Shopify'   },
-  meta_ads: { label: 'Meta Ads'  },
-  ithink:   { label: 'iThink'    },
-  judgeme:  { label: 'Judge.me'  },
-  ga4:      { label: 'GA4'       },
+  shopify:     { label: 'Shopify'     },
+  meta_ads:    { label: 'Meta Ads'    },
+  ithink:      { label: 'iThink'      },
+  judgeme:     { label: 'Judge.me'    },
+  ga4:         { label: 'GA4'         },
+  unicommerce: { label: 'Unicommerce' },
 };
 
 function timeAgo(dateStr: string | null | undefined): string {
@@ -80,21 +83,23 @@ function ConnectorRow({
   h, syncState, localSyncAt,
   onSynced, onSyncStart, onSyncSuccess, onSyncError,
 }: ConnectorRowProps) {
-  const syncShopify = useSyncShopify();
-  const syncMeta    = useSyncMeta();
-  const syncIthink  = useSyncIthink();
-  const syncJudgeme = useSyncJudgeme();
-  const syncGA4     = useSyncGA4();
+  const syncShopify     = useSyncShopify();
+  const syncMeta        = useSyncMeta();
+  const syncIthink      = useSyncIthink();
+  const syncJudgeme     = useSyncJudgeme();
+  const syncGA4         = useSyncGA4();
+  const syncUnicommerce = useSyncUnicommerce();
 
   const key  = h.connector_name;
   const meta = CONNECTOR_META[key] ?? { label: key };
 
   const triggers: Partial<Record<string, () => void>> = {
-    shopify:  () => { onSyncStart(); syncShopify.mutate(undefined, { onSuccess: () => { onSyncSuccess(); onSynced(); }, onError: () => onSyncError() }); },
-    meta_ads: () => { onSyncStart(); syncMeta.mutate(undefined,    { onSuccess: () => { onSyncSuccess(); onSynced(); }, onError: () => onSyncError() }); },
-    ithink:   () => { onSyncStart(); syncIthink.mutate(undefined,  { onSuccess: () => { onSyncSuccess(); onSynced(); }, onError: () => onSyncError() }); },
-    judgeme:  () => { onSyncStart(); syncJudgeme.mutate(undefined, { onSuccess: () => { onSyncSuccess(); onSynced(); }, onError: () => onSyncError() }); },
-    ga4:      () => { onSyncStart(); syncGA4.mutate(undefined,     { onSuccess: () => { onSyncSuccess(); onSynced(); }, onError: () => onSyncError() }); },
+    shopify:     () => { onSyncStart(); syncShopify.mutate(undefined,     { onSuccess: () => { onSyncSuccess(); onSynced(); }, onError: () => onSyncError() }); },
+    meta_ads:    () => { onSyncStart(); syncMeta.mutate(undefined,        { onSuccess: () => { onSyncSuccess(); onSynced(); }, onError: () => onSyncError() }); },
+    ithink:      () => { onSyncStart(); syncIthink.mutate(undefined,      { onSuccess: () => { onSyncSuccess(); onSynced(); }, onError: () => onSyncError() }); },
+    judgeme:     () => { onSyncStart(); syncJudgeme.mutate(undefined,     { onSuccess: () => { onSyncSuccess(); onSynced(); }, onError: () => onSyncError() }); },
+    ga4:         () => { onSyncStart(); syncGA4.mutate(undefined,         { onSuccess: () => { onSyncSuccess(); onSynced(); }, onError: () => onSyncError() }); },
+    unicommerce: () => { onSyncStart(); syncUnicommerce.mutate(undefined, { onSuccess: () => { onSyncSuccess(); onSynced(); }, onError: () => onSyncError() }); },
   };
   const trigger = triggers[key];
 

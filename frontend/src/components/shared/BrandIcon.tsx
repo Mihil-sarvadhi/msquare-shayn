@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 
-export type ConnectorKey = 'shopify' | 'meta_ads' | 'ga4' | 'judgeme' | 'ithink';
+export type ConnectorKey = 'shopify' | 'meta_ads' | 'ga4' | 'judgeme' | 'ithink' | 'unicommerce';
 
 interface BrandIconProps {
   connector: ConnectorKey | string;
@@ -14,6 +14,7 @@ const BRAND_BG: Record<string, string> = {
   ga4: '#F9AB00',
   judgeme: '#F7666B',
   ithink: '#1E3A8A',
+  unicommerce: '#5B6CFF',
 };
 
 function Glyph({ connector }: { connector: string }) {
@@ -51,6 +52,14 @@ function Glyph({ connector }: { connector: string }) {
           <path d="M3 8l9-4 9 4v8l-9 4-9-4V8z" />
           <path d="M3 8l9 4 9-4" />
           <path d="M12 12v8" />
+        </svg>
+      );
+    case 'unicommerce':
+      return (
+        <svg viewBox="0 0 24 24" width="62%" height="62%" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <rect x="3" y="6" width="18" height="12" rx="2" />
+          <path d="M7 6V4h10v2" />
+          <path d="M3 12h18" />
         </svg>
       );
     default:

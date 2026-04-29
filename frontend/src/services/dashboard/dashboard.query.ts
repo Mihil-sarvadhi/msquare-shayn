@@ -59,6 +59,15 @@ export function useSyncGA4() {
   });
 }
 
+export function useSyncUnicommerce() {
+  const refetch = useRefetchDashboard();
+  return useMutation({
+    mutationFn: () => triggerSync('unicommerce'),
+    onSuccess: () => { refetch(); },
+    onError:   () => {},
+  });
+}
+
 export function useSyncAll() {
   const refetch = useRefetchDashboard();
   return useMutation({

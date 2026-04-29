@@ -16,6 +16,7 @@ const CustomersPage          = lazy(() => import('@pages/customers/page').then((
 const MarketingPage          = lazy(() => import('@pages/marketing/page').then((m) => ({ default: m.MarketingPage })));
 const FinancePage            = lazy(() => import('@pages/finance/page').then((m) => ({ default: m.FinancePage })));
 const CatalogPage            = lazy(() => import('@pages/catalog/page').then((m) => ({ default: m.CatalogPage })));
+const MarketplacePage        = lazy(() => import('@pages/marketplace/page').then((m) => ({ default: m.MarketplacePage })));
 const AuthPage               = lazy(() => import('@pages/auth/page').then((m) => ({ default: m.AuthPage })));
 
 export function App() {
@@ -49,6 +50,7 @@ export function App() {
                     <Route path="/marketing"  element={<MarketingPage />} />
                     <Route path="/finance"    element={<FinancePage />} />
                     <Route path="/catalog"    element={<CatalogPage />} />
+                    <Route path="/marketplace" element={<MarketplacePage />} />
                   </Routes>
                 </Suspense>
               </AppShell>
