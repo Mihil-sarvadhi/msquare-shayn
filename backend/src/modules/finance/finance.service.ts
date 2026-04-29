@@ -247,7 +247,11 @@ async function returnsTotalExclTax(from: Date, to: Date): Promise<number> {
  *  - sessions                 = SUM(shopify_analytics_daily.sessions)
  *  - orders                   = COUNT(shopify_orders) in window (test=false)
  *  - orders_fulfilled         = COUNT WHERE fulfillment_status IN (FULFILLED, PARTIALLY_FULFILLED)
- *  - returning_customer_rate  = orders by customers with ≥1 prior order / orders × 100
+ *  - returning_customer_rate  = distinct returning customers / distinct customers × 100
+ *
+ * The returning-rate formula matches Shopify Admin's tooltip definition exactly:
+ * "Returning customer rate = returning customers / customers" — distinct customers,
+ * NOT orders. A customer placing two orders in the window counts once on each side.
  *
  * `gross_sales` for the tile reuses `buildBreakdown` — see project memory:
  * any Shopify-derived sales number must factor through buildBreakdown/computeTotals.
@@ -271,7 +275,12 @@ async function storefrontMetrics(from: Date, to: Date): Promise<StorefrontMetric
         replacements: { source: SOURCE.SHOPIFY, from, to },
       },
     ),
-    sequelize.query<{ orders: string; orders_fulfilled: string; returning: string }>(
+    sequelize.query<{
+      orders: string;
+      orders_fulfilled: string;
+      distinct_customers: string;
+      returning_customers: string;
+    }>(
       `WITH base AS (
          SELECT order_id, customer_id, created_at, fulfillment_status
            FROM shopify_orders
@@ -281,25 +290,32 @@ async function storefrontMetrics(from: Date, to: Date): Promise<StorefrontMetric
        SELECT COUNT(*)::text AS orders,
               SUM(CASE WHEN fulfillment_status IN ('FULFILLED', 'PARTIALLY_FULFILLED')
                        THEN 1 ELSE 0 END)::text AS orders_fulfilled,
-              SUM(CASE WHEN base.customer_id IS NOT NULL AND EXISTS (
+              COUNT(DISTINCT customer_id)::text AS distinct_customers,
+              COUNT(DISTINCT CASE WHEN customer_id IS NOT NULL AND EXISTS (
                             SELECT 1 FROM shopify_orders prior
                              WHERE prior.customer_id = base.customer_id
                                AND prior.created_at < base.created_at
                                AND COALESCE(prior.test, FALSE) = FALSE
-                          ) THEN 1 ELSE 0 END)::text AS returning
+                          ) THEN customer_id END)::text AS returning_customers
          FROM base`,
       { type: QueryTypes.SELECT, replacements: { from, to } },
     ),
   ]);
 
-  const o = orderRows[0] ?? { orders: '0', orders_fulfilled: '0', returning: '0' };
-  const orders = parseInt(o.orders, 10);
-  const returning = parseInt(o.returning, 10);
+  const o = orderRows[0] ?? {
+    orders: '0',
+    orders_fulfilled: '0',
+    distinct_customers: '0',
+    returning_customers: '0',
+  };
+  const distinctCustomers = parseInt(o.distinct_customers, 10);
+  const returningCustomers = parseInt(o.returning_customers, 10);
   return {
     sessions: parseInt(analyticsRows[0]?.sessions ?? '0', 10),
-    orders,
+    orders: parseInt(o.orders, 10),
     orders_fulfilled: parseInt(o.orders_fulfilled, 10),
-    returning_customer_rate: orders > 0 ? (returning / orders) * 100 : 0,
+    returning_customer_rate:
+      distinctCustomers > 0 ? (returningCustomers / distinctCustomers) * 100 : 0,
   };
 }
 
