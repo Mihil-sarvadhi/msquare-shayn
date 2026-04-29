@@ -1,7 +1,7 @@
 # Finance Page — Storefront KPI Strip
 
 **Date:** 2026-04-29
-**Status:** Approved through architecture; awaiting plan
+**Status:** In implementation. **Scope cut 2026-04-29:** Added-to-cart tile dropped after Task 1 gate verification — Shayn's Shopify plan does not expose any cart-event dataset through ShopifyQL (probed `products`, `cart_metrics`, `cart_summary`, `customer_visits`, `product_visits`; all return *Schema Error: Invalid dataset*). Sessions confirmed working via `FROM sessions SHOW sessions GROUP BY day`. Strip is therefore **5 tiles**: Sessions · Gross sales · Returning customer rate · Orders fulfilled · Orders. Added-to-cart deferred to a follow-up.
 **Owner:** hemal@sarvadhi.com
 
 ## Goal
