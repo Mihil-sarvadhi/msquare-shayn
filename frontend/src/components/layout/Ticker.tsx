@@ -13,37 +13,67 @@ interface TickerItem {
   highlight?: boolean;
 }
 
-function pct(curr: number | null | undefined, prev: number | null | undefined): { dir: Direction; text: string } | undefined {
+function pct(
+  curr: number | null | undefined,
+  prev: number | null | undefined,
+  opts: { invert?: boolean } = {},
+): { dir: Direction; text: string } | undefined {
   const c = Number(curr ?? 0);
   const p = Number(prev ?? 0);
   if (!p) return undefined;
   const change = ((c - p) / p) * 100;
+  const positive = opts.invert ? change <= -0.05 : change >= 0.05;
+  const negative = opts.invert ? change >= 0.05 : change <= -0.05;
   return {
-    dir:  change >= 0.05 ? 'up' : change <= -0.05 ? 'down' : 'flat',
+    dir:  positive ? 'up' : negative ? 'down' : 'flat',
     text: `${change >= 0 ? '↑' : '↓'} ${Math.abs(change).toFixed(1)}%`,
   };
 }
 
-function diff(curr: number | null | undefined, prev: number | null | undefined): { dir: Direction; text: string } | undefined {
+/** Integer-count diff (+/- N). Use for orders, customers, NDR — values where
+ *  the absolute difference itself is meaningful. */
+function countDiff(
+  curr: number | null | undefined,
+  prev: number | null | undefined,
+  opts: { invert?: boolean } = {},
+): { dir: Direction; text: string } | undefined {
   const c = Number(curr ?? 0);
   const p = Number(prev ?? 0);
-  if (!p) return undefined;
+  if (!p && !c) return undefined;
   const d = c - p;
+  if (Math.abs(d) < 1) return { dir: 'flat', text: '— flat' };
+  const positive = opts.invert ? d < 0 : d > 0;
   return {
-    dir:  d >= 1 ? 'up' : d <= -1 ? 'down' : 'flat',
-    text: `${d >= 0 ? '↑' : '↓'} ${formatNum(Math.abs(d))}`,
+    dir:  positive ? 'up' : 'down',
+    text: `${d > 0 ? '+' : '−'}${formatNum(Math.abs(d))}`,
   };
 }
 
-function ppDiff(curr: number | null | undefined, prev: number | null | undefined): { dir: Direction; text: string } | undefined {
+/** Fixed-decimal ratio diff (e.g. ROAS 1.45× → 1.20×). Reports as % change for
+ *  meaning, not raw integer (which rounds sub-1 deltas to 0). */
+function ratioDiff(
+  curr: number | null | undefined,
+  prev: number | null | undefined,
+): { dir: Direction; text: string } | undefined {
+  return pct(curr, prev);
+}
+
+function ppDiff(
+  curr: number | null | undefined,
+  prev: number | null | undefined,
+  opts: { invert?: boolean } = {},
+): { dir: Direction; text: string } | undefined {
   const c = Number(curr ?? 0);
   const p = Number(prev ?? 0);
-  if (!p) return undefined;
+  if (!p && !c) return undefined;
   const d = c - p;
-  /* Lower RTO is better — flip direction so down = green */
+  if (Math.abs(d) < 0.05) return { dir: 'flat', text: '— flat' };
+  /* For "lower-is-better" metrics like RTO, invert the colour: arrow still
+   *  reflects raw direction, but the dir (which drives green/red) flips. */
+  const positive = opts.invert ? d < 0 : d > 0;
   return {
-    dir:  d <= -0.05 ? 'up' : d >= 0.05 ? 'down' : 'flat',
-    text: `${d >= 0 ? '↑' : '↓'} ${Math.abs(d).toFixed(1)}pp`,
+    dir:  positive ? 'up' : 'down',
+    text: `${d > 0 ? '↑' : '↓'} ${Math.abs(d).toFixed(1)}pp`,
   };
 }
 
@@ -118,17 +148,48 @@ export function Ticker() {
   const kpis           = useAppSelector((s) => s.dashboard.kpis);
   const prevKpis       = useAppSelector((s) => s.dashboard.prevKpis);
   const abandonedCarts = useAppSelector((s) => s.dashboard.abandonedCarts);
+  const netRevenue     = useAppSelector((s) => s.dashboard.netRevenue);
+  const range          = useAppSelector((s) => s.range);
+
+  // Lead-tile label reflects the actual range, not always "Today".
+  const leadLabel = useMemo(() => {
+    if (range.presetKey === 'today')        return 'Today';
+    if (range.presetKey === 'yesterday')    return 'Yesterday';
+    if (range.presetKey === 'last_7d')      return 'Revenue · 7d';
+    if (range.presetKey === 'last_30d')     return 'Revenue · 30d';
+    if (range.presetKey === 'last_90d')     return 'Revenue · 90d';
+    if (range.presetKey === 'last_365d')    return 'Revenue · 12mo';
+    if (range.presetKey === 'mtd')          return 'Revenue · MTD';
+    if (range.presetKey === 'qtd')          return 'Revenue · QTD';
+    if (range.presetKey === 'ytd')          return 'Revenue · YTD';
+    return 'Revenue';
+  }, [range.presetKey]);
+
+  // Net revenue = gross revenue − refunds − logistics cost − RTO waste
+  // (already computed by backend, exposed as `dashboard.netRevenue`).
+  const netRev = netRevenue?.net_revenue;
+
+  // Fulfillment % (delivered / total shipments) — operational health.
+  const fulfilled    = (kpis?.totalShipments ?? 0) > 0
+    ? ((kpis?.delivered ?? 0) / (kpis?.totalShipments ?? 1)) * 100
+    : 0;
+  const prevFulfilled = (prevKpis?.totalShipments ?? 0) > 0
+    ? ((prevKpis?.delivered ?? 0) / (prevKpis?.totalShipments ?? 1)) * 100
+    : 0;
 
   const items = useMemo<TickerItem[]>(() => [
-    { label: 'Today',     value: compactINR(kpis?.revenue),               delta: pct(kpis?.revenue,   prevKpis?.revenue),   highlight: true },
-    { label: 'Orders',    value: formatNum(kpis?.orders ?? 0),            delta: diff(kpis?.orders,   prevKpis?.orders)    },
-    { label: 'AOV',       value: formatINR(kpis?.aov ?? 0),               delta: pct(kpis?.aov,       prevKpis?.aov)       },
-    { label: 'ROAS',      value: `${(kpis?.roas ?? 0).toFixed(2)}×`,      delta: diff(kpis?.roas,     prevKpis?.roas)      },
-    { label: 'RTO',       value: `${(kpis?.rtoRate ?? 0).toFixed(1)}%`,   delta: ppDiff(kpis?.rtoRate, prevKpis?.rtoRate)  },
-    { label: 'Carts',     value: formatNum(abandonedCarts?.count ?? 0)                                                      },
-    { label: 'Customers', value: formatNum(kpis?.customers ?? 0),         delta: diff(kpis?.customers, prevKpis?.customers) },
-    { label: 'Ad spend',  value: compactINR(kpis?.adSpend),               delta: pct(kpis?.adSpend,    prevKpis?.adSpend)   },
-  ], [kpis, prevKpis, abandonedCarts]);
+    { label: leadLabel, value: compactINR(kpis?.revenue),                   delta: pct(kpis?.revenue,        prevKpis?.revenue),         highlight: true },
+    { label: 'Net Rev', value: compactINR(netRev),                                                                                                          },
+    { label: 'Orders',  value: formatNum(kpis?.orders ?? 0),                delta: countDiff(kpis?.orders,   prevKpis?.orders)            },
+    { label: 'AOV',     value: formatINR(kpis?.aov ?? 0),                   delta: pct(kpis?.aov,            prevKpis?.aov)               },
+    { label: 'ROAS',    value: `${(kpis?.roas ?? 0).toFixed(2)}×`,          delta: ratioDiff(kpis?.roas,     prevKpis?.roas)              },
+    { label: 'RTO',     value: `${(kpis?.rtoRate ?? 0).toFixed(1)}%`,       delta: ppDiff(kpis?.rtoRate,     prevKpis?.rtoRate, { invert: true }) },
+    { label: 'NDR',     value: formatNum(kpis?.ndr ?? 0),                   delta: countDiff(kpis?.ndr,      prevKpis?.ndr,     { invert: true }) },
+    { label: 'Fulfilled', value: `${fulfilled.toFixed(0)}%`,                delta: ppDiff(fulfilled,         prevFulfilled)                },
+    { label: 'Customers', value: formatNum(kpis?.customers ?? 0),           delta: countDiff(kpis?.customers, prevKpis?.customers)         },
+    { label: 'Carts',   value: formatNum(abandonedCarts?.count ?? 0)                                                                       },
+    { label: 'Ad spend', value: compactINR(kpis?.adSpend),                  delta: pct(kpis?.adSpend,        prevKpis?.adSpend)            },
+  ], [leadLabel, kpis, prevKpis, abandonedCarts, netRev, fulfilled, prevFulfilled]);
 
   return (
     <div
