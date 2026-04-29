@@ -5,6 +5,7 @@ import { fetchRefunds, setRefundsPage } from '@store/slices/refundsSlice';
 import { Panel } from '@components/shared/Panel';
 import { PageLoader } from '@components/shared/PageLoader';
 import { formatINR, formatINRFull, formatNum, formatDate } from '@utils/formatters';
+import { StorefrontKpiStrip } from './components/StorefrontKpiStrip';
 import {
   CartesianGrid,
   Cell,
@@ -1038,6 +1039,10 @@ export function FinancePage() {
       {showPageLoader && <PageLoader overlay />}
       <div className="bg-[var(--bg)]">
         <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 pt-4 pb-6 space-y-4">
+          {/* Storefront KPI strip — Shopify Admin Overview parity (5 tiles).
+              Renders nothing until kpis + salesBreakdown are loaded. */}
+          <StorefrontKpiStrip />
+
           {/* Total Sales Breakdown — 8 KPI tiles (Shopify-spec, with vs-prev deltas) */}
           {finance.salesBreakdown && (
             <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] px-5 py-4">
