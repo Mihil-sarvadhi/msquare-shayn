@@ -242,11 +242,78 @@ async function returnsTotalExclTax(from: Date, to: Date): Promise<number> {
   return parseFloat(result[0]?.amount ?? '0');
 }
 
+/**
+ * Storefront KPIs for the new Finance tile strip:
+ *  - sessions                 = SUM(shopify_analytics_daily.sessions)
+ *  - orders                   = COUNT(shopify_orders) in window (test=false)
+ *  - orders_fulfilled         = COUNT WHERE fulfillment_status IN (FULFILLED, PARTIALLY_FULFILLED)
+ *  - returning_customer_rate  = orders by customers with ≥1 prior order / orders × 100
+ *
+ * `gross_sales` for the tile reuses `buildBreakdown` — see project memory:
+ * any Shopify-derived sales number must factor through buildBreakdown/computeTotals.
+ */
+interface StorefrontMetrics {
+  sessions: number;
+  returning_customer_rate: number; // 0-100
+  orders_fulfilled: number;
+  orders: number;
+}
+
+async function storefrontMetrics(from: Date, to: Date): Promise<StorefrontMetrics> {
+  const [analyticsRows, orderRows] = await Promise.all([
+    sequelize.query<{ sessions: string }>(
+      `SELECT COALESCE(SUM(sessions), 0)::text AS sessions
+         FROM shopify_analytics_daily
+         WHERE source = :source
+           AND date BETWEEN (:from)::date AND (:to)::date`,
+      {
+        type: QueryTypes.SELECT,
+        replacements: { source: SOURCE.SHOPIFY, from, to },
+      },
+    ),
+    sequelize.query<{ orders: string; orders_fulfilled: string; returning: string }>(
+      `WITH base AS (
+         SELECT order_id, customer_id, created_at, fulfillment_status
+           FROM shopify_orders
+           WHERE created_at BETWEEN :from AND :to
+             AND COALESCE(test, FALSE) = FALSE
+       )
+       SELECT COUNT(*)::text AS orders,
+              SUM(CASE WHEN fulfillment_status IN ('FULFILLED', 'PARTIALLY_FULFILLED')
+                       THEN 1 ELSE 0 END)::text AS orders_fulfilled,
+              SUM(CASE WHEN base.customer_id IS NOT NULL AND EXISTS (
+                            SELECT 1 FROM shopify_orders prior
+                             WHERE prior.customer_id = base.customer_id
+                               AND prior.created_at < base.created_at
+                               AND COALESCE(prior.test, FALSE) = FALSE
+                          ) THEN 1 ELSE 0 END)::text AS returning
+         FROM base`,
+      { type: QueryTypes.SELECT, replacements: { from, to } },
+    ),
+  ]);
+
+  const o = orderRows[0] ?? { orders: '0', orders_fulfilled: '0', returning: '0' };
+  const orders = parseInt(o.orders, 10);
+  const returning = parseInt(o.returning, 10);
+  return {
+    sessions: parseInt(analyticsRows[0]?.sessions ?? '0', 10),
+    orders,
+    orders_fulfilled: parseInt(o.orders_fulfilled, 10),
+    returning_customer_rate: orders > 0 ? (returning / orders) * 100 : 0,
+  };
+}
+
 export async function getKpis(from: Date, to: Date): Promise<FinanceKpis> {
-  const [orders, refundsSummary, returnsExcl] = await Promise.all([
+  const ms = to.getTime() - from.getTime();
+  const prevTo = new Date(from.getTime() - 1);
+  const prevFrom = new Date(prevTo.getTime() - ms);
+
+  const [orders, refundsSummary, returnsExcl, sf, sfPrev] = await Promise.all([
     orderTotals(from, to),
     refundSummaryAggregates(from, to),
     returnsTotalExclTax(from, to),
+    storefrontMetrics(from, to),
+    storefrontMetrics(prevFrom, prevTo),
   ]);
 
   // Mirror Shopify Sales Breakdown exactly:
@@ -274,6 +341,13 @@ export async function getKpis(from: Date, to: Date): Promise<FinanceKpis> {
     net_revenue,
     refund_count: refundsSummary.refund_count,
     order_count: orders.order_count,
+    sessions: { value: sf.sessions, previous: sfPrev.sessions },
+    returning_customer_rate: {
+      value: sf.returning_customer_rate,
+      previous: sfPrev.returning_customer_rate,
+    },
+    orders_fulfilled: { value: sf.orders_fulfilled, previous: sfPrev.orders_fulfilled },
+    orders: { value: sf.orders, previous: sfPrev.orders },
   };
 }
 

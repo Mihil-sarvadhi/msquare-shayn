@@ -1,3 +1,9 @@
+/** Per-tile current/previous pair for storefront KPIs (lets the UI compute deltas). */
+export interface KpiPair {
+  value: number;
+  previous: number;
+}
+
 export interface FinanceKpis {
   gross_revenue: number;
   total_discounts: number;
@@ -7,6 +13,15 @@ export interface FinanceKpis {
   net_revenue: number;
   refund_count: number;
   order_count: number;
+  // Storefront strip — current vs equivalent prior period.
+  /** Total online-store sessions for the window (Shopify Analytics). */
+  sessions: KpiPair;
+  /** % of orders placed by customers with at least one prior order, 0-100. */
+  returning_customer_rate: KpiPair;
+  /** Orders fulfilled in the window (FULFILLED or PARTIALLY_FULFILLED). */
+  orders_fulfilled: KpiPair;
+  /** Orders created in the window (excluding test orders). */
+  orders: KpiPair;
 }
 
 export interface RevenueBreakdownPoint {
