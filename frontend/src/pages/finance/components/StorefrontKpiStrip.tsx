@@ -77,6 +77,7 @@ export function StorefrontKpiStrip() {
       pair: kpis.returning_customer_rate,
       format: (n) => `${n.toFixed(2)}%`,
       icon: UserCheck,
+      trend: kpis.returning_rate_daily,
     },
     {
       label: 'Orders',

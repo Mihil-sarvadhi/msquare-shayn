@@ -22,6 +22,8 @@ export interface FinanceKpisApi {
   orders: KpiPairApi;
   /** Per-day sessions (oldest → newest) for the window. Drives Sessions sparkline. */
   sessions_daily: number[];
+  /** Per-day returning-customer rate (0-100, oldest → newest). Drives Returning customer rate sparkline. */
+  returning_rate_daily: number[];
 }
 
 export interface RevenueBreakdownPointApi {

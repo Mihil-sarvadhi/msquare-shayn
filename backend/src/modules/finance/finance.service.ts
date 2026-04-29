@@ -317,21 +317,56 @@ export async function getKpis(from: Date, to: Date): Promise<FinanceKpis> {
   const prevTo = new Date(from.getTime() - 1);
   const prevFrom = new Date(prevTo.getTime() - ms);
 
-  const [orders, refundsSummary, returnsExcl, sf, sfPrev, sessionsDaily] = await Promise.all([
-    orderTotals(from, to),
-    refundSummaryAggregates(from, to),
-    returnsTotalExclTax(from, to),
-    storefrontMetrics(from, to),
-    storefrontMetrics(prevFrom, prevTo),
-    sequelize.query<{ sessions: string }>(
-      `SELECT COALESCE(sessions, 0)::text AS sessions
-         FROM shopify_analytics_daily
-         WHERE source = :source
-           AND date BETWEEN (:from)::date AND (:to)::date
-         ORDER BY date ASC`,
-      { type: QueryTypes.SELECT, replacements: { source: SOURCE.SHOPIFY, from, to } },
-    ),
-  ]);
+  const [orders, refundsSummary, returnsExcl, sf, sfPrev, sessionsDaily, returningRateDaily] =
+    await Promise.all([
+      orderTotals(from, to),
+      refundSummaryAggregates(from, to),
+      returnsTotalExclTax(from, to),
+      storefrontMetrics(from, to),
+      storefrontMetrics(prevFrom, prevTo),
+      sequelize.query<{ sessions: string }>(
+        `SELECT COALESCE(sessions, 0)::text AS sessions
+           FROM shopify_analytics_daily
+           WHERE source = :source
+             AND date BETWEEN (:from)::date AND (:to)::date
+           ORDER BY date ASC`,
+        { type: QueryTypes.SELECT, replacements: { source: SOURCE.SHOPIFY, from, to } },
+      ),
+      // Per-day returning-customer rate. A customer is "returning" on day D if
+      // their first-ever order (any time, not just the window) is before D.
+      sequelize.query<{ rate: string }>(
+        `WITH window_orders AS (
+           SELECT (created_at AT TIME ZONE 'Asia/Kolkata')::date AS order_date,
+                  customer_id
+             FROM shopify_orders
+             WHERE created_at BETWEEN :from AND :to
+               AND COALESCE(test, FALSE) = FALSE
+               AND customer_id IS NOT NULL
+               AND customer_id <> ''
+         ),
+         first_ever AS (
+           SELECT customer_id,
+                  MIN((created_at AT TIME ZONE 'Asia/Kolkata')::date) AS first_date
+             FROM shopify_orders
+             WHERE COALESCE(test, FALSE) = FALSE
+               AND customer_id IS NOT NULL
+               AND customer_id <> ''
+             GROUP BY customer_id
+         )
+         SELECT w.order_date,
+                CASE WHEN COUNT(DISTINCT w.customer_id) > 0
+                     THEN ROUND(
+                       COUNT(DISTINCT CASE WHEN fe.first_date < w.order_date THEN w.customer_id END)::numeric
+                       / COUNT(DISTINCT w.customer_id)::numeric * 100, 2
+                     )
+                     ELSE 0 END::text AS rate
+           FROM window_orders w
+           LEFT JOIN first_ever fe ON fe.customer_id = w.customer_id
+           GROUP BY w.order_date
+           ORDER BY w.order_date ASC`,
+        { type: QueryTypes.SELECT, replacements: { from, to } },
+      ),
+    ]);
 
   // Mirror Shopify Sales Breakdown exactly:
   //   net_sales       = gross_sales - discounts - returns
@@ -365,6 +400,7 @@ export async function getKpis(from: Date, to: Date): Promise<FinanceKpis> {
     },
     orders: { value: sf.orders, previous: sfPrev.orders },
     sessions_daily: sessionsDaily.map((r) => parseInt(r.sessions, 10) || 0),
+    returning_rate_daily: returningRateDaily.map((r) => parseFloat(r.rate) || 0),
   };
 }
 

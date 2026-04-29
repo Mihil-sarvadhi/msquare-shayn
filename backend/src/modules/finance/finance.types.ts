@@ -23,6 +23,10 @@ export interface FinanceKpis {
   /** Per-day sessions across the window (Asia/Kolkata day buckets), oldest → newest.
    *  Drives the storefront-strip Sessions sparkline. */
   sessions_daily: number[];
+  /** Per-day returning-customer rate across the window (0-100), oldest → newest.
+   *  Each point is `distinct returning customers / distinct customers ordering that day × 100`,
+   *  where "returning" = customer's first-ever order was before that day. */
+  returning_rate_daily: number[];
 }
 
 export interface RevenueBreakdownPoint {
