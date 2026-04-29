@@ -21,6 +21,11 @@ export interface CustomerOverview {
   new_customers: number;
   returning_customers: number;
   repeat_rate: number;
+  /** Equivalent prior-length window — drives delta % on each Customers tile. */
+  prev_total_customers: number;
+  prev_new_customers: number;
+  prev_returning_customers: number;
+  prev_repeat_rate: number;
 }
 
 export interface CustomerSegmentItem {

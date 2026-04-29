@@ -39,6 +39,14 @@ export interface CustomerOverviewRow {
   repeat_rate: number;
 }
 
+/** customerOverview response shape with prev-period values for delta rendering. */
+export interface CustomerOverviewWithPrev extends CustomerOverviewRow {
+  prev_total_customers: number;
+  prev_new_customers: number;
+  prev_returning_customers: number;
+  prev_repeat_rate: number;
+}
+
 export interface CustomerSegmentRow {
   bucket: string;
   count: string;

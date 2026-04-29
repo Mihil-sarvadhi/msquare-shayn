@@ -211,9 +211,17 @@ export function CustomersPage() {
 
   const isLoading = loading || loadingCustomers;
 
-  /* Deltas — only customer total + repeat rate available from prevKpis */
+  /* Deltas — analytics.customerOverview now ships prev_* fields per tile.
+     Total Customers also has prevKpis.customers from dashboard as a fallback. */
   const hasPrevCust    = (prevKpis?.customers   ?? 0) > 0;
   const totalCustDelta = custPctDelta(kpis?.customers, prevKpis?.customers);
+
+  const newCustDelta       = custPctDelta(customerOverview?.new_customers,       customerOverview?.prev_new_customers);
+  const returningCustDelta = custPctDelta(customerOverview?.returning_customers, customerOverview?.prev_returning_customers);
+  const repeatRateDelta    = custPctDelta(customerOverview?.repeat_rate,         customerOverview?.prev_repeat_rate);
+  const hasPrevNew         = (customerOverview?.prev_new_customers       ?? 0) > 0;
+  const hasPrevReturning   = (customerOverview?.prev_returning_customers ?? 0) > 0;
+  const hasPrevRepeat      = (customerOverview?.prev_repeat_rate         ?? 0) > 0;
 
   /* Contextual insights */
   const repeatRate   = customerOverview?.repeat_rate  ?? 0;
@@ -248,6 +256,7 @@ export function CustomersPage() {
             <KpiCard
               label="New Customers"
               value={formatNum(customerOverview?.new_customers)}
+              delta={hasPrevNew ? newCustDelta : undefined}
               sub={newPct > 60
                 ? `${newPct.toFixed(0)}% of buyers — acquisition heavy`
                 : newPct > 30
@@ -258,6 +267,7 @@ export function CustomersPage() {
             <KpiCard
               label="Returning Customers"
               value={formatNum(customerOverview?.returning_customers)}
+              delta={hasPrevReturning ? returningCustDelta : undefined}
               sub={returningPct > 40
                 ? `${returningPct.toFixed(0)}% — strong loyalty`
                 : `${returningPct.toFixed(0)}% repeat visitors`}
@@ -266,6 +276,7 @@ export function CustomersPage() {
             <KpiCard
               label="Repeat Rate"
               value={formatPct(repeatRate)}
+              delta={hasPrevRepeat ? repeatRateDelta : undefined}
               sub={repeatRate >= 30
                 ? 'Strong — above D2C benchmark'
                 : repeatRate >= 15
