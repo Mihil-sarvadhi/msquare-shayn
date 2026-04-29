@@ -134,10 +134,11 @@ export async function syncAnalyticsDaily(): Promise<number> {
         source: SOURCE.SHOPIFY,
         date: r.date,
         sessions: r.sessions,
+        orders_fulfilled: r.orders_fulfilled,
         synced_at: now,
       })),
       {
-        updateOnDuplicate: ['sessions', 'synced_at', 'updated_at'],
+        updateOnDuplicate: ['sessions', 'orders_fulfilled', 'synced_at', 'updated_at'],
         conflictAttributes: ['source', 'date'],
       },
     );

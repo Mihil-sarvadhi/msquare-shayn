@@ -7,6 +7,7 @@ interface ShopifyAnalyticsDailyAttributes {
   source: SourceType;
   date: string;
   sessions: number;
+  orders_fulfilled: number;
   synced_at: Date;
   created_at?: Date;
   updated_at?: Date;
@@ -25,6 +26,7 @@ export class ShopifyAnalyticsDaily
   declare source: SourceType;
   declare date: string;
   declare sessions: number;
+  declare orders_fulfilled: number;
   declare synced_at: Date;
   declare created_at: Date;
   declare updated_at: Date;
@@ -36,6 +38,7 @@ ShopifyAnalyticsDaily.init(
     source: { type: DataTypes.TEXT, allowNull: false, defaultValue: 'shopify' },
     date: { type: DataTypes.DATEONLY, allowNull: false },
     sessions: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+    orders_fulfilled: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
     synced_at: { type: DataTypes.DATE, allowNull: false },
     created_at: DataTypes.DATE,
     updated_at: DataTypes.DATE,

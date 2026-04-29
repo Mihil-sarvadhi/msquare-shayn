@@ -245,11 +245,13 @@ async function returnsTotalExclTax(from: Date, to: Date): Promise<number> {
 /**
  * Storefront KPIs for the new Finance tile strip:
  *  - sessions                 = SUM(shopify_analytics_daily.sessions)
+ *  - orders_fulfilled         = SUM(shopify_analytics_daily.orders_fulfilled)
+ *                              (Shopify ShopifyQL `FROM fulfillments` — bucketed
+ *                               by fulfillment date, matches Shopify Admin)
  *  - orders                   = COUNT(shopify_orders) in window (test=false)
- *  - orders_fulfilled         = COUNT WHERE fulfillment_status IN (FULFILLED, PARTIALLY_FULFILLED)
  *  - returning_customer_rate  = distinct returning customers / distinct customers × 100
  *
- * The returning-rate formula matches Shopify Admin's tooltip definition exactly:
+ * Returning-rate matches Shopify Admin's tooltip exactly:
  * "Returning customer rate = returning customers / customers" — distinct customers,
  * NOT orders. A customer placing two orders in the window counts once on each side.
  *
@@ -265,8 +267,9 @@ interface StorefrontMetrics {
 
 async function storefrontMetrics(from: Date, to: Date): Promise<StorefrontMetrics> {
   const [analyticsRows, orderRows] = await Promise.all([
-    sequelize.query<{ sessions: string }>(
-      `SELECT COALESCE(SUM(sessions), 0)::text AS sessions
+    sequelize.query<{ sessions: string; orders_fulfilled: string }>(
+      `SELECT COALESCE(SUM(sessions), 0)::text         AS sessions,
+              COALESCE(SUM(orders_fulfilled), 0)::text AS orders_fulfilled
          FROM shopify_analytics_daily
          WHERE source = :source
            AND date BETWEEN (:from)::date AND (:to)::date`,
@@ -277,19 +280,16 @@ async function storefrontMetrics(from: Date, to: Date): Promise<StorefrontMetric
     ),
     sequelize.query<{
       orders: string;
-      orders_fulfilled: string;
       distinct_customers: string;
       returning_customers: string;
     }>(
       `WITH base AS (
-         SELECT order_id, customer_id, created_at, fulfillment_status
+         SELECT order_id, customer_id, created_at
            FROM shopify_orders
            WHERE created_at BETWEEN :from AND :to
              AND COALESCE(test, FALSE) = FALSE
        )
        SELECT COUNT(*)::text AS orders,
-              SUM(CASE WHEN fulfillment_status IN ('FULFILLED', 'PARTIALLY_FULFILLED')
-                       THEN 1 ELSE 0 END)::text AS orders_fulfilled,
               COUNT(DISTINCT customer_id)::text AS distinct_customers,
               COUNT(DISTINCT CASE WHEN customer_id IS NOT NULL AND EXISTS (
                             SELECT 1 FROM shopify_orders prior
@@ -304,16 +304,16 @@ async function storefrontMetrics(from: Date, to: Date): Promise<StorefrontMetric
 
   const o = orderRows[0] ?? {
     orders: '0',
-    orders_fulfilled: '0',
     distinct_customers: '0',
     returning_customers: '0',
   };
+  const a = analyticsRows[0] ?? { sessions: '0', orders_fulfilled: '0' };
   const distinctCustomers = parseInt(o.distinct_customers, 10);
   const returningCustomers = parseInt(o.returning_customers, 10);
   return {
-    sessions: parseInt(analyticsRows[0]?.sessions ?? '0', 10),
+    sessions: parseInt(a.sessions, 10),
+    orders_fulfilled: parseInt(a.orders_fulfilled, 10),
     orders: parseInt(o.orders, 10),
-    orders_fulfilled: parseInt(o.orders_fulfilled, 10),
     returning_customer_rate:
       distinctCustomers > 0 ? (returningCustomers / distinctCustomers) * 100 : 0,
   };

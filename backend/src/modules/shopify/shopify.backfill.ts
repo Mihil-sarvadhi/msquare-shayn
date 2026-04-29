@@ -118,7 +118,7 @@ const ANALYTICS_BACKFILL_ANCHOR_YEAR = 2023;
 export async function backfillAnalyticsDaily(): Promise<{ rows_written: number }> {
   const until = new Date();
   const finalYear = until.getUTCFullYear();
-  const allRows: Array<{ date: string; sessions: number }> = [];
+  const allRows: Array<{ date: string; sessions: number; orders_fulfilled: number }> = [];
 
   for (let year = ANALYTICS_BACKFILL_ANCHOR_YEAR; year <= finalYear; year += 1) {
     const since = new Date(Date.UTC(year, 0, 1));
@@ -140,7 +140,7 @@ export async function backfillAnalyticsDaily(): Promise<{ rows_written: number }
 
   // Dedupe by date — yearly chunks can overlap on boundary days, and Postgres
   // ON CONFLICT DO UPDATE can't touch the same row twice in one statement.
-  const byDate = new Map<string, { date: string; sessions: number }>();
+  const byDate = new Map<string, { date: string; sessions: number; orders_fulfilled: number }>();
   for (const r of allRows) byDate.set(r.date, r);
   const deduped = Array.from(byDate.values());
 
@@ -150,10 +150,11 @@ export async function backfillAnalyticsDaily(): Promise<{ rows_written: number }
       source: SOURCE.SHOPIFY,
       date: r.date,
       sessions: r.sessions,
+      orders_fulfilled: r.orders_fulfilled,
       synced_at: now,
     })),
     {
-      updateOnDuplicate: ['sessions', 'synced_at', 'updated_at'],
+      updateOnDuplicate: ['sessions', 'orders_fulfilled', 'synced_at', 'updated_at'],
       conflictAttributes: ['source', 'date'],
     },
   );
