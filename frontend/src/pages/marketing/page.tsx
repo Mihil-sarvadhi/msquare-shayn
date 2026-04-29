@@ -677,6 +677,20 @@ export function MarketingPage() {
   const hasPrevCustomers = (prevKpis?.customers ?? 0) > 0;
   const prevMerValid    = hasPrevSpend && (prevKpis?.revenue ?? 0) > 0;
 
+  // Sparklines for the top KPI strip — derived from marketingTrend (per-day Meta Ads data).
+  // CAC has no daily series (depends on per-day customer acquisition data not exposed here).
+  const spendSpark   = useMemo(() => marketingTrend.map((d) => Number(d.spend          ?? 0)), [marketingTrend]);
+  const revenueSpark = useMemo(() => marketingTrend.map((d) => Number(d.purchase_value ?? 0)), [marketingTrend]);
+  const roasSpark    = useMemo(() => marketingTrend.map((d) => Number(d.roas           ?? 0)), [marketingTrend]);
+  const merSpark     = useMemo(
+    () => marketingTrend.map((d) => {
+      const r = Number(d.purchase_value ?? 0);
+      const s = Number(d.spend ?? 0);
+      return r > 0 ? s / r : 0;
+    }),
+    [marketingTrend],
+  );
+
   const showPageLoader = isLoading && !kpis;
 
   return (
@@ -693,6 +707,7 @@ export function MarketingPage() {
               value={formatINR(kpis?.adSpend)}
               delta={hasPrevSpend ? spendDelta : undefined}
               sub={hasPrevSpend ? spendInsight(spendDelta) : 'vs prior period'}
+              trend={spendSpark}
               loading={isLoading}
             />
             <KpiCard
@@ -700,6 +715,7 @@ export function MarketingPage() {
               value={formatINR(kpis?.revenue)}
               delta={hasPrevRevenue ? revDelta : undefined}
               sub={hasPrevRevenue ? revenueInsight(roas, revDelta) : (roas >= 2.5 ? 'Strong return on spend' : 'Below breakeven')}
+              trend={revenueSpark}
               loading={isLoading}
             />
             <KpiCard
@@ -707,6 +723,7 @@ export function MarketingPage() {
               value={`${roas.toFixed(2)}x`}
               delta={hasPrevSpend ? roasDelta : undefined}
               sub={roasInsight(roas, hasPrevSpend ? roasDelta : undefined)}
+              trend={roasSpark}
               loading={isLoading}
             />
             <KpiCard
@@ -714,6 +731,8 @@ export function MarketingPage() {
               value={`${mer.toFixed(2)}x`}
               delta={prevMerValid ? (merDelta !== undefined ? -merDelta : undefined) : undefined}
               sub={merInsight(mer, prevMerValid ? merDelta : undefined)}
+              trend={merSpark}
+              invertDelta
               loading={isLoading}
             />
             <KpiCard
