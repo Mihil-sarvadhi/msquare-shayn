@@ -26,6 +26,7 @@
     "backfill:ithink": "tsx src/modules/ithink/ithink.backfill.ts",
     "backfill:judgeme": "tsx src/modules/judgeme/judgeme.backfill.ts",
     "backfill:ga4": "tsx src/modules/ga4/ga4.backfill.ts",
+    "backfill:unicommerce": "tsx src/modules/unicommerce/unicommerce.backfill.ts",
     "ga4:token": "node scripts/getGA4Token.js"
   },
   "dependencies": {

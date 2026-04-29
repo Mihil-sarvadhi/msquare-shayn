@@ -8,6 +8,8 @@ import {
   syncGA4Handler,
   refreshGA4TokenHandler,
   syncAllHandler,
+  syncUnicommerceHandler,
+  syncUnicommerceBackfillHandler,
 } from './sync.controller';
 
 const router = Router();
@@ -20,5 +22,7 @@ router.post('/ithink/backfill', syncIthinkBackfillHandler);
 router.post('/judgeme', syncJudgeMeHandler);
 router.post('/ga4', syncGA4Handler);
 router.post('/ga4/token-refresh', refreshGA4TokenHandler);
+router.post('/unicommerce', syncUnicommerceHandler);
+router.post('/unicommerce/backfill', syncUnicommerceBackfillHandler);
 
 export default router;

@@ -10,6 +10,8 @@ import {
 import { syncJudgeMe } from '@modules/judgeme/judgeme.sync';
 import { syncGA4Data, syncGA4Realtime } from '@modules/ga4/ga4.sync';
 import { generateToken } from '@modules/ga4/ga4.token';
+import { syncUnicommerce } from '@modules/unicommerce/unicommerce.sync';
+import { unicommerceBackfill } from '@modules/unicommerce/unicommerce.backfill';
 import { logger } from '@logger/logger';
 import type { SyncResult } from './sync.types';
 
@@ -67,6 +69,16 @@ export async function triggerJudgeMeSync(): Promise<SyncResult> {
   return { message: 'Judge.me sync triggered' };
 }
 
+export async function triggerUnicommerceSync(): Promise<SyncResult> {
+  await syncUnicommerce();
+  return { message: 'Unicommerce sync triggered' };
+}
+
+export async function triggerUnicommerceBackfill(): Promise<SyncResult> {
+  await unicommerceBackfill();
+  return { message: 'Unicommerce backfill triggered' };
+}
+
 export async function triggerAllSync(): Promise<SyncResult & { results: Record<string, string> }> {
   await sequelize.query(`UPDATE connector_health SET last_sync_at = NULL`, {
     type: QueryTypes.UPDATE,
@@ -113,6 +125,14 @@ export async function triggerAllSync(): Promise<SyncResult & { results: Record<s
       .catch((e: Error) => {
         results['ga4'] = e.message;
         logger.error(`[SyncAll] GA4: ${e.message}`);
+      }),
+    syncUnicommerce()
+      .then(() => {
+        results['unicommerce'] = 'ok';
+      })
+      .catch((e: Error) => {
+        results['unicommerce'] = e.message;
+        logger.error(`[SyncAll] Unicommerce: ${e.message}`);
       }),
   ]);
 

@@ -10,6 +10,8 @@ import {
   triggerGA4Sync,
   triggerGA4TokenRefresh,
   triggerAllSync,
+  triggerUnicommerceSync,
+  triggerUnicommerceBackfill,
 } from './sync.service';
 
 // All sync handlers respond 202 immediately and run in background to avoid client timeout.
@@ -69,4 +71,12 @@ export async function refreshGA4TokenHandler(_req: Request, res: Response): Prom
 
 export function syncAllHandler(_req: Request, res: Response): void {
   fireAndForget(res, 'all', triggerAllSync);
+}
+
+export function syncUnicommerceHandler(_req: Request, res: Response): void {
+  fireAndForget(res, 'unicommerce', triggerUnicommerceSync);
+}
+
+export function syncUnicommerceBackfillHandler(_req: Request, res: Response): void {
+  fireAndForget(res, 'unicommerce-backfill', triggerUnicommerceBackfill);
 }
