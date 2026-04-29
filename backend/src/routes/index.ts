@@ -10,6 +10,7 @@ import analyticsRoutes from '@modules/analytics/analytics.routes';
 import ga4Routes from '@modules/ga4/ga4.routes';
 import financeRoutes from '@modules/finance/finance.routes';
 import catalogRoutes from '@modules/catalog/catalog.routes';
+import unicommerceRoutes from '@modules/unicommerce/unicommerce.routes';
 
 export const router = Router();
 
@@ -22,4 +23,5 @@ router.use('/analytics', analyticsRoutes);
 router.use('/analytics/ga4', ga4Routes);
 router.use('/finance', financeRoutes);
 router.use('/catalog', catalogRoutes);
+router.use('/unicommerce', unicommerceRoutes);
 router.use('/webhooks/shopify', express.raw({ type: 'application/json' }), webhookRoutes);
