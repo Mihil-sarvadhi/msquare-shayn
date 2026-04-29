@@ -202,6 +202,14 @@ export function OperationsPage() {
     () => shipmentsTrend.map((d) => Number(d.ndr ?? 0)),
     [shipmentsTrend],
   );
+  const codMixSpark = useMemo(
+    () => shipmentsTrend.map((d) => {
+      const cod = Number(d.cod_orders ?? 0);
+      const pre = Number(d.prepaid_orders ?? 0);
+      return cod + pre > 0 ? (cod / (cod + pre)) * 100 : 0;
+    }),
+    [shipmentsTrend],
+  );
 
   useEffect(() => {
     dispatch(fetchDashboard(range));
@@ -276,6 +284,8 @@ export function OperationsPage() {
                 : codMix > 40
                   ? 'Moderate COD exposure'
                   : 'Healthy prepaid mix'}
+              trend={codMixSpark}
+              invertDelta
               loading={isLoading}
             />
             <KpiCard

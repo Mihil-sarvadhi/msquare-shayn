@@ -15,6 +15,10 @@ export interface ShipmentsTrendItem {
   rto: number;
   ofd: number;
   ndr: number;
+  /** Shopify orders with payment_mode='COD' on this day (joined for COD Mix sparkline). */
+  cod_orders: number;
+  /** Shopify orders with payment_mode='Prepaid' on this day. */
+  prepaid_orders: number;
 }
 export interface MetaFunnel {
   spend: number; impressions: number; clicks: number;

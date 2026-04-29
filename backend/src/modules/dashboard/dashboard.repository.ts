@@ -131,7 +131,16 @@ export async function getKpis(since: string, until: string): Promise<KpiResult> 
 export async function getShipmentsTrend(
   since: string,
   until: string,
-): Promise<{ date: string; total_shipments: number; delivered: number; rto: number; ofd: number; ndr: number }[]> {
+): Promise<{
+  date: string;
+  total_shipments: number;
+  delivered: number;
+  rto: number;
+  ofd: number;
+  ndr: number;
+  cod_orders: number;
+  prepaid_orders: number;
+}[]> {
   const rows = await sequelize.query<{
     date: string;
     total_shipments: string;
@@ -139,16 +148,41 @@ export async function getShipmentsTrend(
     rto: string;
     ofd: string;
     ndr: string;
+    cod_orders: string;
+    prepaid_orders: string;
   }>(
-    `SELECT order_date::date::text AS date,
-            COUNT(*) AS total_shipments,
-            SUM(CASE WHEN current_status_code = 'DL' THEN 1 ELSE 0 END) AS delivered,
-            SUM(CASE WHEN current_status_code LIKE 'RT%' THEN 1 ELSE 0 END) AS rto,
-            SUM(CASE WHEN current_status_code = 'UD' AND current_status LIKE '%Out For Delivery%' THEN 1 ELSE 0 END) AS ofd,
-            SUM(CASE WHEN current_status = 'Undelivered' THEN 1 ELSE 0 END) AS ndr
-       FROM ithink_shipments
-       WHERE order_date BETWEEN :since AND :until
-       GROUP BY order_date::date
+    // FULL OUTER JOIN of two daily aggregates so we get rows even on days with
+    // only ithink shipments OR only Shopify orders (rare, but safe).
+    `WITH ithink AS (
+       SELECT order_date::date AS date,
+              COUNT(*)::int AS total_shipments,
+              SUM(CASE WHEN current_status_code = 'DL' THEN 1 ELSE 0 END)::int AS delivered,
+              SUM(CASE WHEN current_status_code LIKE 'RT%' THEN 1 ELSE 0 END)::int AS rto,
+              SUM(CASE WHEN current_status_code = 'UD' AND current_status LIKE '%Out For Delivery%' THEN 1 ELSE 0 END)::int AS ofd,
+              SUM(CASE WHEN current_status = 'Undelivered' THEN 1 ELSE 0 END)::int AS ndr
+         FROM ithink_shipments
+         WHERE order_date BETWEEN :since AND :until
+         GROUP BY order_date::date
+     ),
+     pay AS (
+       SELECT (created_at AT TIME ZONE 'Asia/Kolkata')::date AS date,
+              SUM(CASE WHEN payment_mode = 'COD'     AND financial_status != 'voided' THEN 1 ELSE 0 END)::int AS cod_orders,
+              SUM(CASE WHEN payment_mode = 'Prepaid' AND financial_status != 'voided' THEN 1 ELSE 0 END)::int AS prepaid_orders
+         FROM shopify_orders
+         WHERE (created_at AT TIME ZONE 'Asia/Kolkata')::date BETWEEN :since AND :until
+           AND COALESCE(test, FALSE) = FALSE
+         GROUP BY (created_at AT TIME ZONE 'Asia/Kolkata')::date
+     )
+     SELECT COALESCE(i.date, p.date)::text AS date,
+            COALESCE(i.total_shipments, 0)::text AS total_shipments,
+            COALESCE(i.delivered, 0)::text       AS delivered,
+            COALESCE(i.rto, 0)::text             AS rto,
+            COALESCE(i.ofd, 0)::text             AS ofd,
+            COALESCE(i.ndr, 0)::text             AS ndr,
+            COALESCE(p.cod_orders, 0)::text      AS cod_orders,
+            COALESCE(p.prepaid_orders, 0)::text  AS prepaid_orders
+       FROM ithink i
+       FULL OUTER JOIN pay p ON p.date = i.date
        ORDER BY date ASC`,
     { type: QueryTypes.SELECT, replacements: { since, until } },
   );
@@ -159,6 +193,8 @@ export async function getShipmentsTrend(
     rto: parseInt(r.rto, 10) || 0,
     ofd: parseInt(r.ofd, 10) || 0,
     ndr: parseInt(r.ndr, 10) || 0,
+    cod_orders: parseInt(r.cod_orders, 10) || 0,
+    prepaid_orders: parseInt(r.prepaid_orders, 10) || 0,
   }));
 }
 

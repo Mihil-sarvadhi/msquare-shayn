@@ -131,6 +131,8 @@ export async function fetchAllDashboard(range: RangeState) {
     rto: Number(r.rto),
     ofd: Number(r.ofd),
     ndr: Number(r.ndr),
+    cod_orders: Number(r.cod_orders ?? 0),
+    prepaid_orders: Number(r.prepaid_orders ?? 0),
   }));
 
   return {

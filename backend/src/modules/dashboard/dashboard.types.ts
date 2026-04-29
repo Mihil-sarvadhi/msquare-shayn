@@ -31,7 +31,9 @@ export interface RevenueTrendRow {
   orders: number;
 }
 
-/** Per-day shipment counts by status, used by the Operations page sparklines. */
+/** Per-day shipment counts by status, used by the Operations page sparklines.
+ *  cod_orders / prepaid_orders come from shopify_orders.payment_mode (joined
+ *  by IST day) so the COD Mix sparkline can compute COD% per day. */
 export interface ShipmentsTrendRow {
   date: string;
   total_shipments: number;
@@ -39,6 +41,8 @@ export interface ShipmentsTrendRow {
   rto: number;
   ofd: number;
   ndr: number;
+  cod_orders: number;
+  prepaid_orders: number;
 }
 export interface MetaFunnelRow {
   spend: number;
