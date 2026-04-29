@@ -7,6 +7,17 @@ export function formatINR(value: number | string | null | undefined): string {
   return `₹${Math.round(num)}`;
 }
 
+/**
+ * Indian rupee with full precision (e.g. "₹46,664.03"). Uses en-IN locale so
+ * the comma grouping follows the lakh-crore convention. Use this where exact
+ * amounts matter (Sales Breakdown) instead of abbreviated formatINR.
+ */
+export function formatINRFull(value: number | string | null | undefined): string {
+  if (value === null || value === undefined || isNaN(Number(value))) return '₹0.00';
+  const num = parseFloat(String(value));
+  return `₹${num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 export function formatNum(value: number | string | null | undefined): string {
   if (!value) return '0';
   return parseInt(String(value), 10).toLocaleString('en-IN');

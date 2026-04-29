@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Campaign } from '@app/types/dashboard';
 import { formatINR, formatNum } from '@utils/formatters';
+import { cn } from '@/lib/utils';
 
 interface CampaignTableProps {
   campaigns: Campaign[];
@@ -10,8 +11,8 @@ interface CampaignTableProps {
 export default function CampaignTable({ campaigns, loading }: CampaignTableProps) {
   const [sortBy, setSortBy] = useState<keyof Campaign>('spend');
 
-  if (loading) return <div className="h-32 bg-parch animate-pulse rounded-lg" />;
-  if (!campaigns.length) return <p className="text-muted text-sm text-center py-8">No campaign data</p>;
+  if (loading) return <div className="h-32 bg-[var(--bg-2)] animate-pulse rounded-lg" />;
+  if (!campaigns.length) return <p className="text-[var(--muted)] text-sm text-center py-8">No campaign data</p>;
 
   const sorted = [...campaigns].sort((a, b) => Number(b[sortBy]) - Number(a[sortBy]));
 
@@ -28,12 +29,20 @@ export default function CampaignTable({ campaigns, loading }: CampaignTableProps
   return (
     <div className="flex-1 min-h-0 overflow-y-auto">
       {/* Sticky header */}
-      <div className="grid sticky top-0 bg-white pb-1 mb-1 border-b border-parch z-10"
-        style={{ gridTemplateColumns: COLS }}>
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Campaign</span>
+      <div
+        className="grid sticky top-0 bg-[var(--surface)] pb-1 mb-1 border-b border-[var(--line)] z-10"
+        style={{ gridTemplateColumns: COLS }}
+      >
+        <span className="text-[10px] font-medium uppercase tracking-widish text-[var(--muted)]">Campaign</span>
         {cols.map((c) => (
-          <button key={c.key} onClick={() => setSortBy(c.key)}
-            className={`text-[10px] font-semibold uppercase tracking-wide text-right pl-2 transition-colors ${sortBy === c.key ? 'text-gold' : 'text-muted hover:text-ink'}`}>
+          <button
+            key={c.key}
+            onClick={() => setSortBy(c.key)}
+            className={cn(
+              'text-[10px] font-medium uppercase tracking-widish text-right pl-2 transition-colors',
+              sortBy === c.key ? 'text-[var(--accent)]' : 'text-[var(--muted)] hover:text-[var(--ink)]',
+            )}
+          >
             {c.label} {sortBy === c.key ? '↓' : ''}
           </button>
         ))}
@@ -42,18 +51,27 @@ export default function CampaignTable({ campaigns, loading }: CampaignTableProps
       {/* Rows */}
       <div className="space-y-0">
         {sorted.map((camp) => (
-          <div key={camp.campaign_id}
-            className="grid items-center py-2 border-b border-parch last:border-0 hover:bg-ivory/60 transition-colors rounded"
-            style={{ gridTemplateColumns: COLS }}>
+          <div
+            key={camp.campaign_id}
+            className="grid items-center py-2 border-b border-[var(--line)] last:border-0 hover:bg-[var(--surface-2)] transition-colors rounded"
+            style={{ gridTemplateColumns: COLS }}
+          >
             <div className="min-w-0 pr-2">
-              <p className="text-xs font-medium text-ink truncate">{camp.campaign_name}</p>
-              <p className="text-[10px] text-muted">{camp.objective?.replace('OUTCOME_', '')}</p>
+              <p className="text-xs font-medium text-[var(--ink)] truncate">{camp.campaign_name}</p>
+              <p className="text-[10px] text-[var(--muted)]">{camp.objective?.replace('OUTCOME_', '')}</p>
             </div>
-            <span className="text-xs text-right font-medium text-ink tabular-nums pl-2">{formatINR(camp.spend)}</span>
-            <span className="text-xs text-right text-muted tabular-nums pl-2">{formatNum(camp.impressions)}</span>
-            <span className="text-xs text-right text-muted tabular-nums pl-2">{formatNum(camp.clicks)}</span>
-            <span className="text-xs text-right text-muted tabular-nums pl-2">{formatNum(camp.purchases)}</span>
-            <span className={`text-xs text-right font-bold tabular-nums pl-2 ${parseFloat(String(camp.roas)) >= 2 ? 'text-emerald' : parseFloat(String(camp.roas)) >= 1 ? 'text-gold' : 'text-ruby'}`}>
+            <span className="text-xs text-right font-medium text-[var(--ink)] tabular-nums pl-2 font-mono">{formatINR(camp.spend)}</span>
+            <span className="text-xs text-right text-[var(--muted)] tabular-nums pl-2 font-mono">{formatNum(camp.impressions)}</span>
+            <span className="text-xs text-right text-[var(--muted)] tabular-nums pl-2 font-mono">{formatNum(camp.clicks)}</span>
+            <span className="text-xs text-right text-[var(--muted)] tabular-nums pl-2 font-mono">{formatNum(camp.purchases)}</span>
+            <span className={cn(
+              'text-xs text-right font-medium tabular-nums pl-2 font-mono',
+              parseFloat(String(camp.roas)) >= 2
+                ? 'text-[var(--green)]'
+                : parseFloat(String(camp.roas)) >= 1
+                  ? 'text-[var(--accent)]'
+                  : 'text-[var(--red)]',
+            )}>
               {parseFloat(String(camp.roas)).toFixed(2)}x
             </span>
           </div>

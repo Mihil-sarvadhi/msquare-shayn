@@ -57,6 +57,7 @@ export async function syncShopifyOrders(): Promise<void> {
         await ShopifyOrderLineitem.create({
           order_id: order.id,
           sku: item.sku || undefined,
+          product_id: item.product?.id || undefined,
           title: item.title,
           variant: item.variant?.title || undefined,
           quantity: item.quantity,

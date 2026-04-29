@@ -17,18 +17,14 @@ import type {
 } from '@app/types/analytics';
 import type { LogisticsItem } from '@app/types/dashboard';
 
-const ACCENT = '#8b6f3a';
-const POS    = '#2d7a5f';
-const NEG    = '#b8433a';
-const WARN   = '#c4871f';
-const MUTED  = '#a39f92';
+import { ACCENT, POS, NEG, WARN, MUTED, AI } from '@utils/constants/palette';
 
 const STATUS_COLOR_MAP: Record<string, string> = {
   delivered:        POS,
   out_for_delivery: ACCENT,
   in_transit:       WARN,
   rto:              NEG,
-  ndr:              '#c478a3',
+  ndr:              AI,
 };
 
 function ShipmentStatusBreakdown({ data }: { data: LogisticsItem[] }) {
@@ -53,7 +49,7 @@ function ShipmentStatusBreakdown({ data }: { data: LogisticsItem[] }) {
                   title={row.current_status}>
               {row.current_status}
             </span>
-            <div className="flex-1 h-[10px] bg-[#f0ece4] rounded-full overflow-hidden">
+            <div className="flex-1 h-[10px] bg-[var(--bg-2)] rounded-full overflow-hidden">
               <div
                 className="h-full rounded-full transition-all duration-500"
                 style={{ width: `${barW}%`, backgroundColor: color }}
@@ -105,7 +101,7 @@ function RtoByStateChart({ rto, geo }: { rto: RtoByStateItem[]; geo: GeoRevenueI
   const CustomTooltipRto = ({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number; color: string }[]; label?: string }) => {
     if (!active || !payload?.length) return null;
     return (
-      <div className="bg-[#1a1208] text-white rounded-lg px-3 py-2 text-xs shadow-xl">
+      <div className="bg-[var(--ink)] text-[var(--surface)] rounded-lg px-3 py-2 text-xs shadow-xl border border-[var(--line-3)]">
         <p className="font-semibold mb-1 uppercase tracking-wide">{label}</p>
         {payload.map((p) => (
           <p key={p.name} style={{ color: p.color }} className="flex justify-between gap-4">
@@ -122,7 +118,7 @@ function RtoByStateChart({ rto, geo }: { rto: RtoByStateItem[]; geo: GeoRevenueI
   return (
     <ResponsiveContainer width="100%" height={260}>
       <ComposedChart data={merged} margin={{ top: 12, right: 52, left: 0, bottom: 16 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e8e6df" vertical={false} />
+        <CartesianGrid strokeDasharray="2 3" stroke="var(--line)" vertical={false} />
         <XAxis
           dataKey="state"
           tick={{ fontSize: 10, fill: MUTED }}
@@ -161,7 +157,7 @@ function RtoByStateChart({ rto, geo }: { rto: RtoByStateItem[]; geo: GeoRevenueI
           wrapperStyle={{ fontSize: '11px', color: MUTED }}
         />
         <ReferenceLine yAxisId="rto" y={20} stroke={NEG} strokeDasharray="4 3" strokeWidth={1.5} label={{ value: '20%', position: 'insideTopRight', fontSize: 10, fill: NEG }} />
-        <Bar yAxisId="rev" dataKey="revenue" name="Revenue" fill="#a5b4fc" fillOpacity={0.5} radius={[3, 3, 0, 0]} maxBarSize={40} />
+        <Bar yAxisId="rev" dataKey="revenue" name="Revenue" fill={ACCENT} fillOpacity={0.45} radius={[3, 3, 0, 0]} maxBarSize={40} />
         <Line yAxisId="rto" type="monotone" dataKey="rto_rate" name="RTO %" stroke={NEG} strokeWidth={2} dot={{ r: 3, fill: NEG, strokeWidth: 0 }} activeDot={{ r: 5 }} />
       </ComposedChart>
     </ResponsiveContainer>

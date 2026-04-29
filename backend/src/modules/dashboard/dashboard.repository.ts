@@ -28,16 +28,35 @@ export async function getKpis(since: string, until: string): Promise<KpiResult> 
       prepaid_orders: string;
       cancelled_orders: string;
     }>(
-      `SELECT
-        COALESCE(SUM(CASE WHEN financial_status != 'voided' THEN COALESCE(gross_sales, revenue) ELSE 0 END), 0) AS total_revenue,
+      // Revenue/AOV mirror Shopify Analytics' "Gross sales": tax-EXCLUSIVE
+      // (subtotal + discounts) × tax_factor, where tax_factor strips embedded
+      // GST per order. For Indian (tax-inclusive) stores raw subtotal includes
+      // tax, so the stored gross_sales column would inflate the KPI by ~3%.
+      // Test orders are excluded to match Shopify's own filter.
+      `WITH scoped_orders AS (
+         SELECT
+           financial_status,
+           payment_mode,
+           customer_id,
+           (COALESCE(subtotal, 0) + COALESCE(total_discounts, 0)) *
+             CASE
+               WHEN COALESCE(subtotal, 0) > 0 AND COALESCE(total_tax, 0) > 0
+                 THEN (subtotal - total_tax) / subtotal
+               ELSE 1.0
+             END AS gross_excl_tax
+         FROM shopify_orders
+         WHERE (created_at AT TIME ZONE 'Asia/Kolkata')::date BETWEEN :since AND :until
+           AND COALESCE(test, FALSE) = FALSE
+       )
+       SELECT
+        COALESCE(SUM(CASE WHEN financial_status != 'voided' THEN gross_excl_tax ELSE 0 END), 0) AS total_revenue,
         COUNT(CASE WHEN financial_status != 'voided' THEN 1 END) AS total_orders,
-        COALESCE(AVG(CASE WHEN financial_status != 'voided' THEN COALESCE(gross_sales, revenue) END), 0) AS aov,
+        COALESCE(AVG(CASE WHEN financial_status != 'voided' THEN gross_excl_tax END), 0) AS aov,
         COUNT(DISTINCT CASE WHEN financial_status != 'voided' THEN customer_id END) AS unique_customers,
         SUM(CASE WHEN payment_mode = 'COD' AND financial_status != 'voided' THEN 1 ELSE 0 END) AS cod_orders,
         SUM(CASE WHEN payment_mode = 'Prepaid' AND financial_status != 'voided' THEN 1 ELSE 0 END) AS prepaid_orders,
         COUNT(CASE WHEN financial_status = 'voided' THEN 1 END) AS cancelled_orders
-       FROM shopify_orders
-       WHERE created_at::date BETWEEN :since AND :until`,
+       FROM scoped_orders`,
       { type: QueryTypes.SELECT, replacements: { since, until } },
     ),
     sequelize.query<{
@@ -110,11 +129,23 @@ export async function getKpis(since: string, until: string): Promise<KpiResult> 
 }
 
 export async function getRevenueTrend(since: string, until: string): Promise<RevenueTrendRow[]> {
+  // Match getKpis: tax-EXCLUSIVE Shopify Analytics gross sales, test orders excluded.
   return sequelize.query<RevenueTrendRow>(
-    `SELECT created_at::date AS date, SUM(COALESCE(gross_sales, revenue)) AS revenue, COUNT(*) AS orders
+    `SELECT (created_at AT TIME ZONE 'Asia/Kolkata')::date AS date,
+            SUM(
+              (COALESCE(subtotal, 0) + COALESCE(total_discounts, 0)) *
+              CASE
+                WHEN COALESCE(subtotal, 0) > 0 AND COALESCE(total_tax, 0) > 0
+                  THEN (subtotal - total_tax) / subtotal
+                ELSE 1.0
+              END
+            ) AS revenue,
+            COUNT(*) AS orders
      FROM shopify_orders
-     WHERE created_at::date BETWEEN :since AND :until AND financial_status != 'voided'
-     GROUP BY created_at::date ORDER BY date ASC`,
+     WHERE (created_at AT TIME ZONE 'Asia/Kolkata')::date BETWEEN :since AND :until
+       AND financial_status != 'voided'
+       AND COALESCE(test, FALSE) = FALSE
+     GROUP BY (created_at AT TIME ZONE 'Asia/Kolkata')::date ORDER BY date ASC`,
     { type: QueryTypes.SELECT, replacements: { since, until } },
   );
 }
@@ -151,7 +182,8 @@ export async function getTopProducts(since: string, until: string): Promise<TopP
             COUNT(DISTINCT o.order_id) AS orders
      FROM shopify_order_lineitems li
      JOIN shopify_orders o ON o.order_id = li.order_id
-     WHERE o.created_at::date BETWEEN :since AND :until AND o.financial_status != 'voided'
+     WHERE (o.created_at AT TIME ZONE 'Asia/Kolkata')::date BETWEEN :since AND :until
+       AND o.financial_status != 'voided'
      GROUP BY li.product_id, li.title ORDER BY revenue DESC LIMIT 5`,
     { type: QueryTypes.SELECT, replacements: { since, until } },
   );
@@ -297,11 +329,15 @@ export async function getAllReviews(
 }
 
 export async function getRecentOrders(): Promise<RecentOrderRow[]> {
+  // `revenue` mirrors Shopify's `totalPriceSet` — the customer-facing total
+  // (subtotal − discount, tax included for Indian stores). This matches what
+  // the merchant sees on Shopify's order detail page (e.g. ₹3,113.10 for an
+  // order with subtotal ₹3,459, SHAYN10% discount and IGST included).
   return sequelize.query<RecentOrderRow>(
     `SELECT
        o.order_id,
        o.order_name,
-       COALESCE(o.gross_sales, o.revenue) AS revenue,
+       o.revenue,
        COALESCE(
          NULLIF(o.financial_status, ''),
          CASE
@@ -320,7 +356,6 @@ export async function getRecentOrders(): Promise<RecentOrderRow[]> {
      GROUP BY
        o.order_id,
        o.order_name,
-       o.gross_sales,
        o.revenue,
        o.financial_status,
        o.fulfillment_status,
@@ -342,10 +377,11 @@ export async function getRevenueVsSpend(
             COALESCE(m.ad_spend, '0') AS ad_spend
      FROM generate_series(:since::date, :until::date, '1 day'::interval) AS d(date)
      LEFT JOIN (
-       SELECT created_at::date AS date, SUM(revenue)::text AS revenue
+       SELECT (created_at AT TIME ZONE 'Asia/Kolkata')::date AS date,
+              SUM(revenue)::text AS revenue
        FROM shopify_orders
        WHERE financial_status != 'voided'
-       GROUP BY created_at::date
+       GROUP BY (created_at AT TIME ZONE 'Asia/Kolkata')::date
      ) o ON o.date = d.date
      LEFT JOIN (
        SELECT date, SUM(spend)::text AS ad_spend

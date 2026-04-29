@@ -1,36 +1,14 @@
 import { SOURCE } from '@constant';
 import type {
-  ShopifyBalanceTransaction,
   ShopifyLocation,
   ShopifyOrderWithRefunds,
   ShopifyOrderWithReturns,
   ShopifyOrderWithTransactions,
-  ShopifyPayout,
 } from '@modules/shopify/shopify.connector';
 import type {
-  BalanceTransactionType,
-  PayoutStatus,
   TransactionKind,
   TransactionStatus,
 } from '@db/models';
-
-const PAYOUT_STATUS_MAP: Record<string, PayoutStatus> = {
-  SCHEDULED: 'scheduled',
-  IN_TRANSIT: 'in_transit',
-  PAID: 'paid',
-  FAILED: 'failed',
-  CANCELED: 'cancelled',
-  CANCELLED: 'cancelled',
-};
-
-const BALANCE_TYPE_MAP: Record<string, BalanceTransactionType> = {
-  CHARGE: 'charge',
-  REFUND: 'refund',
-  ADJUSTMENT: 'adjustment',
-  FEE: 'fee',
-  DISPUTE: 'dispute',
-  RESERVE: 'reserve',
-};
 
 const TX_KIND_MAP: Record<string, TransactionKind> = {
   SALE: 'sale',
@@ -71,47 +49,6 @@ export function mapLocation(loc: ShopifyLocation) {
   };
 }
 
-export function mapPayout(p: ShopifyPayout) {
-  const fees =
-    num(p.summary.chargesFee.amount) +
-    num(p.summary.refundsFee.amount) +
-    num(p.summary.adjustmentsFee.amount);
-  return {
-    source: SOURCE.SHOPIFY,
-    source_payout_id: gid(p.id),
-    payout_date: p.issuedAt ? new Date(p.issuedAt) : null,
-    status: PAYOUT_STATUS_MAP[p.status.toUpperCase()] ?? 'scheduled',
-    amount: num(p.net.amount),
-    currency: p.net.currencyCode,
-    bank_summary: p.bankAccount,
-    charges_gross: num(p.summary.chargesGross.amount),
-    refunds_gross: null,
-    adjustments_gross: num(p.summary.adjustmentsGross.amount),
-    fees_total: fees,
-    source_metadata: null,
-    synced_at: new Date(),
-    updated_at: new Date(),
-  };
-}
-
-export function mapBalanceTransaction(t: ShopifyBalanceTransaction) {
-  return {
-    source: SOURCE.SHOPIFY,
-    source_balance_transaction_id: gid(t.id),
-    payout_id: null,
-    source_payout_id: t.associatedPayout ? gid(t.associatedPayout.id) : null,
-    transaction_id: t.sourceOrderTransactionId ?? t.sourceId,
-    type: BALANCE_TYPE_MAP[t.type.toUpperCase()] ?? 'adjustment',
-    amount: num(t.amount.amount),
-    fee: num(t.fee.amount),
-    net: num(t.net.amount),
-    processed_at: t.transactionDate ? new Date(t.transactionDate) : null,
-    source_metadata: null,
-    synced_at: new Date(),
-    updated_at: new Date(),
-  };
-}
-
 export function mapRefunds(orderWithRefunds: ShopifyOrderWithRefunds) {
   return orderWithRefunds.refunds.map((r) => ({
     source: SOURCE.SHOPIFY,
@@ -140,7 +77,7 @@ export function mapReturns(orderWithReturns: ShopifyOrderWithReturns) {
   return orderWithReturns.returns.map((r) => {
     const lineItems = r.returnLineItems.edges.map((e) => {
       const li = e.node.fulfillmentLineItem?.lineItem;
-      const unitPrice = num(li?.discountedUnitPriceSet?.shopMoney?.amount);
+      const unitPrice = num(li?.discountedUnitPriceAfterAllDiscountsSet?.shopMoney?.amount);
       return {
         sku: li?.sku ?? '',
         quantity: e.node.quantity,

@@ -37,7 +37,12 @@ export async function loginHandler(req: Request, res: Response): Promise<void> {
 
 export async function logoutHandler(req: Request, res: Response): Promise<void> {
   try {
-    const token = req.cookies?.[COOKIE_NAME] as string | undefined;
+    /* Accept either a Bearer token (frontend in-memory auth) or the session cookie */
+    const authHeader = req.headers.authorization;
+    const bearer = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    const cookieTok = (req.cookies?.[COOKIE_NAME] as string | undefined) ?? null;
+    const token = bearer ?? cookieTok;
+
     if (token) await service.logout(token);
     res.clearCookie(COOKIE_NAME, { path: '/' });
     handleApiResponse(res, { data: { message: 'Logged out' } });

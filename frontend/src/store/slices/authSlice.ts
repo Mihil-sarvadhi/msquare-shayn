@@ -47,7 +47,8 @@ export const login = createAsyncThunk(
 );
 
 export const logout = createAsyncThunk('auth/logout', async () => {
-  await baseService.post('/auth/logout');
+  /* Best-effort server-side session cleanup — clear local state regardless */
+  try { await baseService.post('/auth/logout'); } catch { /* ignore network/auth errors */ }
   tokenStore.clear();
 });
 

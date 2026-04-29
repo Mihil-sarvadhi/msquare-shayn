@@ -25,7 +25,7 @@ export async function getNetRevenue(since: string, until: string) {
   const [shopify] = await sequelize.query<{ gross_revenue: string }>(
     `SELECT COALESCE(SUM(revenue), 0) AS gross_revenue
      FROM shopify_orders
-     WHERE created_at::date BETWEEN :since AND :until AND financial_status != 'voided'`,
+     WHERE (created_at AT TIME ZONE 'Asia/Kolkata')::date BETWEEN :since AND :until AND financial_status != 'voided'`,
     { type: QueryTypes.SELECT, replacements: { since, until } },
   );
   const [ithink] = await sequelize.query<{ logistics_cost: string; rto_waste: string }>(
@@ -80,7 +80,7 @@ export async function getGeoRevenue(since: string, until: string): Promise<GeoRe
   return sequelize.query<GeoRevenueRow>(
     `SELECT customer_state AS state, COALESCE(SUM(revenue), 0) AS revenue, COUNT(*) AS orders
      FROM shopify_orders
-     WHERE created_at::date BETWEEN :since AND :until AND financial_status != 'voided'
+     WHERE (created_at AT TIME ZONE 'Asia/Kolkata')::date BETWEEN :since AND :until AND financial_status != 'voided'
        AND customer_state IS NOT NULL AND customer_state != ''
      GROUP BY customer_state ORDER BY revenue DESC LIMIT 10`,
     { type: QueryTypes.SELECT, replacements: { since, until } },
@@ -136,7 +136,7 @@ export async function getCustomerOverview(
     `WITH orders_normalized AS (
        SELECT
          COALESCE(NULLIF(customer_id, ''), NULLIF(LOWER(customer_email), '')) AS customer_key,
-         created_at::date AS order_date
+         (created_at AT TIME ZONE 'Asia/Kolkata')::date AS order_date
        FROM shopify_orders
        WHERE financial_status != 'voided'
      ),
@@ -180,7 +180,7 @@ export async function getCustomerSegments(since: string, until: string): Promise
          COUNT(*) AS orders_count
        FROM shopify_orders
        WHERE financial_status != 'voided'
-         AND created_at::date BETWEEN :since AND :until
+         AND (created_at AT TIME ZONE 'Asia/Kolkata')::date BETWEEN :since AND :until
          AND COALESCE(NULLIF(customer_id, ''), NULLIF(LOWER(customer_email), '')) IS NOT NULL
        GROUP BY customer_key
      )
@@ -207,9 +207,9 @@ export async function getTopCustomers(since: string, until: string): Promise<Top
             MAX(customer_state)                          AS state,
             COUNT(*)                                     AS orders_count,
             COALESCE(SUM(revenue), 0)::text              AS total_spent,
-            MAX(created_at::date)                        AS last_order_date
+            MAX((created_at AT TIME ZONE 'Asia/Kolkata')::date)                        AS last_order_date
      FROM shopify_orders
-     WHERE created_at::date BETWEEN :since AND :until
+     WHERE (created_at AT TIME ZONE 'Asia/Kolkata')::date BETWEEN :since AND :until
        AND financial_status != 'voided'
        AND COALESCE(NULLIF(customer_id, ''), NULLIF(LOWER(customer_email), '')) IS NOT NULL
     GROUP BY COALESCE(NULLIF(customer_id, ''), NULLIF(LOWER(customer_email), ''))
@@ -227,7 +227,7 @@ export async function getDiscountAnalysis(since: string, until: string): Promise
             COALESCE(AVG(revenue), 0) AS aov,
             ROUND(100.0 * COUNT(*) / NULLIF(SUM(COUNT(*)) OVER (), 0), 1) AS pct_of_total
      FROM shopify_orders
-     WHERE created_at::date BETWEEN :since AND :until AND financial_status != 'voided'
+     WHERE (created_at AT TIME ZONE 'Asia/Kolkata')::date BETWEEN :since AND :until AND financial_status != 'voided'
      GROUP BY 1 ORDER BY orders DESC LIMIT 20`,
     { type: QueryTypes.SELECT, replacements: { since, until } },
   );
@@ -271,7 +271,7 @@ export async function getAttributionGap(since: string, until: string): Promise<A
   );
   const [shopify] = await sequelize.query<{ shopify_orders: string }>(
     `SELECT COUNT(*) AS shopify_orders FROM shopify_orders
-     WHERE created_at::date BETWEEN :since AND :until AND financial_status != 'voided'`,
+     WHERE (created_at AT TIME ZONE 'Asia/Kolkata')::date BETWEEN :since AND :until AND financial_status != 'voided'`,
     { type: QueryTypes.SELECT, replacements: { since, until } },
   );
   return {
@@ -291,7 +291,7 @@ export async function getTopSkus(since: string, until: string): Promise<TopSkuRo
        SUM(li.quantity * li.unit_price) AS revenue
      FROM shopify_order_lineitems li
      JOIN shopify_orders o ON o.order_id = li.order_id
-     WHERE o.created_at::date BETWEEN :since AND :until
+     WHERE (o.created_at AT TIME ZONE 'Asia/Kolkata')::date BETWEEN :since AND :until
        AND o.financial_status != 'voided'
        AND li.sku IS NOT NULL AND li.sku != ''
      GROUP BY li.sku, li.title, li.variant
@@ -369,7 +369,7 @@ export async function getChannelRevenue(since: string, until: string): Promise<C
   const [shopifyRow] = await sequelize.query<{ shopify_revenue: string }>(
     `SELECT COALESCE(SUM(revenue), 0) AS shopify_revenue
      FROM shopify_orders
-     WHERE created_at::date BETWEEN :since AND :until
+     WHERE (created_at AT TIME ZONE 'Asia/Kolkata')::date BETWEEN :since AND :until
        AND financial_status != 'voided'`,
     { type: QueryTypes.SELECT, replacements: { since, until } },
   );

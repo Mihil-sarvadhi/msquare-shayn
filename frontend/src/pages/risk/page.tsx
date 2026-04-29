@@ -30,9 +30,9 @@ export function RiskPage() {
   if (risk.error) {
     return (
       <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center">
-        <div className="bg-white rounded-xl border border-[var(--neg-soft)] p-8 text-center max-w-md">
-          <p className="text-[var(--neg)] font-semibold mb-2">Connection Error</p>
-          <p className="text-[var(--text-muted)] text-sm">{risk.error}</p>
+        <div className="bg-[var(--surface)] rounded-xl border border-[var(--red-soft)] p-8 text-center max-w-md">
+          <p className="text-[var(--red)] font-semibold mb-2">Connection Error</p>
+          <p className="text-[var(--muted)] text-sm">{risk.error}</p>
         </div>
       </div>
     );
@@ -47,8 +47,8 @@ export function RiskPage() {
       <div className="bg-[var(--bg)]">
         <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 pt-4 pb-6 space-y-4">
           <div>
-            <h1 className="text-2xl font-semibold text-[var(--text)]">Risk · Disputes</h1>
-            <p className="text-sm text-[var(--text-muted)] mt-0.5">
+            <h1 className="text-[18px] font-semibold tracking-tightish text-[var(--ink)] leading-[1.25]">Risk · Disputes</h1>
+            <p className="text-[11.5px] text-[var(--muted)] mt-0.5">
               Chargebacks, evidence deadlines, win/loss tracking
             </p>
           </div>
@@ -134,7 +134,7 @@ export function RiskPage() {
                             {d.reason ?? '-'}
                           </td>
                           <td className="p-2 text-xs">
-                            <span className="bg-[var(--warn-soft, #FEF3C7)] text-[var(--warn, #B45309)] px-2 py-0.5 rounded-full font-medium">
+                            <span className="bg-[var(--amber-soft)] text-[var(--amber)] px-2 py-0.5 rounded-full font-medium">
                               {d.status}
                             </span>
                           </td>
@@ -145,10 +145,10 @@ export function RiskPage() {
                             className={cn(
                               'p-2 text-center text-sm font-bold tabular-nums',
                               overdue
-                                ? 'text-[var(--neg)]'
+                                ? 'text-[var(--red)]'
                                 : left.endsWith('h') || left === '<1h'
-                                  ? 'text-[var(--warn, #B45309)]'
-                                  : 'text-[var(--text)]',
+                                  ? 'text-[var(--amber)]'
+                                  : 'text-[var(--ink)]',
                             )}
                           >
                             {left}

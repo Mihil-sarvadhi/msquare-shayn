@@ -195,8 +195,7 @@ export async function getSummary(since: string, until: string) {
         total_users:          parseInt(row.metricValues[1].value, 10),
         total_new_users:      parseInt(row.metricValues[2].value, 10),
         total_page_views:     parseInt(row.metricValues[3].value, 10),
-        avg_bounce_rate:      parseFloat(row.metricValues[4].value),
-        avg_session_duration: parseFloat(row.metricValues[5].value),
+        avg_session_duration: parseFloat(row.metricValues[4].value),
       };
     }
   } catch {

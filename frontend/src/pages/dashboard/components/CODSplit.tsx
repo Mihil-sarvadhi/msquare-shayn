@@ -5,8 +5,9 @@ import { formatNum } from '@utils/formatters';
 
 interface Props { kpis: KPIs | null; loading: boolean; }
 
-const COLORS = ['#E07B3A', '#2E8B57'];
-const TRACK  = '#F0EBE0';
+/* COD = c5 amber, Prepaid = c2 teal (matches mockup donut) */
+const COLORS = ['#C8780B', '#0F8C82'];
+const TRACK  = 'var(--bg-2)';
 
 export default function CODSplit({ kpis, loading }: Props) {
   if (loading) return <div className="h-40 bg-parch animate-pulse rounded-lg" />;
@@ -73,7 +74,7 @@ export default function CODSplit({ kpis, loading }: Props) {
     </div>
     {/* Source note — COD/Prepaid counts come from iThink shipments, not Shopify */}
     <div className="flex items-start gap-1.5 px-1">
-      <Info size={11} strokeWidth={1.5} className="text-[#8C7B64] shrink-0 mt-0.5" />
+      <Info size={11} strokeWidth={1.5} className="text-[var(--muted)] shrink-0 mt-0.5" />
       <p className="text-[10px] text-[#8C7B64] leading-snug">
         Count reflects iThink shipments with a recorded payment mode. Orders not yet shipped or missing payment info are excluded.
       </p>

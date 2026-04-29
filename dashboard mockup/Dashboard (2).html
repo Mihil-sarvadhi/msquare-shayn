@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>SHAYN MIS — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,300;9..144,400&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="dashboard.css?v=3" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+
+<!-- ═══════════════ TOP BAR ═══════════════ -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand-mark" href="Login.html" title="SHAYN MIS">
+      <span class="glyph">
+        <svg width="18" height="20" viewBox="0 0 20 22" fill="none">
+          <path d="M14.5 5.5C14.5 3.567 12.71 2 10.5 2H7.5C5.29 2 3.5 3.567 3.5 5.5V6c0 1.933 1.79 3.5 4 3.5h3c2.21 0 4 1.567 4 3.5v.5c0 1.933-1.79 3.5-4 3.5H7.5c-2.21 0-4-1.567-4-3.5"
+                stroke="#B8893E" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="name">SHAYN<span class="pip">MIS</span></span>
+    </a>
+
+    <nav class="topnav" id="topnav">
+      <a href="#" class="active">Overview</a>
+      <a href="#">Marketing</a>
+      <a href="#">Customers</a>
+      <a href="#">Operations <span class="badge">3</span></a>
+      <a href="#">Reviews</a>
+      <a href="#">Reports</a>
+    </nav>
+
+    <div class="topbar-right">
+      <button class="searchbtn" id="searchBtn" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <span>Search anything…</span>
+        <span class="spacer"></span>
+        <span class="kbd">⌘K</span>
+      </button>
+      <button class="iconbtn" id="themeBtn" title="Toggle theme" aria-label="Toggle theme">
+        <svg id="iconMoon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        <svg id="iconSun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+      </button>
+      <button class="iconbtn" title="Notifications">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>
+        <span class="dot"></span>
+      </button>
+      <button class="daterange" id="daterange">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        <span class="label">Last 30 days</span>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+      <span class="sync-pill" title="Last synced 2 minutes ago">Synced</span>
+      <span class="avatar" title="Admin">AS</span>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════════ TICKER ═══════════════ -->
+<div class="ticker">
+  <div class="ticker-inner">
+    <div class="ticker-track">
+      <span class="ticker-item"><span class="lbl">Today</span><span class="val">₹4.2L</span><span class="up">↑ 12%</span></span>
+      <span class="ticker-item"><span class="dot"></span><span class="lbl">Orders</span><span class="val">62</span><span class="up">↑ 8</span></span>
+      <span class="ticker-item"><span class="dot"></span><span class="lbl">Sessions</span><span class="val">2,418</span><span class="up">↑ 6.8%</span></span>
+      <span class="ticker-item"><span class="dot"></span><span class="lbl">ROAS</span><span class="val">2.18×</span><span class="down">↓ 0.3</span></span>
+      <span class="ticker-item"><span class="dot"></span><span class="lbl">AOV</span><span class="val">₹4,732</span><span class="up">↑ 8.2%</span></span>
+      <span class="ticker-item"><span class="dot"></span><span class="lbl">RTO</span><span class="val">5.7%</span><span class="down">↓ 1.2pp</span></span>
+      <span class="ticker-item"><span class="dot"></span><span class="lbl">Carts</span><span class="val">328</span><span class="down">↑ 14</span></span>
+      <span class="ticker-item"><span class="dot"></span><span class="lbl">Stock alert</span><span class="val">Petal Touch · 4 left</span></span>
+    </div>
+    <div class="ticker-track" aria-hidden="true">
+      <span class="ticker-item"><span class="lbl">Today</span><span class="val">₹4.2L</span><span class="up">↑ 12%</span></span>
+      <span class="ticker-item"><span class="dot"></span><span class="lbl">Orders</span><span class="val">62</span><span class="up">↑ 8</span></span>
+      <span class="ticker-item"><span class="dot"></span><span class="lbl">Sessions</span><span class="val">2,418</span><span class="up">↑ 6.8%</span></span>
+      <span class="ticker-item"><span class="dot"></span><span class="lbl">ROAS</span><span class="val">2.18×</span><span class="down">↓ 0.3</span></span>
+      <span class="ticker-item"><span class="dot"></span><span class="lbl">AOV</span><span class="val">₹4,732</span><span class="up">↑ 8.2%</span></span>
+      <span class="ticker-item"><span class="dot"></span><span class="lbl">RTO</span><span class="val">5.7%</span><span class="down">↓ 1.2pp</span></span>
+      <span class="ticker-item"><span class="dot"></span><span class="lbl">Carts</span><span class="val">328</span><span class="down">↑ 14</span></span>
+      <span class="ticker-item"><span class="dot"></span><span class="lbl">Stock alert</span><span class="val">Petal Touch · 4 left</span></span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ PAGE ═══════════════ -->
+<main class="page">
+
+  <!-- ───── KPI BENTO ───── -->
+  <section class="kpi-grid rise rise-3" id="kpiGrid"></section>
+
+  <!-- ───── Row: Live users / Recent orders / Abandoned carts ───── -->
+  <section class="row cols-3 rise rise-4">
+    <div class="card">
+      <div class="card-h">
+        <div class="ttl-block">
+          <div class="card-ttl">Recent Orders</div>
+          <div class="card-sub">Last 6 orders · this period</div>
+        </div>
+        <button class="btn" style="height:30px;padding:0 12px;font-size:12px">View all →</button>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:10px;padding:6px 0 10px;border-bottom:1px solid var(--line)">
+        <div style="font-family:'Geist',sans-serif;font-weight:500;font-size:36px;letter-spacing:-.025em;line-height:1">152</div>
+        <span class="delta up">↑ 5.6%</span>
+        <span style="color:var(--muted);font-size:12px">vs 144 prev</span>
+      </div>
+      <div class="order-list" id="orderList"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">
+        <div class="ttl-block">
+          <div class="card-ttl">Abandoned Carts</div>
+          <div class="card-sub">Recoverable revenue</div>
+        </div>
+        <button class="btn" style="height:30px;padding:0 12px;font-size:12px">Trigger emails</button>
+      </div>
+      <div class="carts-hero">
+        <div class="v">328</div>
+        <div style="color:var(--muted);font-size:12px;padding-bottom:6px">abandoned carts</div>
+      </div>
+      <div class="carts-grid">
+        <div><div class="v">₹78.2L</div><div class="k">Cart Value Lost</div></div>
+        <div><div class="v">₹23.8K</div><div class="k">Avg Cart Value</div></div>
+      </div>
+      <div class="recovery-hint">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--accent)"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/></svg>
+        <span>Recoverable revenue · trigger recovery emails within <b>2 hours</b> for best conversion.</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">
+        <div class="ttl-block">
+          <div class="card-ttl">Logistics</div>
+          <div class="card-sub">Shipment status · this period</div>
+        </div>
+      </div>
+      <div class="logistics-h">Status overview</div>
+      <div class="logistics-grid">
+        <div class="log-cell ok"><div class="v">68</div><div class="k">Delivered</div></div>
+        <div class="log-cell warn"><div class="v">7</div><div class="k">In Transit</div></div>
+        <div class="log-cell"><div class="v">2</div><div class="k">OFD</div></div>
+        <div class="log-cell err"><div class="v">9</div><div class="k">RTO</div></div>
+        <div class="log-cell"><div class="v">2</div><div class="k">NDR</div></div>
+      </div>
+      <div class="logistics-foot">
+        <span>Total Shipments <b>88</b></span>
+        <span>RTO Rate <b style="color:var(--red)">10.2%</b></span>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:10px;padding-top:10px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)">
+        <span>SLA on time <b style="color:var(--green);font-weight:500;font-family:'Geist Mono',monospace">94.3%</b></span>
+        <span style="color:var(--muted-2)">·</span>
+        <span>Avg delivery <b style="color:var(--ink);font-weight:500;font-family:'Geist Mono',monospace">3.2 days</b></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── Row: Revenue by channel + COD/Prepaid ───── -->
+  <section class="row cols-2 rise rise-5">
+    <div class="card">
+      <div class="card-h">
+        <div class="ttl-block">
+          <div class="card-ttl">Revenue by Channel</div>
+          <div class="card-sub">Daily · Last 30 days</div>
+        </div>
+        <div class="tabs">
+          <button class="active">Daily</button>
+          <button>Weekly</button>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <svg id="revChart"></svg>
+        <div class="tooltip" id="revTooltip"></div>
+      </div>
+      <div class="legend">
+        <span class="item"><span class="swatch" style="background:var(--c1)"></span>Shopify</span>
+        <span class="item muted"><span class="swatch" style="background:var(--muted-2)"></span>Amazon<span class="soon">SOON</span></span>
+        <span class="item muted"><span class="swatch" style="background:var(--muted-2)"></span>Flipkart<span class="soon">SOON</span></span>
+        <span class="item muted"><span class="swatch" style="background:var(--muted-2)"></span>Myntra<span class="soon">SOON</span></span>
+        <span class="item muted"><span class="swatch" style="background:var(--muted-2)"></span>Eternz<span class="soon">SOON</span></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">
+        <div class="ttl-block">
+          <div class="card-ttl">COD vs Prepaid</div>
+          <div class="card-sub">Payment mix · Last 30 days</div>
+        </div>
+      </div>
+      <div class="donut-wrap center">
+        <div class="donut" style="position:relative">
+          <svg id="codDonut"></svg>
+          <div class="donut-center"><div><div class="v">85.5%</div><div class="k">Prepaid</div></div></div>
+        </div>
+        <div style="display:flex;gap:24px;font-size:12.5px;margin-top:4px">
+          <span style="display:inline-flex;align-items:center;gap:6px;color:var(--muted)"><span style="width:9px;height:9px;border-radius:2px;background:var(--c5);display:inline-block"></span>COD <b style="color:var(--ink);font-weight:500;margin-left:4px">14.5%</b></span>
+          <span style="display:inline-flex;align-items:center;gap:6px;color:var(--muted)"><span style="width:9px;height:9px;border-radius:2px;background:var(--c2);display:inline-block"></span>Prepaid <b style="color:var(--ink);font-weight:500;margin-left:4px">85.5%</b></span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;padding-top:14px;border-top:1px solid var(--line);margin-top:14px;text-align:center">
+          <div><div style="font-family:'Geist Mono',monospace;font-size:16px;font-weight:500">₹6.18L</div><div style="font-size:10.5px;color:var(--muted-2);letter-spacing:.04em;text-transform:uppercase;margin-top:2px">Prepaid revenue</div></div>
+          <div><div style="font-family:'Geist Mono',monospace;font-size:16px;font-weight:500">₹1.05L</div><div style="font-size:10.5px;color:var(--muted-2);letter-spacing:.04em;text-transform:uppercase;margin-top:2px">COD revenue</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── Revenue vs Spend Trend ───── -->
+  <section class="row rise rise-6">
+    <div class="card">
+      <div class="card-h">
+        <div class="ttl-block">
+          <div class="card-ttl">Revenue vs Spend Trend</div>
+          <div class="card-sub">Daily · Last 30 days</div>
+        </div>
+        <div class="legend">
+          <span class="item"><span class="swatch" style="background:var(--c1)"></span>Revenue</span>
+          <span class="item"><span class="swatch" style="background:var(--c3)"></span>Ad Spend</span>
+          <span style="color:var(--muted);font-size:12px;margin-left:14px">ROAS <b style="color:var(--ink);font-family:'Geist Mono',monospace;font-weight:500">2.18×</b></span>
+        </div>
+      </div>
+      <div class="chart-wrap"><svg id="revSpend"></svg></div>
+    </div>
+  </section>
+
+  <!-- ───── Row: Traffic / Ecommerce / Funnel ───── -->
+  <section class="row cols-12 rise rise-7">
+    <div class="card span-4">
+      <div class="card-h">
+        <div class="ttl-block">
+          <div class="card-ttl">Traffic Trend</div>
+          <div class="card-sub">Sessions · Users · New · Last 30 days</div>
+        </div>
+      </div>
+      <div class="chart-wrap"><svg id="trafficChart"></svg></div>
+      <div class="legend">
+        <span class="item"><span class="swatch" style="background:var(--c1)"></span>Sessions</span>
+        <span class="item"><span class="swatch" style="background:var(--c4)"></span>Users</span>
+        <span class="item"><span class="swatch" style="background:var(--c3)"></span>New users</span>
+      </div>
+    </div>
+
+    <div class="card span-4">
+      <div class="card-h">
+        <div class="ttl-block">
+          <div class="card-ttl">Ecommerce Trend</div>
+          <div class="card-sub">Revenue & transactions</div>
+        </div>
+      </div>
+      <div class="chart-wrap"><svg id="ecChart"></svg></div>
+      <div class="legend">
+        <span class="item"><span class="swatch" style="background:var(--c1)"></span>Revenue</span>
+        <span class="item"><span class="swatch" style="background:var(--c2)"></span>Transactions</span>
+      </div>
+    </div>
+
+    <div class="card span-4">
+      <div class="card-h">
+        <div class="ttl-block">
+          <div class="card-ttl">Conversion Funnel</div>
+          <div class="card-sub">Sessions → Checkouts → Purchases</div>
+        </div>
+      </div>
+      <div class="funnel" id="funnelArea"></div>
+      <div class="funnel-foot" id="funnelFoot"></div>
+    </div>
+  </section>
+
+  <!-- ───── Row: Acquisition donut + map ───── -->
+  <section class="row cols-12 rise rise-8">
+    <div class="card span-5">
+      <div class="card-h">
+        <div class="ttl-block">
+          <div class="card-ttl">Acquisition</div>
+          <div class="card-sub">Traffic by channel · Last 30 days</div>
+        </div>
+      </div>
+      <div class="donut-wrap">
+        <div class="donut"><svg id="acqDonut"></svg></div>
+        <div class="donut-legend" id="acqLegend"></div>
+      </div>
+    </div>
+
+    <div class="card span-7">
+      <div class="card-h">
+        <div class="ttl-block">
+          <div class="card-ttl">Active Users by Country</div>
+          <div class="card-sub">Last 30 days</div>
+        </div>
+        <span style="color:var(--muted);font-size:11.5px">Total <b style="color:var(--ink);font-weight:500">49,553</b></span>
+      </div>
+      <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:18px;align-items:start">
+        <div>
+          <div class="map-wrap"><svg id="worldMap"></svg></div>
+          <div class="map-legend">
+            <span>Less</span>
+            <span class="scale"><div style="background:rgba(184,137,62,0.10)"></div><div style="background:rgba(184,137,62,0.28)"></div><div style="background:rgba(184,137,62,0.5)"></div><div style="background:rgba(184,137,62,0.75)"></div><div style="background:var(--accent)"></div></span>
+            <span>More</span>
+          </div>
+        </div>
+        <div class="country-table" id="mapList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── Row: Campaign performance + Top Pages ───── -->
+  <section class="row cols-12">
+    <div class="card span-6">
+      <div class="card-h">
+        <div class="ttl-block">
+          <div class="card-ttl">Campaign Performance</div>
+          <div class="card-sub">Meta Ads · Last 30 days</div>
+        </div>
+        <div class="tabs">
+          <button class="active">Meta</button>
+          <button>Google</button>
+          <button>All</button>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table class="tbl" id="campaignTable">
+          <thead>
+            <tr>
+              <th class="sortable">Campaign</th>
+              <th class="num sortable">Spend</th>
+              <th class="num sortable">Revenue</th>
+              <th class="num sortable sort-desc">ROAS</th>
+              <th class="num sortable">CTR</th>
+              <th class="num sortable">CPM</th>
+              <th class="num sortable">Freq</th>
+              <th class="sortable">Status</th>
+            </tr>
+          </thead>
+          <tbody id="campaignBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card span-6">
+      <div class="card-h">
+        <div class="ttl-block">
+          <div class="card-ttl">Top Pages &amp; Screens</div>
+          <div class="card-sub">Views · Users · Engagement · Last 30 days</div>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table class="tbl" id="pagesTable">
+          <thead>
+            <tr>
+              <th class="sortable">Page</th>
+              <th class="num sortable sort-desc">Views</th>
+              <th class="num sortable">Users</th>
+              <th class="num sortable">V/U</th>
+              <th class="num sortable">Avg time</th>
+              <th class="num sortable">Events</th>
+              <th class="num sortable">Bounce</th>
+            </tr>
+          </thead>
+          <tbody id="pagesBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───── Row: Top products / Top rated / Reviews summary ───── -->
+  <section class="row cols-3">
+    <div class="card">
+      <div class="card-h">
+        <div class="ttl-block">
+          <div class="card-ttl">Top 5 Products</div>
+          <div class="card-sub">By revenue · this period</div>
+        </div>
+        <button class="btn" style="height:28px;padding:0 10px;font-size:11.5px">All</button>
+      </div>
+      <div class="products-list" id="topProducts"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">
+        <div class="ttl-block">
+          <div class="card-ttl">Top Rated Products</div>
+          <div class="card-sub">Highest customer rating</div>
+        </div>
+      </div>
+      <div class="products-list" id="topRated"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">
+        <div class="ttl-block">
+          <div class="card-ttl">Review Summary</div>
+          <div class="card-sub">All-time customer feedback</div>
+        </div>
+      </div>
+      <div class="rev-hero">
+        <div class="v">4.9</div>
+        <div class="meta">
+          <div class="stars">★★★★★</div>
+          <div class="count">8 reviews · this period</div>
+        </div>
+      </div>
+      <div class="rev-bars" id="revBars"></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ═══════════════ CMD+K PALETTE ═══════════════ -->
+<div class="cmdk-overlay" id="cmdkOverlay">
+  <div class="cmdk" onclick="event.stopPropagation()">
+    <div class="cmdk-input-wrap">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input class="cmdk-input" id="cmdkInput" placeholder="Search pages, orders, customers, actions…" />
+      <span class="esc">Esc</span>
+    </div>
+    <div class="cmdk-list" id="cmdkList"></div>
+  </div>
+</div>
+
+<div id="tweaks-root"></div>
+
+<script src="data.js?v=5"></script>
+<script src="charts.js?v=5"></script>
+<script src="dashboard.js?v=5"></script>
+
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel">
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "light",
+  "accent": "#f5f5f5",
+  "density": "compact",
+  "kpiStyle": "bento"
+}/*EDITMODE-END*/;
+
+function TweaksApp() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+  React.useEffect(() => {
+    document.documentElement.setAttribute('data-theme', t.theme);
+    try { localStorage.setItem('shayn-theme', t.theme); } catch(_) {}
+    const sun = document.getElementById('iconSun'), moon = document.getElementById('iconMoon');
+    if (sun && moon) { sun.style.display = t.theme === 'dark' ? 'block' : 'none'; moon.style.display = t.theme === 'dark' ? 'none' : 'block'; }
+  }, [t.theme]);
+
+  React.useEffect(() => {
+    document.documentElement.style.setProperty('--accent', t.accent);
+    const hex = t.accent.replace('#','');
+    const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
+    document.documentElement.style.setProperty('--accent-soft', `rgba(${r},${g},${b},0.10)`);
+    document.documentElement.style.setProperty('--accent-soft-2', `rgba(${r},${g},${b},0.22)`);
+  }, [t.accent]);
+
+  React.useEffect(() => {
+    const map = { compact: 'compact', balanced: '', comfy: 'comfy' };
+    document.documentElement.setAttribute('data-density', map[t.density] || '');
+  }, [t.density]);
+
+  React.useEffect(() => {
+    const grid = document.getElementById('kpiGrid');
+    if (grid) grid.setAttribute('data-style', t.kpiStyle);
+  }, [t.kpiStyle]);
+
+  return (
+    <TweaksPanel title="Tweaks · SHAYN MIS">
+      <TweakSection label="Theme" />
+      <TweakRadio label="Mode" value={t.theme} options={['light','dark']} onChange={(v)=>setTweak('theme',v)} />
+      <TweakColor label="Accent" value={t.accent} onChange={(v)=>setTweak('accent',v)} />
+
+      <TweakSection label="Layout" />
+      <TweakRadio label="Density" value={t.density} options={['compact','balanced','comfy']} onChange={(v)=>setTweak('density',v)} />
+
+      <TweakSection label="KPI strip" />
+      <TweakRadio label="Style" value={t.kpiStyle} options={[{value:'bento',label:'Bento'},{value:'flat',label:'Flat'},{value:'minimal',label:'Minimal'}]} onChange={(v)=>setTweak('kpiStyle',v)} />
+
+      <TweakButton label="Reset to defaults" secondary onClick={() => {
+        Object.entries(TWEAK_DEFAULTS).forEach(([k,v]) => setTweak(k,v));
+      }} />
+    </TweaksPanel>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('tweaks-root')).render(<TweaksApp />);
+</script>
+
+<style>
+.kpi-grid[data-style="flat"] .kpi { grid-column: span 2 !important; grid-row: span 1 !important; min-height: 132px; }
+.kpi-grid[data-style="flat"] .kpi.size-xl .kpi-val { font-size: 30px; }
+.kpi-grid[data-style="flat"] .kpi.size-xl .kpi-spark { height: 36px; }
+.kpi-grid[data-style="minimal"] .kpi-spark, .kpi-grid[data-style="minimal"] .kpi-icon { display: none; }
+.kpi-grid[data-style="minimal"] .kpi { grid-column: span 2 !important; grid-row: span 1 !important; min-height: 110px; }
+.kpi-grid[data-style="minimal"] .kpi.size-xl .kpi-val { font-size: 32px; }
+</style>
+</body>
+</html>

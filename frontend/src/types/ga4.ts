@@ -3,7 +3,6 @@ export interface GA4Summary {
   total_users:          number;
   total_new_users:      number;
   total_page_views:     number;
-  avg_bounce_rate:      number;
   avg_session_duration: number;
 }
 
@@ -12,7 +11,6 @@ export interface GA4SummaryInsights {
   users_delta_pct: number;
   new_users_delta_pct: number;
   page_views_delta_pct: number;
-  bounce_rate_delta_pct: number;
   avg_session_duration_delta_pct: number;
 }
 

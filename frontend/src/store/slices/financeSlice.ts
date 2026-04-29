@@ -6,65 +6,48 @@ import type {
   FinanceKpisApi,
   PaymentMethodSplitApi,
   RefundsSummaryApi,
-  RevenueBreakdownPointApi,
+  RevenueBreakdownComparisonApi,
   SalesBreakdownApi,
+  SalesByChannelApi,
+  SalesByProductApi,
 } from '@app/types/finance-api';
-
-export type SalesBreakdownMode = 'computed' | 'shopify_native';
 
 export interface FinanceState {
   kpis: FinanceKpisApi | null;
-  breakdown: RevenueBreakdownPointApi[];
+  breakdown: RevenueBreakdownComparisonApi | null;
   paymentSplit: PaymentMethodSplitApi | null;
   refundsSummary: RefundsSummaryApi | null;
   salesBreakdown: SalesBreakdownApi | null;
-  salesBreakdownMode: SalesBreakdownMode;
+  salesByChannel: SalesByChannelApi | null;
+  salesByProduct: SalesByProductApi | null;
   loading: boolean;
-  loadingSalesBreakdown: boolean;
   error: string | null;
 }
 
 const initialState: FinanceState = {
   kpis: null,
-  breakdown: [],
+  breakdown: null,
   paymentSplit: null,
   refundsSummary: null,
   salesBreakdown: null,
-  salesBreakdownMode: 'computed',
+  salesByChannel: null,
+  salesByProduct: null,
   loading: false,
-  loadingSalesBreakdown: false,
   error: null,
 };
 
 export const fetchFinanceOverview = createAsyncThunk(
   'finance/fetchOverview',
-  async (
-    args: RangeState | { range: RangeState; salesBreakdownMode?: SalesBreakdownMode },
-  ) => {
-    const range = 'preset' in args ? args : args.range;
-    const mode = 'preset' in args ? 'computed' : args.salesBreakdownMode ?? 'computed';
+  async (range: RangeState) => {
     const params = buildFinanceRangeParams(range);
-    return financeApi.fetchOverview({ ...params, salesBreakdownMode: mode });
-  },
-);
-
-/** Refetch only the Sales Breakdown when the user toggles "Verified by Shopify". */
-export const fetchSalesBreakdownOnly = createAsyncThunk(
-  'finance/fetchSalesBreakdownOnly',
-  async (args: { range: RangeState; mode: SalesBreakdownMode }) => {
-    const params = buildFinanceRangeParams(args.range);
-    return financeApi.getSalesBreakdown({ ...params, mode: args.mode });
+    return financeApi.fetchOverview(params);
   },
 );
 
 const financeSlice = createSlice({
   name: 'finance',
   initialState,
-  reducers: {
-    setSalesBreakdownMode(state, action: { payload: SalesBreakdownMode }) {
-      state.salesBreakdownMode = action.payload;
-    },
-  },
+  reducers: {},
   extraReducers: (builder) => {
     builder
       .addCase(fetchFinanceOverview.pending, (state) => {
@@ -78,23 +61,14 @@ const financeSlice = createSlice({
         state.paymentSplit = action.payload.paymentSplit;
         state.refundsSummary = action.payload.refundsSummary;
         state.salesBreakdown = action.payload.salesBreakdown;
+        state.salesByChannel = action.payload.salesByChannel;
+        state.salesByProduct = action.payload.salesByProduct;
       })
       .addCase(fetchFinanceOverview.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message ?? 'Failed to load finance overview';
-      })
-      .addCase(fetchSalesBreakdownOnly.pending, (state) => {
-        state.loadingSalesBreakdown = true;
-      })
-      .addCase(fetchSalesBreakdownOnly.fulfilled, (state, action) => {
-        state.loadingSalesBreakdown = false;
-        state.salesBreakdown = action.payload;
-      })
-      .addCase(fetchSalesBreakdownOnly.rejected, (state) => {
-        state.loadingSalesBreakdown = false;
       });
   },
 });
 
-export const { setSalesBreakdownMode } = financeSlice.actions;
 export default financeSlice.reducer;

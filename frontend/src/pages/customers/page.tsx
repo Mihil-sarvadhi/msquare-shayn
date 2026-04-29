@@ -16,16 +16,14 @@ import {
 import type { CustomerOverview, CustomerSegmentItem, TopCustomerItem, GeoRevenueItem } from '@app/types/analytics';
 import type { TopRatedProduct } from '@app/types/dashboard';
 
-const ACCENT = '#8b6f3a';
-const POS    = '#2d7a5f';
-const MUTED  = '#a39f92';
+import { ACCENT, POS, MUTED } from '@utils/constants/palette';
 
 function CustomerSegmentsChart({ data }: { data: CustomerSegmentItem[] }) {
   return (
     <div className="h-full min-h-[180px]">
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={data} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e8e6df" vertical={false} />
+        <CartesianGrid strokeDasharray="2 3" stroke="var(--line)" vertical={false} />
         <XAxis dataKey="bucket" tick={{ fontSize: 11, fill: MUTED }} tickLine={false} axisLine={false} height={22} />
         <YAxis
           tickFormatter={(v: number) => formatNum(v)}
@@ -55,7 +53,7 @@ function NewVsReturningChart({ data }: { data: CustomerOverview | null }) {
     <div className="h-full min-h-[180px]">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={bars} margin={{ top: 10, right: 8, left: 0, bottom: 0 }} barCategoryGap="30%">
-          <CartesianGrid strokeDasharray="3 3" stroke="#e8e6df" vertical={false} />
+          <CartesianGrid strokeDasharray="2 3" stroke="var(--line)" vertical={false} />
           <XAxis dataKey="name" tick={{ fontSize: 11, fill: MUTED }} tickLine={false} axisLine={false} height={22} />
           <YAxis
             tickFormatter={(v: number) => formatNum(v)}
@@ -113,7 +111,7 @@ function GeoRevenueChart({ data }: { data: GeoRevenueItem[] }) {
   return (
     <ResponsiveContainer width="100%" height={400}>
       <BarChart data={data} margin={{ top: 24, right: 16, left: 4, bottom: 40 }} barCategoryGap="20%">
-        <CartesianGrid strokeDasharray="3 3" stroke="#e8e6df" vertical={false} />
+        <CartesianGrid strokeDasharray="2 3" stroke="var(--line)" vertical={false} />
         <XAxis dataKey="state" tickLine={false} axisLine={false} interval={0} tick={<GeoStateTick />} />
         <YAxis
           tickFormatter={(v: number) => formatINR(v)}

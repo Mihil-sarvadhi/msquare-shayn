@@ -3,12 +3,12 @@ import { authenticate } from '@middleware/auth';
 import {
   kpisHandler,
   paymentMethodSplitHandler,
-  payoutDetailHandler,
-  payoutsListHandler,
   refundsListHandler,
   refundsSummaryHandler,
   revenueBreakdownHandler,
   salesBreakdownHandler,
+  salesByChannelHandler,
+  salesByProductHandler,
   transactionsListHandler,
 } from './finance.controller';
 
@@ -20,8 +20,8 @@ router.get('/kpis', kpisHandler);
 router.get('/revenue-breakdown', revenueBreakdownHandler);
 router.get('/sales-breakdown', salesBreakdownHandler);
 router.get('/payment-method-split', paymentMethodSplitHandler);
-router.get('/payouts', payoutsListHandler);
-router.get('/payouts/:id', payoutDetailHandler);
+router.get('/sales-by-channel', salesByChannelHandler);
+router.get('/sales-by-product', salesByProductHandler);
 router.get('/refunds', refundsListHandler);
 router.get('/refunds/summary', refundsSummaryHandler);
 router.get('/transactions', transactionsListHandler);

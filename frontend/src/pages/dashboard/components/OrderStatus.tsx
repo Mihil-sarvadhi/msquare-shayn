@@ -4,8 +4,9 @@ import { formatNum } from '@utils/formatters';
 
 interface Props { kpis: KPIs | null; loading: boolean; }
 
-const COLORS = ['#C9991A', '#E07B3A', '#C0394B', '#9E9E9E'];
-const TRACK  = '#F0EBE0';
+/* Mockup palette: c1 gold (fulfilled), c5 amber (in transit), red (RTO), muted (cancelled) */
+const COLORS = ['#1F8A4C', '#C8780B', '#C4361F', '#98948A'];
+const TRACK  = 'var(--bg-2)';
 
 export default function OrderStatus({ kpis, loading }: Props) {
   if (loading) return <div className="h-40 bg-parch animate-pulse rounded-lg" />;

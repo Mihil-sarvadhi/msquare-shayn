@@ -43,22 +43,22 @@ export default function ConnectorStatus({ health }: ConnectorStatusProps) {
             key={h.connector_name}
             onMouseEnter={() => setHovered(h.connector_name)}
             onMouseLeave={() => setHovered(null)}
-            className="flex items-center justify-between rounded-lg px-3 py-2 transition-all duration-200 cursor-default hover:bg-[#F5F0E8]"
+            className="flex items-center justify-between rounded-lg px-3 py-2 transition-all duration-200 cursor-default hover:bg-[var(--surface-2)]"
           >
             {/* Left — icon + label */}
             <div className="flex items-center gap-2.5">
               <span className="text-base leading-none">{meta.icon}</span>
-              <span className="text-sm font-medium text-[#1A1208]">{meta.label}</span>
+              <span className="text-sm font-medium text-[var(--ink)]">{meta.label}</span>
             </div>
 
             {/* Right — status dot + label, time appears on hover */}
             <div className="flex items-center gap-1.5 justify-end">
               {isHovered && h.last_sync_at ? (
-                <span className="text-[11px] text-[#8C7B64] tabular-nums">{formatIST(h.last_sync_at)}</span>
+                <span className="text-[11px] text-[var(--muted)] tabular-nums">{formatIST(h.last_sync_at)}</span>
               ) : (
                 <>
                   <span className={`w-2 h-2 rounded-full ${style.dot} ring-2 ${style.ring}`} />
-                  <span className="text-[11px] text-[#8C7B64]">{style.label}</span>
+                  <span className="text-[11px] text-[var(--muted)]">{style.label}</span>
                 </>
               )}
             </div>

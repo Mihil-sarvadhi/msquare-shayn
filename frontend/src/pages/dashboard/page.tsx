@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Camera, ChevronRight } from 'lucide-react';
+import {
+  ShieldCheck, Camera, ChevronRight,
+  TrendingUp, IndianRupee, Globe, Users, UserPlus,
+} from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@store/hooks';
 import { fetchDashboard } from '@store/slices/dashboardSlice';
 import { fetchMarketingData, fetchOperationsData } from '@store/slices/analyticsSlice';
 import { fetchGA4Data, fetchGA4RealtimeWidgetData, refreshGA4Realtime } from '@store/slices/ga4Slice';
+import { Ticker } from '@components/layout/Ticker';
 import { DrawerProvider } from '@components/shared/DrawerContext';
 import { InfoDrawer } from '@components/shared/InfoDrawer';
 import { KpiCard } from '@components/shared/KpiCard';
@@ -27,21 +31,22 @@ import type {
   GA4Product, GA4RealtimeWidget, GA4PageScreen, GA4CountryActiveUsers,
 } from '@app/types/ga4';
 
-/* ─── Palette ─────────────────────────────────────────────────── */
-const ACCENT = '#8b6f3a';
-const POS    = '#2d7a5f';
-const INFO   = '#5b7cc7';
-const WARN   = '#c4871f';
-const NEG    = '#b8433a';
-const MUTED  = '#a39f92';
-const AI     = '#5b4299';
+/* ─── Palette (mockup c1-c5 + semantics) ─────────────────────── */
+const ACCENT = '#B8893E';   /* c1 — gold */
+const TEAL   = '#0F8C82';   /* c2 */
+const INFO   = '#2456C2';   /* c3 — blue */
+const POS    = '#1F8A4C';   /* c4 — green */
+const WARN   = '#C8780B';   /* c5 — amber */
+const NEG    = '#C4361F';   /* red */
+const MUTED  = '#98948A';
+const AI     = '#6E3FD0';   /* purple */
 
 const CHANNEL_DEFS = [
   { key: 'shopify',  label: 'Shopify',  color: ACCENT,   active: true  },
-  { key: 'amazon',   label: 'Amazon',   color: '#e8a838', active: false },
-  { key: 'flipkart', label: 'Flipkart', color: '#c4871f', active: false },
-  { key: 'myntra',   label: 'Myntra',   color: '#6b5529', active: false },
-  { key: 'eternz',   label: 'Eternz',   color: '#a39f92', active: false },
+  { key: 'amazon',   label: 'Amazon',   color: '#E8A838', active: false },
+  { key: 'flipkart', label: 'Flipkart', color: WARN,     active: false },
+  { key: 'myntra',   label: 'Myntra',   color: '#8C6624', active: false },
+  { key: 'eternz',   label: 'Eternz',   color: MUTED,    active: false },
 ] as const;
 
 const CHANNEL_COLORS: Record<string, string> = {
@@ -50,11 +55,11 @@ const CHANNEL_COLORS: Record<string, string> = {
   'Paid Social':     INFO,
   'Organic Social':  AI,
   'Email':           WARN,
-  'Referral':        '#2f9e9e',
+  'Referral':        TEAL,
   'Paid Search':     NEG,
   'Unassigned':      MUTED,
 };
-const FALLBACK_COLORS = [ACCENT, POS, INFO, WARN, AI, '#2f9e9e', NEG, MUTED];
+const FALLBACK_COLORS = [ACCENT, TEAL, INFO, POS, WARN, AI, NEG, MUTED];
 
 /* ─── Helpers ─────────────────────────────────────────────────── */
 function delta(current: number | undefined | null, prev: number | undefined | null): number | undefined {
@@ -152,35 +157,35 @@ function RealtimeActiveUsers({
   return (
     <div className="h-full flex flex-col">
       <div className="mb-3 flex items-start justify-between">
-        <p className="text-4xl font-bold text-[var(--text)]">{formatNum(total)}</p>
+        <p className="text-[42px] font-medium tracking-tightx leading-none tabular-nums text-[var(--ink)]">{formatNum(total)}</p>
         <div className="flex items-center gap-2 mt-2">
           <span className="relative flex h-2.5 w-2.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--green)] opacity-75" />
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[var(--green)]" />
           </span>
-          <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-semibold">Live</span>
+          <span className="text-[10px] uppercase tracking-widish text-[var(--muted)] font-medium">Live</span>
         </div>
       </div>
-      <p className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] font-semibold mb-2">
+      <p className="text-[10.5px] uppercase tracking-widish text-[var(--muted)] font-medium mb-2">
         {metric === 'newUsers' ? 'New users per minute' : 'Active users per minute'}
       </p>
       <div className="mb-3">
         <ResponsiveContainer width="100%" height={64}>
           <BarChart data={trend}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e8e6df" vertical={false} />
+            <CartesianGrid strokeDasharray="2 3" stroke="var(--line)" vertical={false} />
             <XAxis dataKey="minute" tick={{ fontSize: 10, fill: MUTED }} tickLine={false} axisLine={false} interval={4} minTickGap={12} padding={{ left: 16, right: 16 }} allowDataOverflow />
             <YAxis hide />
             <Tooltip content={<CustomTooltip formatter={(v) => formatNum(Number(v))} labelFormatter={(label) => `${label}`} />} />
-            <Bar dataKey="value" name={metricLabelTitle} fill={INFO} radius={[3, 3, 0, 0]} />
+            <Bar dataKey="value" name={metricLabelTitle} fill={ACCENT} radius={[2, 2, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
       <div className="grid grid-cols-2 gap-2 mb-2">
-        <select className="h-8 rounded-md border border-[var(--border)] bg-white px-2 text-xs text-[var(--text)]" value={location} onChange={(e) => onLocationChange(e.target.value as 'country' | 'city')}>
+        <select className="h-8 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 text-xs text-[var(--ink)]" value={location} onChange={(e) => onLocationChange(e.target.value as 'country' | 'city')}>
           <option value="country">Country</option>
           <option value="city">City</option>
         </select>
-        <select className="h-8 rounded-md border border-[var(--border)] bg-white px-2 text-xs text-[var(--text)]" value={metric} onChange={(e) => onMetricChange(e.target.value as 'activeUsers' | 'newUsers')}>
+        <select className="h-8 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 text-xs text-[var(--ink)]" value={metric} onChange={(e) => onMetricChange(e.target.value as 'activeUsers' | 'newUsers')}>
           <option value="activeUsers">Active users</option>
           <option value="newUsers">New users</option>
         </select>
@@ -189,16 +194,16 @@ function RealtimeActiveUsers({
         <div className="flex-1 overflow-y-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-[var(--border)]">
-                <th className="py-1 pr-3 text-left  text-[var(--text-muted)] font-medium">{locationLabel}</th>
-                <th className="py-1      text-right text-[var(--text-muted)] font-medium">{metricLabel}</th>
+              <tr className="border-b border-[var(--line)]">
+                <th className="py-1.5 pr-3 text-left  text-[10.5px] font-medium uppercase tracking-widish text-[var(--muted)]">{locationLabel}</th>
+                <th className="py-1.5      text-right text-[10.5px] font-medium uppercase tracking-widish text-[var(--muted)]">{metricLabel}</th>
               </tr>
             </thead>
             <tbody>
               {breakdown.slice(0, 5).map((r) => (
-                <tr key={r.location} className="border-b border-[var(--border)] last:border-0">
-                  <td className="py-1 pr-3 text-[var(--text)]">{r.location}</td>
-                  <td className="py-1      text-right tabular-nums font-semibold">{formatNum(r.value)}</td>
+                <tr key={r.location} className="border-b border-[var(--line)] last:border-0">
+                  <td className="py-1.5 pr-3 text-[12.5px] text-[var(--ink-2)]">{r.location}</td>
+                  <td className="py-1.5      text-right font-mono text-[12.5px] tabular-nums font-medium text-[var(--ink)]">{formatNum(r.value)}</td>
                 </tr>
               ))}
             </tbody>
@@ -218,42 +223,50 @@ function LiveActivityFeed({ orders, kpis, prevKpis }: { orders: RecentOrder[]; k
   const ordersDelta = prevOrders > 0 ? ((ordersToday - prevOrders) / prevOrders) * 100 : undefined;
   return (
     <div>
-      <p className="text-xs text-[var(--text-muted)] mb-1">Orders this period</p>
+      <p className="text-[11px] font-medium uppercase tracking-widish text-[var(--muted)] mb-1.5">Orders this period</p>
       <div className="flex items-baseline gap-2 mb-1">
-        <p className="text-3xl font-semibold text-[var(--text)]">{formatNum(ordersToday)}</p>
+        <p className="text-[30px] font-medium tracking-tightx tabular-nums leading-none text-[var(--ink)]">{formatNum(ordersToday)}</p>
         {ordersDelta !== undefined && (
           <span className={cn(
-            'text-xs font-semibold px-1.5 py-0.5 rounded-full',
-            ordersDelta >= 0 ? 'bg-[var(--pos-soft)] text-[var(--pos)]' : 'bg-[var(--neg-soft)] text-[var(--neg)]',
+            'inline-flex items-center gap-0.5 text-[11.5px] font-medium tabular-nums',
+            'px-2 py-[3px] rounded-full',
+            ordersDelta >= 0 ? 'bg-[var(--green-soft)] text-[var(--green)]' : 'bg-[var(--red-soft)] text-[var(--red)]',
           )}>
             {ordersDelta >= 0 ? '↑' : '↓'} {Math.abs(ordersDelta).toFixed(1)}%
           </span>
         )}
       </div>
       {prevOrders > 0 && (
-        <p className="text-xs text-[var(--text-subtle)] mb-3">vs {formatNum(prevOrders)} previous period</p>
+        <p className="text-[11.5px] text-[var(--muted-2)] mb-3">vs {formatNum(prevOrders)} previous period</p>
       )}
       <div className="space-y-0">
         {orders.slice(0, 5).map((o, i) => (
-          <div key={o.order_id || i} className="group relative flex items-center justify-between py-2 border-b border-[var(--border)] last:border-0">
+          <div key={o.order_id || i} className="group relative grid grid-cols-[1fr_auto] items-start gap-3 py-3 border-b border-[var(--line)] last:border-0 transition-[padding] hover:pl-1.5">
             <div className="min-w-0">
-              <p className="text-xs font-medium text-[var(--text)] truncate">{o.order_name}</p>
-              <p className="text-xs text-[var(--text-subtle)] truncate">{o.customer_city}</p>
-              <div className="mt-1 flex items-center gap-1.5">
+              <p className="font-mono text-[12px] font-medium text-[var(--ink)] truncate">{o.order_name}</p>
+              <p className="text-[11px] uppercase tracking-widish text-[var(--muted)] truncate mt-[2px]">{o.customer_city || '—'}</p>
+              <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
                 <span className={cn(
-                  'px-1.5 py-0.5 rounded-full text-[10px] font-medium capitalize',
-                  prettyStatus(o.financial_status).includes('paid') ? 'bg-[var(--pos-soft)] text-[var(--pos)]' : 'bg-[var(--warn-soft)] text-[var(--warn)]',
+                  'inline-flex px-2 py-[3px] rounded-md text-[10.5px] font-medium tracking-[0.04em] capitalize',
+                  prettyStatus(o.financial_status).includes('paid')
+                    ? 'bg-[var(--green-soft)] text-[var(--green)]'
+                    : 'bg-[var(--amber-soft)] text-[var(--amber)]',
                 )}>
                   {prettyStatus(o.financial_status)}
                 </span>
-                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium capitalize bg-[var(--surface-2)] text-[var(--text-muted)]">
+                <span className={cn(
+                  'inline-flex px-2 py-[3px] rounded-md text-[10.5px] font-medium tracking-[0.04em] capitalize',
+                  prettyStatus(o.fulfillment_status).includes('fulfill') && !prettyStatus(o.fulfillment_status).includes('un')
+                    ? 'bg-[var(--blue-soft)] text-[var(--blue)]'
+                    : 'bg-[var(--bg-2)] text-[var(--muted)]',
+                )}>
                   {prettyStatus(o.fulfillment_status)}
                 </span>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-xs font-semibold text-[var(--accent)]">{formatINRFull(o.revenue)}</p>
-              <p className="text-xs text-[var(--text-subtle)]">{formatDate(o.created_at)}</p>
+              <p className="font-mono text-[13px] font-medium text-[var(--ink)] tabular-nums">{formatINRFull(o.revenue)}</p>
+              <p className="text-[10.5px] uppercase tracking-[0.04em] text-[var(--muted-2)] mt-[2px]">{formatDate(o.created_at)}</p>
             </div>
             <div className="pointer-events-none absolute left-0 top-full z-20 mt-1 hidden w-[320px] rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2 shadow-lg group-hover:block">
               <p className="text-[11px] font-semibold text-[var(--text)] mb-1">{o.order_name}</p>
@@ -293,23 +306,28 @@ function AbandonedCartsWidget({ carts }: { carts: { count: number; total_value: 
   return (
     <div className="h-full flex flex-col">
       <div>
-        <p className="text-4xl font-semibold text-[var(--neg)]">{formatNum(carts?.count ?? 0)}</p>
-        <p className="text-xs text-[var(--text-muted)] mt-1">abandoned carts</p>
+        <p className="text-[42px] font-medium tracking-tightx leading-none text-[var(--red)] tabular-nums">{formatNum(carts?.count ?? 0)}</p>
+        <p className="text-[11px] font-medium uppercase tracking-widish text-[var(--muted)] mt-1.5">abandoned carts</p>
       </div>
-      <div className="h-px bg-[var(--border)] my-4" />
+      <div className="h-px bg-[var(--line)] my-4" />
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <p className="text-xl font-semibold text-[var(--text)]">{formatINR(carts?.total_value ?? 0)}</p>
-          <p className="text-xs text-[var(--text-muted)] mt-0.5">Cart Value Lost</p>
+          <p className="font-mono text-[18px] font-medium text-[var(--ink)] tabular-nums">{formatINR(carts?.total_value ?? 0)}</p>
+          <p className="text-[10.5px] font-medium uppercase tracking-[0.04em] text-[var(--muted)] mt-0.5">Cart Value Lost</p>
         </div>
         <div>
-          <p className="text-xl font-semibold text-[var(--text)]">{formatINR(carts?.avg_value ?? 0)}</p>
-          <p className="text-xs text-[var(--text-muted)] mt-0.5">Avg Cart Value</p>
+          <p className="font-mono text-[18px] font-medium text-[var(--ink)] tabular-nums">{formatINR(carts?.avg_value ?? 0)}</p>
+          <p className="text-[10.5px] font-medium uppercase tracking-[0.04em] text-[var(--muted)] mt-0.5">Avg Cart Value</p>
         </div>
       </div>
-      <p className="mt-auto pt-4 text-[10px] text-[var(--text-subtle)] leading-snug">
-        Recoverable revenue · trigger recovery emails within 2 hours for best conversion.
-      </p>
+      <div className="mt-auto pt-4">
+        <div className="flex items-start gap-2 rounded-[10px] bg-[var(--accent-soft)] px-3 py-2">
+          <span aria-hidden className="text-[var(--accent)] text-sm leading-none mt-[1px]">↺</span>
+          <p className="text-[11.5px] leading-snug text-[var(--ink-2)]">
+            <span className="font-medium text-[var(--accent)]">Recoverable revenue</span> · trigger recovery emails within 2 hours for best conversion.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -334,16 +352,16 @@ function RevenueByChannelPanel({ data, range, className }: { data: RevenueTrendI
     >
       <ResponsiveContainer width="100%" height={240}>
         <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barCategoryGap="30%">
-          <CartesianGrid strokeDasharray="3 3" stroke="#e8e6df" vertical={false} />
+          <CartesianGrid strokeDasharray="2 3" stroke="var(--line)" vertical={false} />
           <XAxis dataKey="date" tickFormatter={fmtAxisDate} tick={{ fontSize: 10, fill: MUTED }} tickLine={false} interval={xInterval} />
           <YAxis tickFormatter={fmtAxisINR} tick={{ fontSize: 10, fill: MUTED }} axisLine={false} tickLine={false} domain={[0, yMax]} tickCount={5} />
-          <Tooltip content={<CustomTooltip formatter={(v: number) => (v === 0 ? 'No orders' : formatINR(v))} />} cursor={{ fill: 'rgba(139,111,58,0.06)' }} />
+          <Tooltip content={<CustomTooltip formatter={(v: number) => (v === 0 ? 'No orders' : formatINR(v))} />} cursor={{ fill: 'rgba(184,137,62,0.08)' }} />
           <Bar dataKey="revenue" name="Shopify" radius={[3, 3, 0, 0]} maxBarSize={24}>
             {chartData.map((d, i) => {
               const isGap     = isSyncGap(chartData, i);
               const isToday   = d.date.slice(0, 10) === todayKey;
               const isNoData  = d.revenue === 0;
-              const fill = isGap ? '#f0c070' : isToday ? `${ACCENT}99` : isNoData ? '#e8e6df' : ACCENT;
+              const fill = isGap ? '#E0B070' : isToday ? `${ACCENT}99` : isNoData ? 'var(--bg-2)' : ACCENT;
               return <Cell key={i} fill={fill} />;
             })}
           </Bar>
@@ -353,7 +371,7 @@ function RevenueByChannelPanel({ data, range, className }: { data: RevenueTrendI
       <div className="flex items-center flex-wrap gap-x-4 gap-y-1.5 mt-3 pt-3 border-t border-[var(--border)]">
         {CHANNEL_DEFS.map((ch) => (
           <span key={ch.key} className={cn('flex items-center gap-1.5 text-xs', ch.active ? 'text-[var(--text-muted)]' : 'text-[var(--text-subtle)] opacity-50')} title={ch.active ? undefined : 'Coming soon — connect this channel to unlock'}>
-            <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: ch.active ? ch.color : '#d4d1c7' }} />
+            <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: ch.active ? ch.color : 'var(--line-3)' }} />
             {ch.label}
             {!ch.active && (<span className="text-[9px] font-medium bg-[var(--surface-2)] text-[var(--text-subtle)] px-1 py-0.5 rounded">soon</span>)}
           </span>
@@ -412,18 +430,18 @@ function RevenueVsSpendPanel({ data, range, className }: { data: RevenueVsSpendI
     >
       <ResponsiveContainer width="100%" height={220}>
         <LineChart data={data} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+          <CartesianGrid strokeDasharray="2 3" stroke="var(--line)" vertical={false} />
           <XAxis dataKey="date" tickFormatter={fmtDate} tick={{ fontSize: 10, fill: MUTED }} tickLine={false} interval={Math.floor(data.length / 6)} />
           <YAxis yAxisId="rev" orientation="left" tickFormatter={(v: number) => `₹${(v / 100000).toFixed(1)}L`} tick={{ fontSize: 10, fill: MUTED }} axisLine={false} tickLine={false} domain={[0, maxRevenue * 1.15]} />
           <YAxis yAxisId="spend" orientation="right" tickFormatter={(v: number) => `₹${(v / 100000).toFixed(1)}L`} tick={{ fontSize: 10, fill: MUTED }} axisLine={false} tickLine={false} domain={[0, maxSpend * 1.15]} />
           <Tooltip content={<CustomTooltip formatter={(v) => `₹${Number(v).toLocaleString('en-IN')}`} />} />
           <Line yAxisId="rev" type="monotone" dataKey="revenue" name="Revenue" stroke={ACCENT} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-          <Line yAxisId="spend" type="monotone" dataKey="ad_spend" name="Ad spend" stroke="#c97d3a" strokeWidth={1.5} strokeDasharray="5 3" dot={false} activeDot={{ r: 4 }} />
+          <Line yAxisId="spend" type="monotone" dataKey="ad_spend" name="Ad spend" stroke={INFO} strokeWidth={1.5} strokeDasharray="4 3" dot={false} activeDot={{ r: 4 }} />
         </LineChart>
       </ResponsiveContainer>
       <div className="flex justify-center gap-6 mt-2 text-xs text-[var(--text-muted)]">
         <span className="flex items-center gap-1.5"><span className="w-6 h-0.5 inline-block rounded" style={{ backgroundColor: ACCENT }} />Revenue</span>
-        <span className="flex items-center gap-1.5"><span className="w-6 h-0.5 inline-block rounded border-dashed border-t-2" style={{ borderColor: '#c97d3a' }} />Ad spend</span>
+        <span className="flex items-center gap-1.5"><span className="w-6 h-0.5 inline-block rounded border-dashed border-t-2" style={{ borderColor: INFO }} />Ad spend</span>
       </div>
     </Panel>
   );
@@ -438,7 +456,7 @@ function TrafficTrendChart({ data }: { data: GA4TrafficDaily[] }) {
     <div className="h-full min-h-[220px]">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e8e6df" vertical={false} />
+          <CartesianGrid strokeDasharray="2 3" stroke="var(--line)" vertical={false} />
           <XAxis dataKey="date" tickFormatter={fmtAxisDate} tick={{ fontSize: 10, fill: MUTED }} tickLine={false} interval={Math.max(0, Math.floor(data.length / 5) - 1)} padding={{ left: 8, right: 8 }} />
           <YAxis tickFormatter={formatNum} tick={{ fontSize: 10, fill: MUTED }} axisLine={false} tickLine={false} width={40} />
           <Tooltip content={<CustomTooltip formatter={(v) => formatNum(Number(v))} />} />
@@ -460,7 +478,7 @@ function EcommerceTrend({ data }: { data: GA4EcommerceDaily[] }) {
     <div className="h-full min-h-[220px]">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e8e6df" vertical={false} />
+          <CartesianGrid strokeDasharray="2 3" stroke="var(--line)" vertical={false} />
           <XAxis dataKey="date" tickFormatter={fmtAxisDate} tick={{ fontSize: 10, fill: MUTED }} tickLine={false} interval={Math.max(0, Math.floor(data.length / 5) - 1)} />
           <YAxis yAxisId="rev" tickFormatter={(v: number) => v >= 100000 ? `₹${(v / 100000).toFixed(1)}L` : `₹${(v / 1000).toFixed(0)}K`} tick={{ fontSize: 10, fill: MUTED }} axisLine={false} tickLine={false} width={42} />
           <YAxis yAxisId="txn" orientation="right" tickFormatter={formatNum} tick={{ fontSize: 10, fill: MUTED }} axisLine={false} tickLine={false} width={30} />
@@ -633,34 +651,34 @@ function TopProductsGA4({ data }: { data: GA4Product[] }) {
 function TopPagesScreensTable({ data }: { data: GA4PageScreen[] }) {
   if (!data.length) return <div className="h-40 flex items-center justify-center text-sm text-[var(--text-subtle)]">No page/screen data</div>;
   return (
-    <div className="overflow-auto max-h-[360px] pr-1">
-      <table className="w-full text-xs min-w-[600px] table-fixed">
+    <div className="overflow-auto max-h-[320px] pr-1">
+      <table className="w-full text-[12px]">
         <thead className="sticky top-0 bg-[var(--surface)] z-10">
-          <tr className="border-b border-[var(--border)]">
-            <th className="py-2 pr-3 text-left text-[var(--text-muted)] font-medium w-[46%]">Page</th>
-            <th className="py-2 pr-3 text-right text-[var(--text-muted)] font-medium whitespace-nowrap">Views</th>
-            <th className="py-2 pr-3 text-right text-[var(--text-muted)] font-medium whitespace-nowrap">Users</th>
-            <th className="py-2 pr-3 text-right text-[var(--text-muted)] font-medium whitespace-nowrap">Views / user</th>
-            <th className="py-2 pr-3 text-right text-[var(--text-muted)] font-medium whitespace-nowrap">Avg time</th>
-            <th className="py-2 pr-3 text-right text-[var(--text-muted)] font-medium whitespace-nowrap">Events</th>
-            <th className="py-2 pr-3 text-right text-[var(--text-muted)] font-medium whitespace-nowrap">Bounce</th>
+          <tr className="border-b border-[var(--line)]">
+            <th className="py-1.5 pr-3 text-left  text-[10.5px] uppercase tracking-widish text-[var(--muted)] font-medium">Page</th>
+            <th className="py-1.5 px-2 text-right text-[10.5px] uppercase tracking-widish text-[var(--muted)] font-medium whitespace-nowrap">Views</th>
+            <th className="py-1.5 px-2 text-right text-[10.5px] uppercase tracking-widish text-[var(--muted)] font-medium whitespace-nowrap">Users</th>
+            <th className="py-1.5 px-2 text-right text-[10.5px] uppercase tracking-widish text-[var(--muted)] font-medium whitespace-nowrap">V/U</th>
+            <th className="py-1.5 px-2 text-right text-[10.5px] uppercase tracking-widish text-[var(--muted)] font-medium whitespace-nowrap">Avg&nbsp;Time</th>
+            <th className="py-1.5 px-2 text-right text-[10.5px] uppercase tracking-widish text-[var(--muted)] font-medium whitespace-nowrap">Events</th>
+            <th className="py-1.5 pl-2 text-right text-[10.5px] uppercase tracking-widish text-[var(--muted)] font-medium whitespace-nowrap">Bounce</th>
           </tr>
         </thead>
         <tbody>
           {data.slice(0, 10).map((row, i) => (
-            <tr key={row.page_title} className={cn('transition-colors hover:bg-[#F8FAFC] border-b border-[var(--border)]/60 last:border-0', i % 2 === 1 && 'bg-[#FAFBFC]')}>
-              <td className="py-2.5 pr-3 text-[var(--text)] font-medium w-[46%]" title={row.page_title}>
-                <span className="block truncate">{row.page_title}</span>
+            <tr key={row.page_title} className={cn('transition-colors hover:bg-[var(--surface-2)] border-b border-[var(--line)]/60 last:border-0', i % 2 === 1 && 'bg-[var(--surface-2)]/40')}>
+              <td className="py-1.5 pr-3 text-[var(--ink)] font-medium" title={row.page_title}>
+                <div className="max-w-[260px] truncate">{row.page_title}</div>
               </td>
-              <td className="py-2.5 pr-3 text-right tabular-nums font-semibold text-[var(--text)] whitespace-nowrap">{formatNum(row.screen_page_views)}</td>
-              <td className="py-2.5 pr-3 text-right tabular-nums text-[var(--text-muted)] whitespace-nowrap">{formatNum(row.active_users)}</td>
-              <td className="py-2.5 pr-3 text-right tabular-nums text-[var(--text-muted)] whitespace-nowrap">{row.views_per_active_user.toFixed(2)}</td>
-              <td className="py-2.5 pr-3 text-right tabular-nums text-[var(--text-muted)] whitespace-nowrap">{Math.round(row.avg_engagement_time_per_active_user)}s</td>
-              <td className="py-2.5 pr-3 text-right tabular-nums text-[var(--text-muted)] whitespace-nowrap">{formatNum(row.event_count)}</td>
-              <td className="py-2.5 pr-3 text-right tabular-nums whitespace-nowrap">
-                <span className="px-2 py-0.5 rounded-md text-xs font-semibold" style={{
-                  color: row.bounce_rate > 0.6 ? '#DC2626' : row.bounce_rate > 0.4 ? '#D97706' : '#059669',
-                  backgroundColor: row.bounce_rate > 0.6 ? '#FEE2E2' : row.bounce_rate > 0.4 ? '#FEF3C7' : '#D1FAE5',
+              <td className="py-1.5 px-2 text-right tabular-nums font-medium text-[var(--ink)] whitespace-nowrap font-mono">{formatNum(row.screen_page_views)}</td>
+              <td className="py-1.5 px-2 text-right tabular-nums text-[var(--muted)] whitespace-nowrap font-mono">{formatNum(row.active_users)}</td>
+              <td className="py-1.5 px-2 text-right tabular-nums text-[var(--muted)] whitespace-nowrap font-mono">{row.views_per_active_user.toFixed(2)}</td>
+              <td className="py-1.5 px-2 text-right tabular-nums text-[var(--muted)] whitespace-nowrap font-mono">{Math.round(row.avg_engagement_time_per_active_user)}s</td>
+              <td className="py-1.5 px-2 text-right tabular-nums text-[var(--muted)] whitespace-nowrap font-mono">{formatNum(row.event_count)}</td>
+              <td className="py-1.5 pl-2 text-right tabular-nums whitespace-nowrap">
+                <span className="px-1.5 py-[1px] rounded text-[10.5px] font-medium font-mono" style={{
+                  color:           row.bounce_rate > 0.6 ? 'var(--red)'      : row.bounce_rate > 0.4 ? 'var(--amber)'      : 'var(--green)',
+                  backgroundColor: row.bounce_rate > 0.6 ? 'var(--red-soft)' : row.bounce_rate > 0.4 ? 'var(--amber-soft)' : 'var(--green-soft)',
                 }}>
                   {(row.bounce_rate * 100).toFixed(1)}%
                 </span>
@@ -694,33 +712,38 @@ function ActiveUsersCountryMapCard({ data, loading, subtitle }: { data: GA4Count
     if (!data.length) return <div className="h-[240px] flex items-center justify-center text-sm text-[var(--text-subtle)]">No country data</div>;
     return (
       <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-3 items-center">
-        <div className="ga4-worldmap relative bg-[#F8FAFC] rounded-lg p-2">
+        <div className="ga4-worldmap relative bg-[var(--bg-2)] rounded-lg p-2">
           <WorldMap
-            color="#3B82F6"
+            color={ACCENT}
             valueSuffix=" users"
             size="responsive"
-            backgroundColor="#F8FAFC"
-            tooltipBgColor="#1A1208"
-            tooltipTextColor="#FDFAF4"
+            backgroundColor="transparent"
+            tooltipBgColor="var(--ink)"
+            tooltipTextColor="var(--surface)"
             data={mapPoints}
             tooltipTextFunction={({ countryName, countryValue }: { countryName: string; countryValue?: number | null }) => `${countryName}: ${formatNum(countryValue ?? 0)} users`}
           />
         </div>
         <div className="flex flex-col">
-          <div className="flex justify-between text-[10px] uppercase tracking-wider text-[var(--text-subtle)] font-semibold pb-1.5 border-b border-[var(--border)]">
+          <div className="flex justify-between text-[10px] uppercase tracking-widish text-[var(--muted-2)] font-medium pb-1.5 border-b border-[var(--line)]">
             <span>Country</span><span>Active Users</span>
           </div>
           <div className="flex-1 overflow-y-auto mt-0.5">
             {data.slice(0, 8).map((row) => {
-              const pct = maxUsers > 0 ? (row.activeUsers / maxUsers) * 100 : 0;
+              const pct  = maxUsers > 0 ? (row.activeUsers / maxUsers) * 100 : 0;
+              const code = COUNTRY_TO_ISO2[normalizeCountry(row.country)];
+              const flag = code ? String.fromCodePoint(...code.split('').map((c) => 127397 + c.charCodeAt(0))) : '🌐';
               return (
-                <div key={row.country} className="py-1.5 transition-colors hover:bg-[#F8FAFC] rounded px-2 -mx-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-[var(--text)] truncate font-medium">{row.country}</span>
-                    <span className="text-xs font-semibold tabular-nums text-[var(--text)]">{formatNum(row.activeUsers)}</span>
+                <div key={row.country} className="py-1.5 transition-colors hover:bg-[var(--surface-2)] rounded px-2 -mx-2">
+                  <div className="flex items-center justify-between mb-1 gap-2">
+                    <span className="text-xs text-[var(--ink)] truncate font-medium flex items-center gap-1.5 min-w-0">
+                      <span aria-hidden className="text-base leading-none shrink-0">{flag}</span>
+                      <span className="truncate">{row.country}</span>
+                    </span>
+                    <span className="text-xs font-medium tabular-nums font-mono text-[var(--ink)] shrink-0">{formatNum(row.activeUsers)}</span>
                   </div>
-                  <div className="h-0.5 rounded-full bg-[#E2E8F0] overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: '#3B82F6' }} />
+                  <div className="h-1 rounded-full bg-[var(--bg-2)] overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: ACCENT }} />
                   </div>
                 </div>
               );
@@ -732,11 +755,11 @@ function ActiveUsersCountryMapCard({ data, loading, subtitle }: { data: GA4Count
   })();
 
   return (
-    <div className="rounded-xl border border-[#E5E7EB] bg-white p-3 shadow-sm">
+    <div className="rounded-[14px] border border-[var(--line)] bg-[var(--surface)] px-[22px] py-[20px] shadow-[var(--shadow-sm)]">
       <style>{`.ga4-worldmap svg { max-width: 100%; height: auto; }`}</style>
-      <div className="flex items-start justify-between mb-2">
-        <h3 className="text-[14px] font-semibold text-[var(--text)] leading-tight">Active Users by Country</h3>
-        <span className="text-[11px] text-[var(--text-subtle)] mt-0.5">{subtitle}</span>
+      <div className="flex items-start justify-between mb-3">
+        <h3 className="text-[14.5px] font-semibold tracking-tightish text-[var(--ink)] leading-[1.25]">Active Users by Country</h3>
+        <span className="text-[11.5px] text-[var(--muted)] mt-0.5">{subtitle}</span>
       </div>
       {body}
     </div>
@@ -800,12 +823,20 @@ export function DashboardPage() {
     ? (prevKpis.codOrders / (prevKpis.codOrders + prevKpis.prepaidOrders)) * 100
     : undefined;
 
-  const bounce = ga4Summary?.avg_bounce_rate ?? 0;
+  /* ── Sparkline trend arrays for top KPI strip ───────────────────── */
+  const revenueSpark    = useMemo(() => revenueTrend.map((d) => Number(d.revenue ?? 0)), [revenueTrend]);
+  const aovSpark        = useMemo(
+    () => revenueTrend.map((d) => (Number(d.orders ?? 0) > 0 ? Number(d.revenue ?? 0) / Number(d.orders) : 0)),
+    [revenueTrend],
+  );
+  const sessionsSpark   = useMemo(() => ga4Overview.map((d) => Number(d.sessions     ?? 0)), [ga4Overview]);
+  const activeUserSpark = useMemo(() => ga4Overview.map((d) => Number(d.active_users ?? 0)), [ga4Overview]);
+  const newUserSpark    = useMemo(() => ga4Overview.map((d) => Number(d.new_users    ?? 0)), [ga4Overview]);
 
   if (error) {
     return (
       <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center">
-        <div className="bg-white rounded-xl border border-[var(--neg-soft)] p-8 text-center max-w-md">
+        <div className="bg-[var(--surface)] rounded-xl border border-[var(--neg-soft)] p-8 text-center max-w-md">
           <p className="text-[var(--neg)] font-semibold mb-2">Connection Error</p>
           <p className="text-[var(--text-muted)] text-sm">{error}</p>
         </div>
@@ -819,16 +850,19 @@ export function DashboardPage() {
     <DrawerProvider>
       <InfoDrawer />
       {showPageLoader && <PageLoader overlay />}
+      <Ticker />
       <div className="bg-[var(--bg)]">
         <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 pt-4 pb-6 space-y-4">
 
-          {/* ═══ ROW 1 · KPI STRIP (6 cards) ═══ */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          {/* ═══ ROW 1 · KPI STRIP (5 cards) ═══ */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
             <KpiCard
               label="Revenue"
               value={formatINR(kpis?.revenue)}
               delta={delta(kpis?.revenue, prevKpis?.revenue)}
               sub={`${formatNum(kpis?.orders)} orders`}
+              icon={TrendingUp}
+              trend={revenueSpark}
               loading={loading}
             />
             <KpiCard
@@ -837,6 +871,8 @@ export function DashboardPage() {
               value={formatINR(kpis?.aov)}
               delta={delta(kpis?.aov, prevKpis?.aov)}
               sub="avg order value"
+              icon={IndianRupee}
+              trend={aovSpark}
               loading={loading}
             />
             <KpiCard
@@ -844,6 +880,8 @@ export function DashboardPage() {
               value={formatNum(ga4Summary?.total_sessions)}
               delta={ga4Insights?.sessions_delta_pct}
               sub="traffic · vs prev period"
+              icon={Globe}
+              trend={sessionsSpark}
               loading={ga4Loading}
             />
             <KpiCard
@@ -851,6 +889,8 @@ export function DashboardPage() {
               value={formatNum(ga4Summary?.total_users)}
               delta={ga4Insights?.users_delta_pct}
               sub="unique · vs prev period"
+              icon={Users}
+              trend={activeUserSpark}
               loading={ga4Loading}
             />
             <KpiCard
@@ -858,13 +898,8 @@ export function DashboardPage() {
               value={formatNum(ga4Summary?.total_new_users)}
               delta={ga4Insights?.new_users_delta_pct}
               sub="first-time · vs prev period"
-              loading={ga4Loading}
-            />
-            <KpiCard
-              label="Bounce Rate"
-              value={`${(bounce * 100).toFixed(1)}%`}
-              delta={ga4Insights?.bounce_rate_delta_pct}
-              sub={bounce > 0.6 ? 'High — fix landing pages' : bounce > 0.4 ? 'Moderate' : 'Healthy'}
+              icon={UserPlus}
+              trend={newUserSpark}
               loading={ga4Loading}
             />
           </div>
@@ -903,10 +938,10 @@ export function DashboardPage() {
               <div className="flex flex-col gap-4">
                 <AbandonedCartsWidget carts={abandonedCarts} />
 
-                <div className="h-px bg-[var(--border)]" />
+                <div className="h-px bg-[var(--line)]" />
 
                 <div>
-                  <p className="text-[10px] font-semibold tracking-widest text-[var(--text-muted)] uppercase mb-3">Logistics Overview</p>
+                  <p className="text-[11px] font-medium uppercase tracking-widish text-[var(--muted)] mb-3">Logistics Overview</p>
                   {(() => {
                     const statusMap: Record<string, { label: string; color: string }> = {
                       delivered:        { label: 'Delivered',  color: POS },
@@ -927,20 +962,22 @@ export function DashboardPage() {
                             const item = logistics.find((l) => l.current_status_code?.toLowerCase() === code);
                             const { label, color } = statusMap[code] ?? { label: code, color: MUTED };
                             return (
-                              <div key={code} className="text-center">
-                                <p className="text-lg font-bold leading-none" style={{ color }}>{item ? formatNum(Number(item.count)) : 0}</p>
-                                <p className="text-[9px] text-[var(--text-muted)] flex items-center justify-center gap-0.5 mt-1">
-                                  <span className="w-1.5 h-1.5 rounded-full inline-block shrink-0" style={{ backgroundColor: color }} />
+                              <div key={code} className="text-center px-1 py-2 rounded-lg">
+                                <p className="font-mono text-[18px] font-medium leading-none tabular-nums" style={{ color }}>
+                                  {item ? formatNum(Number(item.count)) : 0}
+                                </p>
+                                <p className="mt-1.5 text-[10.5px] font-medium uppercase tracking-[0.04em] text-[var(--muted)] flex items-center justify-center gap-1">
+                                  <span aria-hidden className="w-1.5 h-1.5 rounded-full inline-block shrink-0" style={{ backgroundColor: color }} />
                                   <span className="truncate">{label}</span>
                                 </p>
                               </div>
                             );
                           })}
                         </div>
-                        <div className="h-px bg-[var(--border)] mb-2" />
-                        <div className="flex justify-between text-xs text-[var(--text-muted)]">
-                          <span>Total Shipments <span className="font-semibold text-[var(--text)]">{formatNum(total)}</span></span>
-                          <span>RTO Rate <span className="font-semibold" style={{ color: rtoRate > 10 ? NEG : POS }}>{rtoRate.toFixed(1)}%</span></span>
+                        <div className="h-px bg-[var(--line)] mb-2" />
+                        <div className="flex justify-between items-center text-[11.5px] text-[var(--muted)]">
+                          <span>Total Shipments <span className="ml-1 font-mono font-medium text-[var(--ink)] tabular-nums">{formatNum(total)}</span></span>
+                          <span>RTO Rate <span className="ml-1 font-mono font-medium tabular-nums" style={{ color: rtoRate > 10 ? NEG : POS }}>{rtoRate.toFixed(1)}%</span></span>
                         </div>
                       </>
                     );
@@ -1120,7 +1157,7 @@ export function DashboardPage() {
                     <div>
                       <div className="flex gap-0.5 mb-0.5">
                         {[1,2,3,4,5].map((s) => (
-                          <span key={s} className="text-base leading-none" style={{ color: s <= Math.round(reviewsSummary.store_rating) ? WARN : '#e2ddd5' }}>★</span>
+                          <span key={s} className="text-base leading-none" style={{ color: s <= Math.round(reviewsSummary.store_rating) ? WARN : 'var(--line-2)' }}>★</span>
                         ))}
                       </div>
                       <p className="text-xs text-[var(--text-muted)]">{formatNum(reviewsSummary.total_reviews)} reviews</p>

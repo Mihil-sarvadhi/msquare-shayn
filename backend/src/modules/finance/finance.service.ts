@@ -1,8 +1,6 @@
 import { QueryTypes } from 'sequelize';
 import { sequelize } from '@db/sequelize';
 import { SOURCE } from '@constant';
-import { logger } from '@logger/logger';
-import { fetchSalesBreakdownViaShopifyQL } from '@modules/shopify/shopify.connector';
 import {
   refundSummaryAggregates,
   listRefunds as listRefundsRepo,
@@ -13,23 +11,21 @@ import {
   listTransactions as listTransactionsRepo,
   type TxListParams,
 } from './transactions.repository';
-import {
-  listPayouts as listPayoutsRepo,
-  findPayoutById,
-  type PayoutsListParams,
-} from './payouts.repository';
-import { listBalanceTransactionsForPayout } from './balance-transactions.repository';
 import { listLocations } from './locations.repository';
 import type {
   FinanceKpis,
   GroupBy,
   PaymentMethodSplit,
-  PayoutDetail,
   RefundsSummary,
+  RevenueBreakdownComparison,
   RevenueBreakdownPoint,
   SalesBreakdown,
   SalesBreakdownDailyPoint,
   SalesBreakdownTotals,
+  SalesByChannel,
+  SalesByChannelEntry,
+  SalesByProduct,
+  SalesByProductEntry,
 } from './finance.types';
 
 interface OrderTotals {
@@ -40,6 +36,16 @@ interface OrderTotals {
   order_count: number;
 }
 
+/**
+ * Top-line totals matching Shopify Analytics' Sales Breakdown semantics:
+ * - Window orders by Shopify-IST `created_at`.
+ * - Gross sales = (subtotal + total_discounts) × tax_factor (tax-exclusive,
+ *   matches Shopify "Gross sales").
+ * - Discounts = total_discounts × tax_factor (tax-exclusive).
+ * - Tax & shipping captured only on PAID, non-cancelled orders.
+ * - All test orders excluded; cancelled/voided orders count toward gross
+ *   (Shopify includes them and offsets via Returns).
+ */
 async function orderTotals(from: Date, to: Date): Promise<OrderTotals> {
   const result = await sequelize.query<{
     gross_revenue: string;
@@ -48,15 +54,29 @@ async function orderTotals(from: Date, to: Date): Promise<OrderTotals> {
     total_shipping: string;
     order_count: string;
   }>(
-    `SELECT COALESCE(SUM(revenue),0)::text AS gross_revenue,
-            COALESCE(SUM(total_discounts),0)::text AS total_discounts,
-            COALESCE(SUM(total_tax),0)::text AS total_tax,
-            COALESCE(SUM(total_shipping),0)::text AS total_shipping,
+    `SELECT COALESCE(SUM(
+              (subtotal + COALESCE(total_discounts, 0))
+              * CASE WHEN COALESCE(subtotal, 0) > 0 AND COALESCE(total_tax, 0) > 0
+                     THEN (subtotal - total_tax) / subtotal
+                     ELSE 1.0 END
+            ), 0)::text AS gross_revenue,
+            COALESCE(SUM(
+              COALESCE(total_discounts, 0)
+              * CASE WHEN COALESCE(subtotal, 0) > 0 AND COALESCE(total_tax, 0) > 0
+                     THEN (subtotal - total_tax) / subtotal
+                     ELSE 1.0 END
+            ), 0)::text AS total_discounts,
+            COALESCE(SUM(
+              CASE WHEN financial_status = 'PAID' AND cancelled_at IS NULL
+                   THEN COALESCE(total_tax, 0) ELSE 0 END
+            ), 0)::text AS total_tax,
+            COALESCE(SUM(
+              CASE WHEN financial_status = 'PAID' AND cancelled_at IS NULL
+                   THEN COALESCE(total_shipping, 0) ELSE 0 END
+            ), 0)::text AS total_shipping,
             COUNT(*)::text AS order_count
        FROM shopify_orders
        WHERE created_at BETWEEN :from AND :to
-         AND COALESCE(financial_status, '') <> 'voided'
-         AND cancelled_at IS NULL
          AND COALESCE(test, FALSE) = FALSE`,
     { type: QueryTypes.SELECT, replacements: { from, to } },
   );
@@ -70,28 +90,189 @@ async function orderTotals(from: Date, to: Date): Promise<OrderTotals> {
   };
 }
 
+/**
+ * Returns total for the window using the same EVENT-DATE attribution Shopify
+ * uses (refund/void date, not order created_at). See `returnsDaily` for the
+ * complete formula explanation. Tax-excl, matches Shopify "Returns" exactly.
+ */
+async function returnsTotalExclTax(from: Date, to: Date): Promise<number> {
+  const result = await sequelize.query<{ amount: string }>(
+    // Shopify-Analytics-exact "Returns" formula — verified against live DB.
+    //
+    // FIVE event-date-bucketed cases, dedup-disjoint (each order contributes
+    // exactly once across cases):
+    //
+    //   case1 — refunds with non-empty refund_line_items:
+    //           Σ(li_subtotal) × tax_factor MINUS withheld_fee
+    //           (withheld_fee = max(0, li_subtotal − refund_amount), e.g.
+    //           a restocking/handling fee held from the customer's refund).
+    //   case2 — closed return for an order whose refund(s) in window have
+    //           empty refund_line_items: total_value × tax_factor (use
+    //           Return record's items value since the refund record gives
+    //           no item detail).
+    //   case3 — refund with empty refund_line_items where the order has
+    //           NO sibling LI refund AND NO closed return: fall back to
+    //           refund_amount × tax_factor. Catches legacy refunds where
+    //           Shopify's GraphQL didn't return per-line detail.
+    //   case4 — closed return for orders WITHOUT any refund in window:
+    //           total_value × tax_factor. Catches RTO COD (items came
+    //           back, no money flowed).
+    //   case5 — voided orders without any return or refund in window:
+    //           subtotal × tax_factor. Catches edge-case immediate voids.
+    //
+    // OPEN/REQUESTED returns are excluded — Shopify's "Returns" only counts
+    // CLOSED. Refund_amount (totalRefundedSet) excludes shipping/tip via
+    // the line-items-only sum; only legacy/empty-LI refunds use refund_amount
+    // directly via case3.
+    `WITH refund_orders_any AS (
+       SELECT DISTINCT order_id FROM orders_refunds
+        WHERE source = :source
+          AND refunded_at BETWEEN :from AND :to
+     ),
+     refund_orders_with_li AS (
+       SELECT DISTINCT r.order_id FROM orders_refunds r
+       CROSS JOIN LATERAL (
+         SELECT COALESCE(SUM((rli->>'amount')::numeric), 0) AS s
+           FROM jsonb_array_elements(COALESCE(r.refund_line_items, '[]'::jsonb)) AS rli
+       ) li
+       WHERE r.source = :source
+         AND r.refunded_at BETWEEN :from AND :to
+         AND li.s > 0
+     ),
+     return_orders_closed AS (
+       SELECT DISTINCT order_id FROM orders_returns
+        WHERE source = :source
+          AND return_created_at BETWEEN :from AND :to
+          AND status = 'CLOSED'
+     ),
+     case1 AS (
+       SELECT SUM(
+                li.li_subtotal
+                * CASE WHEN COALESCE(o.subtotal, 0) > 0 AND COALESCE(o.total_tax, 0) > 0
+                       THEN (o.subtotal - o.total_tax) / o.subtotal
+                       ELSE 1.0 END
+                - CASE WHEN r.refund_amount > 0
+                       THEN GREATEST(0, li.li_subtotal - r.refund_amount)
+                       ELSE 0 END
+              ) AS amount
+         FROM orders_refunds r
+         JOIN shopify_orders o ON o.order_id = r.order_id
+         CROSS JOIN LATERAL (
+           SELECT COALESCE(SUM((rli->>'amount')::numeric), 0) AS li_subtotal
+             FROM jsonb_array_elements(COALESCE(r.refund_line_items, '[]'::jsonb)) AS rli
+         ) li
+        WHERE r.source = :source
+          AND r.refunded_at BETWEEN :from AND :to
+          AND COALESCE(o.test, FALSE) = FALSE
+          AND li.li_subtotal > 0
+     ),
+     case2 AS (
+       SELECT SUM(
+                COALESCE(r.total_value, 0)
+                * CASE WHEN COALESCE(o.subtotal, 0) > 0 AND COALESCE(o.total_tax, 0) > 0
+                       THEN (o.subtotal - o.total_tax) / o.subtotal
+                       ELSE 1.0 END
+              ) AS amount
+         FROM orders_returns r
+         JOIN shopify_orders o ON o.order_id = r.order_id
+        WHERE r.source = :source
+          AND r.return_created_at BETWEEN :from AND :to
+          AND r.status = 'CLOSED'
+          AND COALESCE(o.test, FALSE) = FALSE
+          AND r.order_id IN (SELECT order_id FROM refund_orders_any)
+          AND r.order_id NOT IN (SELECT order_id FROM refund_orders_with_li)
+     ),
+     case3 AS (
+       SELECT SUM(
+                r.refund_amount
+                * CASE WHEN COALESCE(o.subtotal, 0) > 0 AND COALESCE(o.total_tax, 0) > 0
+                       THEN (o.subtotal - o.total_tax) / o.subtotal
+                       ELSE 1.0 END
+              ) AS amount
+         FROM orders_refunds r
+         JOIN shopify_orders o ON o.order_id = r.order_id
+         CROSS JOIN LATERAL (
+           SELECT COALESCE(SUM((rli->>'amount')::numeric), 0) AS li_subtotal
+             FROM jsonb_array_elements(COALESCE(r.refund_line_items, '[]'::jsonb)) AS rli
+         ) li
+        WHERE r.source = :source
+          AND r.refunded_at BETWEEN :from AND :to
+          AND COALESCE(o.test, FALSE) = FALSE
+          AND li.li_subtotal = 0
+          AND r.refund_amount > 0
+          AND r.order_id NOT IN (SELECT order_id FROM refund_orders_with_li)
+          AND r.order_id NOT IN (SELECT order_id FROM return_orders_closed)
+     ),
+     case4 AS (
+       SELECT SUM(
+                COALESCE(r.total_value, 0)
+                * CASE WHEN COALESCE(o.subtotal, 0) > 0 AND COALESCE(o.total_tax, 0) > 0
+                       THEN (o.subtotal - o.total_tax) / o.subtotal
+                       ELSE 1.0 END
+              ) AS amount
+         FROM orders_returns r
+         JOIN shopify_orders o ON o.order_id = r.order_id
+        WHERE r.source = :source
+          AND r.return_created_at BETWEEN :from AND :to
+          AND r.status = 'CLOSED'
+          AND COALESCE(o.test, FALSE) = FALSE
+          AND r.order_id NOT IN (SELECT order_id FROM refund_orders_any)
+     ),
+     case5 AS (
+       SELECT SUM(
+                COALESCE(subtotal, 0)
+                * CASE WHEN COALESCE(subtotal, 0) > 0 AND COALESCE(total_tax, 0) > 0
+                       THEN (subtotal - total_tax) / subtotal
+                       ELSE 1.0 END
+              ) AS amount
+         FROM shopify_orders
+        WHERE cancelled_at BETWEEN :from AND :to
+          AND COALESCE(test, FALSE) = FALSE
+          AND COALESCE(financial_status, '') = 'VOIDED'
+          AND order_id NOT IN (SELECT order_id FROM refund_orders_any)
+          AND order_id NOT IN (SELECT order_id FROM return_orders_closed)
+     )
+     SELECT (COALESCE((SELECT amount FROM case1), 0)
+           + COALESCE((SELECT amount FROM case2), 0)
+           + COALESCE((SELECT amount FROM case3), 0)
+           + COALESCE((SELECT amount FROM case4), 0)
+           + COALESCE((SELECT amount FROM case5), 0))::text AS amount`,
+    { type: QueryTypes.SELECT, replacements: { source: SOURCE.SHOPIFY, from, to } },
+  );
+  return parseFloat(result[0]?.amount ?? '0');
+}
+
 export async function getKpis(from: Date, to: Date): Promise<FinanceKpis> {
-  const [orders, refunds] = await Promise.all([
+  const [orders, refundsSummary, returnsExcl] = await Promise.all([
     orderTotals(from, to),
     refundSummaryAggregates(from, to),
+    returnsTotalExclTax(from, to),
   ]);
 
-  // Per spec: net_revenue = gross - discounts - refunds - tax - shipping
-  const net_revenue =
-    orders.gross_revenue -
-    orders.total_discounts -
-    refunds.total_refunds -
-    orders.total_tax -
-    orders.total_shipping;
+  // Mirror Shopify Sales Breakdown exactly:
+  //   net_sales       = gross_sales - discounts - returns
+  //   taxes (display) = effective_rate × net_sales (Shopify reports tax on net,
+  //                     not tax on gross)
+  //   total_sales     = net_sales + shipping + taxes - return_fees
+  // We expose `net_revenue` here as Shopify's `total_sales` so the founder-
+  // facing "True Net Revenue" tile matches the breakdown's Total sales line.
+  const subtotalExcl = orders.gross_revenue - orders.total_discounts;
+  const net_sales = subtotalExcl - returnsExcl;
+  const tax_rate =
+    subtotalExcl > 0 && orders.total_tax > 0
+      ? orders.total_tax / (subtotalExcl - orders.total_tax + orders.total_tax) // = total_tax / subtotalExcl
+      : 0;
+  const taxes_on_net = Math.round(tax_rate * net_sales * 100) / 100;
+  const net_revenue = net_sales + orders.total_shipping + taxes_on_net;
 
   return {
     gross_revenue: orders.gross_revenue,
     total_discounts: orders.total_discounts,
-    total_tax: orders.total_tax,
+    total_tax: taxes_on_net,
     total_shipping: orders.total_shipping,
-    total_refunds: refunds.total_refunds,
+    total_refunds: returnsExcl,
     net_revenue,
-    refund_count: refunds.refund_count,
+    refund_count: refundsSummary.refund_count,
     order_count: orders.order_count,
   };
 }
@@ -101,52 +282,384 @@ export async function getRevenueBreakdown(
   to: Date,
   groupBy: GroupBy,
 ): Promise<RevenueBreakdownPoint[]> {
-  const truncUnit = groupBy === 'day' ? 'day' : groupBy === 'week' ? 'week' : 'month';
-  const orderRows = await sequelize.query<{
-    bucket: string;
-    gross: string;
-    discounts: string;
-    tax: string;
-    shipping: string;
-  }>(
-    `SELECT date_trunc('${truncUnit}', created_at)::date::text AS bucket,
-            COALESCE(SUM(revenue),0)::text AS gross,
-            COALESCE(SUM(total_discounts),0)::text AS discounts,
-            COALESCE(SUM(total_tax),0)::text AS tax,
-            COALESCE(SUM(total_shipping),0)::text AS shipping
-       FROM shopify_orders
-       WHERE created_at BETWEEN :from AND :to
-       GROUP BY bucket
-       ORDER BY bucket ASC`,
-    { type: QueryTypes.SELECT, replacements: { from, to } },
-  );
+  // Reuse buildBreakdown so totals match the Sales Breakdown panel exactly.
+  // Critical: buildBreakdown surfaces "return-only days" (refund/void events
+  // on dates with no orders in the window) — the prior bespoke SQL here
+  // dropped those by iterating only over orderRows.
+  // Per project memory, any Shopify-derived sales metric must factor through
+  // this chain rather than rolling fresh formulas.
+  const { daily, totals } = await buildBreakdown(from, to);
 
-  const refundRows = await sequelize.query<{ bucket: string; refunds: string }>(
-    `SELECT date_trunc('${truncUnit}', refunded_at)::date::text AS bucket,
-            COALESCE(SUM(refund_amount),0)::text AS refunds
-       FROM orders_refunds
-       WHERE source = :source AND refunded_at BETWEEN :from AND :to
-       GROUP BY bucket`,
-    { type: QueryTypes.SELECT, replacements: { source: SOURCE.SHOPIFY, from, to } },
-  );
+  // Per-day Total sales uses the period's effective tax rate so the series
+  // sums to totals.total_sales exactly. The raw `daily[i].taxes` field uses
+  // collected tax (which over-counts on refunded items); for the period total
+  // computeTotals re-derives Tax as effectiveRate × net_sales. Apply the same
+  // ratio here so per-day totals sum to the displayed period Total sales.
+  const effectiveRate = totals.net_sales !== 0 ? totals.taxes / totals.net_sales : 0;
 
-  const refundMap = new Map(refundRows.map((r) => [r.bucket, parseFloat(r.refunds)]));
-
-  return orderRows.map((r) => {
-    const gross = parseFloat(r.gross);
-    const discounts = parseFloat(r.discounts);
-    const tax = parseFloat(r.tax);
-    const shipping = parseFloat(r.shipping);
-    const refunds = refundMap.get(r.bucket) ?? 0;
+  const dayPoints: RevenueBreakdownPoint[] = daily.map((d) => {
+    const dayTax = d.net_sales * effectiveRate;
     return {
-      date: r.bucket,
-      gross,
-      discounts,
-      refunds,
-      tax,
-      net: gross - discounts - refunds - tax - shipping,
+      date: d.date,
+      gross: d.gross_sales,
+      discounts: d.discounts,
+      refunds: d.returns,
+      tax: dayTax,
+      total: d.net_sales + d.shipping_charges + dayTax - d.return_fees,
+      orders: d.order_count,
     };
   });
+  if (groupBy === 'day') {
+    return dayPoints.sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  // Re-aggregate to week/month buckets in JS to keep a single source of truth.
+  const bucketKey = (date: string): string => {
+    const d = new Date(`${date}T00:00:00.000Z`);
+    if (groupBy === 'month') {
+      return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-01`;
+    }
+    // week → Monday-anchored ISO date
+    const day = d.getUTCDay();
+    const monday = new Date(d);
+    monday.setUTCDate(d.getUTCDate() - ((day + 6) % 7));
+    return monday.toISOString().slice(0, 10);
+  };
+  const buckets = new Map<string, RevenueBreakdownPoint>();
+  for (const p of dayPoints) {
+    const key = bucketKey(p.date);
+    const cur = buckets.get(key) ?? {
+      date: key,
+      gross: 0,
+      discounts: 0,
+      refunds: 0,
+      tax: 0,
+      total: 0,
+      orders: 0,
+    };
+    cur.gross += p.gross;
+    cur.discounts += p.discounts;
+    cur.refunds += p.refunds;
+    cur.tax += p.tax;
+    cur.total += p.total;
+    cur.orders += p.orders;
+    buckets.set(key, cur);
+  }
+  return Array.from(buckets.values()).sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/**
+ * Same as getRevenueBreakdown but also returns the previous equivalent period
+ * so the chart can overlay a comparison line — mirrors Shopify Analytics'
+ * "Total sales over time" current-vs-comparison view.
+ */
+export async function getRevenueBreakdownWithComparison(
+  from: Date,
+  to: Date,
+  groupBy: GroupBy,
+): Promise<RevenueBreakdownComparison> {
+  const ms = to.getTime() - from.getTime();
+  const prevTo = new Date(from.getTime() - 1);
+  const prevFrom = new Date(prevTo.getTime() - ms);
+  const [current, previous] = await Promise.all([
+    getRevenueBreakdown(from, to, groupBy),
+    getRevenueBreakdown(prevFrom, prevTo, groupBy),
+  ]);
+  return {
+    current: { from: fmtDate(from), to: fmtDate(to), points: current },
+    previous: { from: fmtDate(prevFrom), to: fmtDate(prevTo), points: previous },
+  };
+}
+
+/* ─────────────────── Total Sales by Channel ───────────────────
+ * Mirrors Shopify Analytics' "Total sales by sales channel" donut.
+ * For each channel:
+ *   total = SUM(subtotal × tax_factor)              -- net sales (orders in window)
+ *         + SUM(shipping + tax for PAID, !cancelled) -- shipping & taxes
+ *         − SUM(void amount, refund amount)          -- returns attributed to original channel
+ * Returns are bucketed by event date (cancelled_at / refunded_at) and joined
+ * back to the original order so they reduce the correct channel's total.
+ */
+const CHANNEL_LABELS: Record<string, string> = {
+  pos: 'Point of Sale',
+  web: 'Online Store',
+  shopify_draft_order: 'Draft Order',
+  android: 'Mobile (Android)',
+  iphone: 'Mobile (iOS)',
+  // Apps that put their API client ID in Shopify's `sourceName` field instead
+  // of a friendly name. New orders sync with `app.name` (see resolveChannel
+  // in shopify.mapper.ts), but already-synced rows still hold the numeric ID —
+  // map them here so the dashboard matches Shopify Analytics today.
+  '277977923585': 'Gokwik_Shayn',
+  '4388981': 'Return Prime',
+};
+
+function normalizeChannelName(raw: string): string {
+  const lower = raw.toLowerCase();
+  return CHANNEL_LABELS[lower] ?? raw;
+}
+
+async function salesByChannelForRange(
+  from: Date,
+  to: Date,
+): Promise<{
+  total: number;
+  channels: SalesByChannelEntry[];
+}> {
+  const rows = await sequelize.query<{ channel_name: string; total: string }>(
+    `WITH base AS (
+       SELECT
+         COALESCE(NULLIF(TRIM(channel), ''), 'Direct') AS channel_name,
+         COALESCE(SUM(
+           COALESCE(subtotal, 0) *
+           CASE WHEN COALESCE(subtotal, 0) > 0 AND COALESCE(total_tax, 0) > 0
+                THEN (subtotal - total_tax) / subtotal
+                ELSE 1.0 END
+         ), 0)
+         + COALESCE(SUM(
+             CASE WHEN financial_status = 'PAID' AND cancelled_at IS NULL
+                  THEN COALESCE(total_shipping, 0) + COALESCE(total_tax, 0)
+                  ELSE 0 END
+           ), 0) AS amount
+       FROM shopify_orders
+       WHERE created_at BETWEEN :from AND :to
+         AND COALESCE(test, FALSE) = FALSE
+       GROUP BY channel_name
+     ),
+     voids AS (
+       SELECT
+         COALESCE(NULLIF(TRIM(channel), ''), 'Direct') AS channel_name,
+         COALESCE(SUM(
+           COALESCE(subtotal, 0) *
+           CASE WHEN COALESCE(subtotal, 0) > 0 AND COALESCE(total_tax, 0) > 0
+                THEN (subtotal - total_tax) / subtotal
+                ELSE 1.0 END
+         ), 0) AS amount
+       FROM shopify_orders
+       WHERE cancelled_at BETWEEN :from AND :to
+         AND COALESCE(test, FALSE) = FALSE
+         AND COALESCE(financial_status, '') = 'VOIDED'
+       GROUP BY channel_name
+     ),
+     refunds AS (
+       SELECT
+         COALESCE(NULLIF(TRIM(o.channel), ''), 'Direct') AS channel_name,
+         COALESCE(SUM(
+           r.refund_amount *
+           CASE WHEN COALESCE(o.subtotal, 0) > 0 AND COALESCE(o.total_tax, 0) > 0
+                THEN (o.subtotal - o.total_tax) / o.subtotal
+                ELSE 1.0 END
+         ), 0) AS amount
+       FROM orders_refunds r
+       JOIN shopify_orders o ON o.order_id = r.order_id
+       WHERE r.source = :source
+         AND r.refunded_at BETWEEN :from AND :to
+         AND COALESCE(o.test, FALSE) = FALSE
+       GROUP BY channel_name
+     ),
+     all_channels AS (
+       SELECT channel_name FROM base
+       UNION SELECT channel_name FROM voids
+       UNION SELECT channel_name FROM refunds
+     )
+     SELECT
+       a.channel_name,
+       (COALESCE(b.amount, 0) - COALESCE(v.amount, 0) - COALESCE(r.amount, 0)) AS total
+     FROM all_channels a
+     LEFT JOIN base   b USING (channel_name)
+     LEFT JOIN voids  v USING (channel_name)
+     LEFT JOIN refunds r USING (channel_name)
+     ORDER BY total DESC NULLS LAST`,
+    {
+      type: QueryTypes.SELECT,
+      replacements: { from, to, source: SOURCE.SHOPIFY },
+    },
+  );
+
+  const channels: SalesByChannelEntry[] = rows.map((row) => ({
+    name: normalizeChannelName(row.channel_name),
+    amount: parseFloat(row.total),
+  }));
+  const total = channels.reduce((s, c) => s + c.amount, 0);
+  return { total, channels };
+}
+
+export async function getSalesByChannel(from: Date, to: Date): Promise<SalesByChannel> {
+  const ms = to.getTime() - from.getTime();
+  const prevTo = new Date(from.getTime() - 1);
+  const prevFrom = new Date(prevTo.getTime() - ms);
+  const [current, previous] = await Promise.all([
+    salesByChannelForRange(from, to),
+    salesByChannelForRange(prevFrom, prevTo),
+  ]);
+  return {
+    current: { from: fmtDate(from), to: fmtDate(to), ...current },
+    previous: { from: fmtDate(prevFrom), to: fmtDate(prevTo), ...previous },
+  };
+}
+
+/* ─────────────────── Total Sales by Product ───────────────────
+ * Mirrors Shopify Analytics' "Total sales by product" — same 3-CTE pattern
+ * as salesByChannelForRange (base − voids − refunds), grouped per product:
+ *   base    = LI gross_excl − LI allocated discount + LI share of shipping/tax
+ *             (orders created in window)
+ *   voids   = LI gross_excl for orders cancelled in window with status VOIDED
+ *             (event-date attribution, mirroring returnsDaily)
+ *   refunds = refund_line_items.amount × parent order's tax_factor for refunds
+ *             with refunded_at in window (event-date attribution). SKUs are
+ *             mapped back to product_id via a representative shopify_order_lineitems
+ *             row so the refund offsets the right product group.
+ * Tax_factor matches the rest of the Sales Breakdown chain.
+ */
+async function salesByProductForRange(
+  from: Date,
+  to: Date,
+  limit: number,
+): Promise<{ total: number; products: SalesByProductEntry[] }> {
+  // NOTE on ORDER BY: amount stays a numeric expression (no ::text cast) so
+  // PostgreSQL sorts it numerically — ::text triggers lexical sort ('9' > '13').
+  const rows = await sequelize.query<{
+    group_key: string;
+    product_id: string | null;
+    title: string;
+    vendor: string | null;
+    product_type: string | null;
+    amount: string;
+    units: string;
+  }>(
+    `WITH per_order_li AS (
+       SELECT order_id, SUM(quantity * unit_price) AS li_sum
+       FROM shopify_order_lineitems
+       WHERE quantity * unit_price > 0
+       GROUP BY order_id
+     ),
+     sku_to_product AS (
+       SELECT DISTINCT ON (sku)
+              sku,
+              NULLIF(product_id, '') AS product_id,
+              title
+         FROM shopify_order_lineitems
+         WHERE COALESCE(NULLIF(TRIM(sku), ''), '') <> ''
+         ORDER BY sku, id DESC
+     ),
+     base AS (
+       SELECT
+         COALESCE(NULLIF(li.product_id, ''), 'title:' || COALESCE(NULLIF(TRIM(li.title), ''), 'unknown')) AS group_key,
+         MAX(NULLIF(li.product_id, ''))           AS product_id,
+         COALESCE(MAX(p.title), MAX(li.title))    AS title,
+         MAX(p.vendor)                            AS vendor,
+         MAX(p.product_type)                      AS product_type,
+         COALESCE(SUM(
+           -- LI gross_excl − allocated discount (tax-excl)
+           (
+             (li.quantity * li.unit_price)
+             - (li.quantity * li.unit_price / NULLIF(pol.li_sum, 0))
+               * COALESCE(o.total_discounts, 0)
+           )
+           * CASE WHEN COALESCE(o.subtotal, 0) > 0 AND COALESCE(o.total_tax, 0) > 0
+                  THEN (o.subtotal - o.total_tax) / o.subtotal
+                  ELSE 1.0 END
+           + CASE WHEN o.financial_status = 'PAID' AND o.cancelled_at IS NULL
+                  THEN (li.quantity * li.unit_price / NULLIF(pol.li_sum, 0))
+                       * (COALESCE(o.total_shipping, 0) + COALESCE(o.total_tax, 0))
+                  ELSE 0 END
+         ), 0) AS amount,
+         COALESCE(SUM(li.quantity), 0) AS units
+       FROM shopify_order_lineitems li
+       JOIN shopify_orders o ON o.order_id = li.order_id
+       JOIN per_order_li pol ON pol.order_id = li.order_id
+       LEFT JOIN products p
+              ON p.source = 'shopify'
+             AND NULLIF(li.product_id, '') IS NOT NULL
+             AND p.source_product_id = li.product_id
+       WHERE o.created_at BETWEEN :from AND :to
+         AND COALESCE(o.test, FALSE) = FALSE
+         AND COALESCE(NULLIF(TRIM(li.title), ''), '') <> ''
+       GROUP BY group_key
+     ),
+     voids AS (
+       SELECT
+         COALESCE(NULLIF(li.product_id, ''), 'title:' || COALESCE(NULLIF(TRIM(li.title), ''), 'unknown')) AS group_key,
+         COALESCE(SUM(
+           (li.quantity * li.unit_price)
+           * CASE WHEN COALESCE(o.subtotal, 0) > 0 AND COALESCE(o.total_tax, 0) > 0
+                  THEN (o.subtotal - o.total_tax) / o.subtotal
+                  ELSE 1.0 END
+         ), 0) AS amount
+       FROM shopify_order_lineitems li
+       JOIN shopify_orders o ON o.order_id = li.order_id
+       WHERE o.cancelled_at BETWEEN :from AND :to
+         AND COALESCE(o.test, FALSE) = FALSE
+         AND COALESCE(o.financial_status, '') = 'VOIDED'
+         AND COALESCE(NULLIF(TRIM(li.title), ''), '') <> ''
+       GROUP BY group_key
+     ),
+     refunds AS (
+       SELECT
+         COALESCE(stp.product_id, 'title:' || COALESCE(NULLIF(TRIM(stp.title), ''), 'unknown')) AS group_key,
+         COALESCE(SUM(
+           rli.amount
+           * CASE WHEN COALESCE(o.subtotal, 0) > 0 AND COALESCE(o.total_tax, 0) > 0
+                  THEN (o.subtotal - o.total_tax) / o.subtotal
+                  ELSE 1.0 END
+         ), 0) AS amount
+       FROM orders_refunds r
+       JOIN shopify_orders o ON o.order_id = r.order_id
+       CROSS JOIN LATERAL jsonb_to_recordset(COALESCE(r.refund_line_items, '[]'::jsonb))
+                            AS rli(sku TEXT, quantity INTEGER, amount NUMERIC)
+       LEFT JOIN sku_to_product stp ON stp.sku = rli.sku
+       WHERE r.source = :source
+         AND r.refunded_at BETWEEN :from AND :to
+         AND COALESCE(o.test, FALSE) = FALSE
+         AND COALESCE(NULLIF(TRIM(rli.sku), ''), '') <> ''
+       GROUP BY group_key
+     ),
+     all_keys AS (
+       SELECT group_key FROM base
+       UNION SELECT group_key FROM voids
+       UNION SELECT group_key FROM refunds
+     )
+     SELECT
+       k.group_key                                                             AS group_key,
+       b.product_id                                                            AS product_id,
+       COALESCE(b.title, 'Untitled product')                                   AS title,
+       b.vendor                                                                AS vendor,
+       b.product_type                                                          AS product_type,
+       (COALESCE(b.amount, 0) - COALESCE(v.amount, 0) - COALESCE(rf.amount, 0)) AS amount,
+       COALESCE(b.units, 0)::text                                              AS units
+     FROM all_keys k
+     LEFT JOIN base    b  USING (group_key)
+     LEFT JOIN voids   v  USING (group_key)
+     LEFT JOIN refunds rf USING (group_key)
+     ORDER BY amount DESC NULLS LAST
+     LIMIT :limit`,
+    { type: QueryTypes.SELECT, replacements: { from, to, limit, source: SOURCE.SHOPIFY } },
+  );
+
+  const products: SalesByProductEntry[] = rows.map((r) => ({
+    product_id: r.product_id ?? r.group_key,
+    title: r.title ?? 'Untitled product',
+    vendor: r.vendor,
+    product_type: r.product_type,
+    amount: parseFloat(r.amount),
+    units: parseInt(r.units, 10),
+  }));
+  const total = products.reduce((s, p) => s + p.amount, 0);
+  return { total, products };
+}
+
+export async function getSalesByProduct(from: Date, to: Date, limit = 10): Promise<SalesByProduct> {
+  const ms = to.getTime() - from.getTime();
+  const prevTo = new Date(from.getTime() - 1);
+  const prevFrom = new Date(prevTo.getTime() - ms);
+  const [current, previous] = await Promise.all([
+    salesByProductForRange(from, to, limit),
+    salesByProductForRange(prevFrom, prevTo, limit),
+  ]);
+  return {
+    current: { from: fmtDate(from), to: fmtDate(to), ...current },
+    previous: { from: fmtDate(prevFrom), to: fmtDate(prevTo), ...previous },
+  };
 }
 
 export async function getPaymentMethodSplit(from: Date, to: Date): Promise<PaymentMethodSplit> {
@@ -207,17 +720,6 @@ export async function getRefundsSummary(from: Date, to: Date): Promise<RefundsSu
       amount: parseFloat(r.amount),
     })),
   };
-}
-
-export async function listPayouts(params: PayoutsListParams) {
-  return listPayoutsRepo(params);
-}
-
-export async function getPayoutDetail(id: number): Promise<PayoutDetail | null> {
-  const payout = await findPayoutById(id);
-  if (!payout) return null;
-  const balance_transactions = await listBalanceTransactionsForPayout(id);
-  return { payout, balance_transactions };
 }
 
 export async function listRefunds(params: RefundsListParams) {
@@ -326,60 +828,132 @@ async function ordersDaily(from: Date, to: Date): Promise<OrderDailyRow[]> {
 }
 
 async function returnsDaily(from: Date, to: Date): Promise<ReturnsDailyRow[]> {
-  // Shopify Analytics' "Returns" represents revenue that didn't reach the merchant.
-  // For COD-heavy stores this is dominated by RTO (orders voided after delivery
-  // attempt fails), which has no associated Refund record — payment was never
-  // captured to begin with. Our model:
-  //
-  //   uncollected_gross = gross_sales of orders not in financial_status PAID, OR
-  //                       cancelled. Bucketed by order created_at.
-  //   paid_refunds      = total_refunded on PAID orders (money captured then
-  //                       returned). Bucketed by created_at — Shopify attributes
-  //                       to the period the order was placed in.
-  //   return_fees       = restocking/return-shipping fees from orders_returns
-  //                       (separate negative line in the breakdown).
-  //
-  // We dedupe by tagging each order's contribution exactly once across the two
-  // buckets (uncollected vs paid_refunds).
+  // Shopify-Analytics-exact "Returns" formula — verified against live DB.
+  // See returnsTotalExclTax for the full rationale. Five event-date-bucketed
+  // cases, dedup-disjoint (each order contributes exactly once across cases):
+  //   case1 = refunds with non-empty refund_line_items
+  //   case2 = closed return for order whose refund(s) lack line items
+  //   case3 = legacy refund_amount fallback when no LI sibling and no return
+  //   case4 = orphan closed returns (no refund in window)
+  //   case5 = voids without return or refund
   return sequelize.query<ReturnsDailyRow>(
-    `WITH formal_returns_per_order AS (
-       SELECT order_id, SUM(total_value) AS total_return_value
-         FROM orders_returns
-        WHERE source = :source AND status NOT IN ('DECLINED','CANCELED')
-        GROUP BY order_id
+    `WITH refund_orders_any AS (
+       SELECT DISTINCT order_id FROM orders_refunds
+        WHERE source = :source
+          AND refunded_at BETWEEN :from AND :to
      ),
-     order_returns AS (
-       SELECT date_trunc('day', o.created_at)::date AS d,
-              -- Per-order Returns contribution:
-              --   PAID + clean       -> 0 (fully captured, nothing returned)
-              --   PAID + refunded    -> total_refunded (money refunded back)
-              --   PAID + in-progress return -> formal_return_value (items coming back)
-              --   Non-PAID/cancelled -> gross - total_received (uncaptured portion)
-              --
-              -- Multiplied by the per-order tax factor (subtotal - tax) / subtotal
-              -- to land in Shopify's tax-EXCLUSIVE reporting space.
-              (CASE
-                WHEN COALESCE(o.financial_status,'') = 'PAID' AND o.cancelled_at IS NULL
-                  THEN GREATEST(
-                    COALESCE(fr.total_return_value, 0),
-                    COALESCE(o.total_refunded, 0)
-                  )
-                ELSE
-                  -- Items value treated as returned. SHAYN's COD deposit (~₹200,
-                  -- non-refundable when RTO) is captured in total_received but
-                  -- it's a SERVICE FEE, not items revenue — Shopify's Sales
-                  -- report counts the full items value as returned regardless.
-                  COALESCE(o.gross_sales, o.revenue, 0)
-              END)
-              *
-              CASE WHEN COALESCE(o.subtotal, 0) > 0 AND COALESCE(o.total_tax, 0) > 0
-                   THEN (o.subtotal - o.total_tax) / o.subtotal
-                   ELSE 1.0 END
-              AS contribution
-         FROM shopify_orders o
-         LEFT JOIN formal_returns_per_order fr ON fr.order_id = o.order_id
-        WHERE o.created_at BETWEEN :from AND :to
+     refund_orders_with_li AS (
+       SELECT DISTINCT r.order_id FROM orders_refunds r
+       CROSS JOIN LATERAL (
+         SELECT COALESCE(SUM((rli->>'amount')::numeric), 0) AS s
+           FROM jsonb_array_elements(COALESCE(r.refund_line_items, '[]'::jsonb)) AS rli
+       ) li
+       WHERE r.source = :source
+         AND r.refunded_at BETWEEN :from AND :to
+         AND li.s > 0
+     ),
+     return_orders_closed AS (
+       SELECT DISTINCT order_id FROM orders_returns
+        WHERE source = :source
+          AND return_created_at BETWEEN :from AND :to
+          AND status = 'CLOSED'
+     ),
+     case1 AS (
+       SELECT date_trunc('day', r.refunded_at)::date AS d,
+              SUM(
+                li.li_subtotal
+                * CASE WHEN COALESCE(o.subtotal, 0) > 0 AND COALESCE(o.total_tax, 0) > 0
+                       THEN (o.subtotal - o.total_tax) / o.subtotal
+                       ELSE 1.0 END
+                - CASE WHEN r.refund_amount > 0
+                       THEN GREATEST(0, li.li_subtotal - r.refund_amount)
+                       ELSE 0 END
+              ) AS amount
+         FROM orders_refunds r
+         JOIN shopify_orders o ON o.order_id = r.order_id
+         CROSS JOIN LATERAL (
+           SELECT COALESCE(SUM((rli->>'amount')::numeric), 0) AS li_subtotal
+             FROM jsonb_array_elements(COALESCE(r.refund_line_items, '[]'::jsonb)) AS rli
+         ) li
+        WHERE r.source = :source
+          AND r.refunded_at BETWEEN :from AND :to
           AND COALESCE(o.test, FALSE) = FALSE
+          AND li.li_subtotal > 0
+        GROUP BY 1
+     ),
+     case2 AS (
+       SELECT date_trunc('day', r.return_created_at)::date AS d,
+              SUM(
+                COALESCE(r.total_value, 0)
+                * CASE WHEN COALESCE(o.subtotal, 0) > 0 AND COALESCE(o.total_tax, 0) > 0
+                       THEN (o.subtotal - o.total_tax) / o.subtotal
+                       ELSE 1.0 END
+              ) AS amount
+         FROM orders_returns r
+         JOIN shopify_orders o ON o.order_id = r.order_id
+        WHERE r.source = :source
+          AND r.return_created_at BETWEEN :from AND :to
+          AND r.status = 'CLOSED'
+          AND COALESCE(o.test, FALSE) = FALSE
+          AND r.order_id IN (SELECT order_id FROM refund_orders_any)
+          AND r.order_id NOT IN (SELECT order_id FROM refund_orders_with_li)
+        GROUP BY 1
+     ),
+     case3 AS (
+       SELECT date_trunc('day', r.refunded_at)::date AS d,
+              SUM(
+                r.refund_amount
+                * CASE WHEN COALESCE(o.subtotal, 0) > 0 AND COALESCE(o.total_tax, 0) > 0
+                       THEN (o.subtotal - o.total_tax) / o.subtotal
+                       ELSE 1.0 END
+              ) AS amount
+         FROM orders_refunds r
+         JOIN shopify_orders o ON o.order_id = r.order_id
+         CROSS JOIN LATERAL (
+           SELECT COALESCE(SUM((rli->>'amount')::numeric), 0) AS li_subtotal
+             FROM jsonb_array_elements(COALESCE(r.refund_line_items, '[]'::jsonb)) AS rli
+         ) li
+        WHERE r.source = :source
+          AND r.refunded_at BETWEEN :from AND :to
+          AND COALESCE(o.test, FALSE) = FALSE
+          AND li.li_subtotal = 0
+          AND r.refund_amount > 0
+          AND r.order_id NOT IN (SELECT order_id FROM refund_orders_with_li)
+          AND r.order_id NOT IN (SELECT order_id FROM return_orders_closed)
+        GROUP BY 1
+     ),
+     case4 AS (
+       SELECT date_trunc('day', r.return_created_at)::date AS d,
+              SUM(
+                COALESCE(r.total_value, 0)
+                * CASE WHEN COALESCE(o.subtotal, 0) > 0 AND COALESCE(o.total_tax, 0) > 0
+                       THEN (o.subtotal - o.total_tax) / o.subtotal
+                       ELSE 1.0 END
+              ) AS amount
+         FROM orders_returns r
+         JOIN shopify_orders o ON o.order_id = r.order_id
+        WHERE r.source = :source
+          AND r.return_created_at BETWEEN :from AND :to
+          AND r.status = 'CLOSED'
+          AND COALESCE(o.test, FALSE) = FALSE
+          AND r.order_id NOT IN (SELECT order_id FROM refund_orders_any)
+        GROUP BY 1
+     ),
+     case5 AS (
+       SELECT date_trunc('day', cancelled_at)::date AS d,
+              SUM(
+                COALESCE(subtotal, 0)
+                * CASE WHEN COALESCE(subtotal, 0) > 0 AND COALESCE(total_tax, 0) > 0
+                       THEN (subtotal - total_tax) / subtotal
+                       ELSE 1.0 END
+              ) AS amount
+         FROM shopify_orders
+        WHERE cancelled_at BETWEEN :from AND :to
+          AND COALESCE(test, FALSE) = FALSE
+          AND COALESCE(financial_status, '') = 'VOIDED'
+          AND order_id NOT IN (SELECT order_id FROM refund_orders_any)
+          AND order_id NOT IN (SELECT order_id FROM return_orders_closed)
+        GROUP BY 1
      ),
      return_fees AS (
        SELECT date_trunc('day', return_created_at)::date AS d,
@@ -387,19 +961,20 @@ async function returnsDaily(from: Date, to: Date): Promise<ReturnsDailyRow[]> {
          FROM orders_returns
         WHERE source = :source
           AND return_created_at BETWEEN :from AND :to
-          AND status NOT IN ('DECLINED','CANCELED')
+          AND status = 'CLOSED'
         GROUP BY 1
      )
-     SELECT d::text AS date,
-            COALESCE(SUM(contribution), 0)::text AS returns,
-            '0'::text AS return_fees
-       FROM order_returns
-      GROUP BY d
+     SELECT d::text AS date, COALESCE(amount,0)::text AS returns, '0'::text AS return_fees FROM case1
       UNION ALL
-     SELECT d::text AS date,
-            '0'::text AS returns,
-            COALESCE(fees, 0)::text AS return_fees
-       FROM return_fees`,
+     SELECT d::text AS date, COALESCE(amount,0)::text AS returns, '0'::text AS return_fees FROM case2
+      UNION ALL
+     SELECT d::text AS date, COALESCE(amount,0)::text AS returns, '0'::text AS return_fees FROM case3
+      UNION ALL
+     SELECT d::text AS date, COALESCE(amount,0)::text AS returns, '0'::text AS return_fees FROM case4
+      UNION ALL
+     SELECT d::text AS date, COALESCE(amount,0)::text AS returns, '0'::text AS return_fees FROM case5
+      UNION ALL
+     SELECT d::text AS date, '0'::text AS returns, COALESCE(fees,0)::text AS return_fees FROM return_fees`,
     { type: QueryTypes.SELECT, replacements: { source: SOURCE.SHOPIFY, from, to } },
   );
 }
@@ -487,6 +1062,7 @@ async function buildBreakdown(
       return_fees: ret.return_fees,
       taxes: dayTax,
       total_sales: net + shipping + dayTax - ret.return_fees,
+      order_count: parseInt(r.order_count, 10),
     };
   });
   // Surface return-only days (returns/refunds without a matching order date in window)
@@ -498,6 +1074,7 @@ async function buildBreakdown(
         discounts: 0,
         returns: ret.returns,
         net_sales: -ret.returns,
+        order_count: 0,
         shipping_charges: 0,
         return_fees: ret.return_fees,
         taxes: 0,
@@ -512,81 +1089,23 @@ async function buildBreakdown(
   };
 }
 
-export type SalesBreakdownMode = 'computed' | 'shopify_native';
-
-/**
- * 5-minute in-memory cache for ShopifyQL responses. Keyed by (from|to|mode).
- * ShopifyQL has a per-shop API rate budget — caching prevents every dashboard
- * tile + page-load from spending it. Stays warm for the common founder workflow
- * (open dashboard, click into Finance, change date range, etc.).
- */
-const SHOPIFYQL_CACHE = new Map<string, { data: SalesBreakdown; expiresAt: number }>();
-const SHOPIFYQL_TTL_MS = 5 * 60 * 1000;
-
 function fmtDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-async function buildBreakdownViaShopifyQL(
-  from: Date,
-  to: Date,
-): Promise<{ totals: SalesBreakdownTotals; daily: SalesBreakdownDailyPoint[] }> {
-  const result = await fetchSalesBreakdownViaShopifyQL(from, to);
-  // ShopifyQL totals don't include order_count; fall back to our orders table count
-  // so the founder still sees order volume.
-  const orderCountResult = await sequelize.query<{ n: string }>(
-    `SELECT COUNT(*)::text AS n FROM shopify_orders
-     WHERE created_at BETWEEN :from AND :to
-       AND COALESCE(financial_status, '') <> 'voided'
-       AND cancelled_at IS NULL
-       AND COALESCE(test, FALSE) = FALSE`,
-    { type: QueryTypes.SELECT, replacements: { from, to } },
-  );
-  const order_count = parseInt(orderCountResult[0]?.n ?? '0', 10);
-  return {
-    totals: { ...result.totals, order_count },
-    daily: result.daily.map((d) => ({ ...d })),
-  };
-}
-
-export async function getSalesBreakdown(
-  from: Date,
-  to: Date,
-  mode: SalesBreakdownMode = 'computed',
-): Promise<SalesBreakdown> {
+/**
+ * Sales Breakdown — computed entirely from synced data (`shopify_orders`,
+ * `orders_refunds`, `orders_returns`, `shopify_order_lineitems`). DB is the
+ * single source of truth so the same formula chain works once we layer in
+ * Amazon / Flipkart / Myntra orders alongside Shopify, and so custom reports
+ * built on top of these tables stay internally consistent with the headline
+ * tiles. Per project memory, every Shopify-derived sales metric must factor
+ * through `ordersDaily` / `returnsDaily` / `buildBreakdown` / `computeTotals`.
+ */
+export async function getSalesBreakdown(from: Date, to: Date): Promise<SalesBreakdown> {
   const ms = to.getTime() - from.getTime();
   const prevTo = new Date(from.getTime() - 1);
   const prevFrom = new Date(prevTo.getTime() - ms);
-
-  if (mode === 'shopify_native') {
-    const cacheKey = `${fmtDate(from)}|${fmtDate(to)}|shopify_native`;
-    const cached = SHOPIFYQL_CACHE.get(cacheKey);
-    if (cached && cached.expiresAt > Date.now()) {
-      return cached.data;
-    }
-    // Surface the real error instead of silently falling back so the user sees
-    // *why* "Verify with Shopify" isn't matching (missing scope, rate limit, etc.)
-    // rather than a quiet wrong-number experience.
-    const [current, prev] = await Promise.all([
-      buildBreakdownViaShopifyQL(from, to),
-      buildBreakdownViaShopifyQL(prevFrom, prevTo),
-    ]);
-    const data: SalesBreakdown = {
-      current: {
-        from: fmtDate(from),
-        to: fmtDate(to),
-        totals: current.totals,
-        daily: current.daily,
-      },
-      previous: { from: fmtDate(prevFrom), to: fmtDate(prevTo), totals: prev.totals },
-    };
-    SHOPIFYQL_CACHE.set(cacheKey, { data, expiresAt: Date.now() + SHOPIFYQL_TTL_MS });
-    logger.info(
-      `[Finance] ShopifyQL totals: gross=${data.current.totals.gross_sales} returns=${data.current.totals.returns} net=${data.current.totals.net_sales} total=${data.current.totals.total_sales}`,
-    );
-    return data;
-  }
-
   const [current, prevDaily] = await Promise.all([
     buildBreakdown(from, to),
     buildBreakdown(prevFrom, prevTo),

@@ -14,12 +14,7 @@ import {
 } from 'recharts';
 import type { ReviewsSummary, TopRatedProduct, RecentReview, ReviewsTrendItem } from '@app/types/dashboard';
 
-const ACCENT = '#8b6f3a';
-const POS    = '#2d7a5f';
-const NEG    = '#b8433a';
-const WARN   = '#c4871f';
-const AI     = '#5b4299';
-const MUTED  = '#a39f92';
+import { ACCENT, POS, NEG, WARN, AI, MUTED } from '@utils/constants/palette';
 
 function RatingTrendChart({ data }: { data: ReviewsTrendItem[] }) {
   return (
@@ -31,7 +26,7 @@ function RatingTrendChart({ data }: { data: ReviewsTrendItem[] }) {
             <stop offset="95%" stopColor={WARN} stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e8e6df" />
+        <CartesianGrid strokeDasharray="2 3" stroke="var(--line)" />
         <XAxis dataKey="date" tickFormatter={formatDate} tick={{ fontSize: 11, fill: MUTED }} tickLine={false} />
         <YAxis domain={[0, 5]} tickFormatter={(v: number) => `${v}★`} tick={{ fontSize: 11, fill: MUTED }} axisLine={false} tickLine={false} />
         <Tooltip content={<CustomTooltip formatter={(v, n) => n === 'avg_rating' ? `${Number(v).toFixed(2)}★` : formatNum(v)} />} />
@@ -46,7 +41,7 @@ function AvgRatingTrendChart({ data }: { data: ReviewsTrendItem[] }) {
   return (
     <ResponsiveContainer width="100%" height={220}>
       <ComposedChart data={data} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e8e6df" />
+        <CartesianGrid strokeDasharray="2 3" stroke="var(--line)" />
         <XAxis dataKey="date" tickFormatter={formatDate} tick={{ fontSize: 11, fill: MUTED }} tickLine={false} />
         <YAxis yAxisId="rating" domain={[3.5, 5]} tickFormatter={(v: number) => `${v}★`} tick={{ fontSize: 11, fill: MUTED }} axisLine={false} tickLine={false} width={36} />
         <YAxis yAxisId="count" orientation="right" tick={{ fontSize: 11, fill: MUTED }} axisLine={false} tickLine={false} width={28} />
@@ -73,7 +68,7 @@ function UgcTrendChart({ data }: { data: ReviewsTrendItem[] }) {
             <stop offset="95%" stopColor={AI} stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e8e6df" />
+        <CartesianGrid strokeDasharray="2 3" stroke="var(--line)" />
         <XAxis dataKey="date" tickFormatter={formatDate} tick={{ fontSize: 11, fill: MUTED }} tickLine={false} />
         <YAxis tick={{ fontSize: 11, fill: MUTED }} axisLine={false} tickLine={false} />
         <Tooltip content={<CustomTooltip formatter={(v) => formatNum(v)} />} />
@@ -95,7 +90,7 @@ function UgcTrendChart({ data }: { data: ReviewsTrendItem[] }) {
 //   return (
 //     <ResponsiveContainer width="100%" height={180}>
 //       <BarChart data={bars} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-//         <CartesianGrid strokeDasharray="3 3" stroke="#e8e6df" vertical={false} />
+//         <CartesianGrid strokeDasharray="2 3" stroke="var(--line)" vertical={false} />
 //         <XAxis dataKey="name" tick={{ fontSize: 11, fill: MUTED }} tickLine={false} />
 //         <YAxis tick={{ fontSize: 11, fill: MUTED }} axisLine={false} tickLine={false} />
 //         <Tooltip content={<CustomTooltip formatter={(v) => formatNum(v)} />} />
@@ -484,8 +479,8 @@ function RecentReviewsCards({ data }: { data: RecentReview[] }) {
               onClick={() => setFilter(c.value)}
               className={`text-[11px] font-medium px-2.5 py-1 rounded-full border transition-colors ${
                 filter === c.value
-                  ? 'bg-[var(--ai)] text-white border-[var(--ai)]'
-                  : 'bg-white text-[var(--text-subtle)] border-[var(--border)] hover:border-[var(--ai)] hover:text-[var(--ai)]'
+                  ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
+                  : 'bg-[var(--surface)] text-[var(--muted-2)] border-[var(--line)] hover:border-[var(--accent)] hover:text-[var(--accent)]'
               }`}
             >
               {c.label}
@@ -495,7 +490,7 @@ function RecentReviewsCards({ data }: { data: RecentReview[] }) {
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as ReviewSort)}
-          className="text-xs border border-[var(--border)] rounded-lg px-2.5 py-1.5 bg-white text-[var(--text-muted)] focus:outline-none focus:border-[var(--ai)] cursor-pointer"
+          className="text-xs border border-[var(--line)] rounded-lg px-2.5 py-1.5 bg-[var(--surface)] text-[var(--muted)] focus:outline-none focus:border-[var(--accent)] cursor-pointer"
         >
           <option value="latest">Latest first</option>
           <option value="highest">Highest rating</option>
@@ -537,7 +532,7 @@ function RecentReviewsCards({ data }: { data: RecentReview[] }) {
             />
             <button
               onClick={() => setLightboxUrl(null)}
-              className="absolute -top-3 -right-3 w-7 h-7 bg-white rounded-full flex items-center justify-center text-gray-700 shadow-md hover:bg-gray-100 text-sm font-bold"
+              className="absolute -top-3 -right-3 w-7 h-7 bg-[var(--surface)] rounded-full flex items-center justify-center text-[var(--ink)] shadow-md hover:bg-[var(--surface-2)] text-sm font-bold border border-[var(--line)]"
             >
               ✕
             </button>

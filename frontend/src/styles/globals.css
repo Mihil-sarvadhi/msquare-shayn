@@ -1,58 +1,157 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ───────────────────────── Light theme (default) ───────────────────────── */
 :root {
-  --bg: #fafaf7;
-  --surface: #ffffff;
-  --surface-2: #f5f3ee;
-  --border: #e8e6df;
-  --border-strong: #d4d1c7;
-  --text: #1a1814;
-  --text-muted: #6b6659;
-  --text-subtle: #a39f92;
-  --accent: #8b6f3a;
-  --accent-soft: #f5efe1;
-  --accent-dark: #6b5529;
-  --pos: #2d7a5f;
-  --pos-soft: #e8f3ed;
-  --neg: #b8433a;
-  --neg-soft: #fbe9e7;
-  --warn: #c4871f;
-  --warn-soft: #fdf5e3;
-  --ai: #5b4299;
-  --ai-soft: #ece7f7;
+  /* Surfaces */
+  --bg:        #F6F4EE;
+  --bg-2:      #EFEDE5;
+  --surface:   #FFFCF6;
+  --surface-2: #FAF7EF;
+
+  /* Text */
+  --ink:     #14130E;
+  --ink-2:   #2A2820;
+  --ink-3:   #4A4738;
+  --muted:   #6E6A5C;
+  --muted-2: #98948A;
+
+  /* Borders */
+  --line:   rgba(20,19,14,0.08);
+  --line-2: rgba(20,19,14,0.14);
+  --line-3: rgba(20,19,14,0.20);
+
+  /* Accent (gold) */
+  --accent:        #B8893E;
+  --accent-2:      #8C6624;
+  --accent-soft:   rgba(184,137,62,0.10);
+  --accent-soft-2: rgba(184,137,62,0.22);
+
+  /* Semantic */
+  --green:      #1F8A4C;
+  --green-soft: rgba(31,138,76,0.12);
+  --red:        #C4361F;
+  --red-soft:   rgba(196,54,31,0.10);
+  --amber:      #C8780B;
+  --amber-soft: rgba(200,120,11,0.12);
+  --blue:       #2456C2;
+  --blue-soft:  rgba(36,86,194,0.10);
+  --teal:       #0F8C82;
+  --teal-soft:  rgba(15,140,130,0.12);
+  --purple:     #6E3FD0;
+
+  /* Chart palette (5 colors) */
+  --c1: #B8893E;
+  --c2: #0F8C82;
+  --c3: #2456C2;
+  --c4: #1F8A4C;
+  --c5: #C8780B;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(20,19,14,0.04);
+  --shadow-md: 0 8px 24px rgba(20,19,14,0.08), 0 2px 4px rgba(20,19,14,0.04);
+  --shadow-lg: 0 24px 60px rgba(20,19,14,0.16);
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius:    14px;
+  --radius-lg: 22px;
+
+  /* Compatibility aliases (legacy var names used across the app) */
+  --text:        var(--ink);
+  --text-muted:  var(--muted);
+  --text-subtle: var(--muted-2);
+  --border:      var(--line);
+  --border-strong: var(--line-2);
+  --pos:         var(--green);
+  --pos-soft:    var(--green-soft);
+  --neg:         var(--red);
+  --neg-soft:    var(--red-soft);
+  --warn:        var(--amber);
+  --warn-soft:   var(--amber-soft);
+  --ai:          var(--purple);
+  --ai-soft:     rgba(110,63,208,0.10);
+  --accent-dark: var(--accent-2);
 }
 
+/* ───────────────────────── Dark theme ───────────────────────── */
+[data-theme='dark'] {
+  --bg:        #0E0E10;
+  --bg-2:      #15151A;
+  --surface:   #18181D;
+  --surface-2: #1D1D24;
+
+  --ink:     #F5F2E8;
+  --ink-2:   #E5E1D2;
+  --ink-3:   #BFBAA9;
+  --muted:   #8C887C;
+  --muted-2: #5C5950;
+
+  --line:   rgba(255,255,255,0.07);
+  --line-2: rgba(255,255,255,0.13);
+  --line-3: rgba(255,255,255,0.20);
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+  --shadow-md: 0 8px 28px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.3);
+  --shadow-lg: 0 24px 60px rgba(0,0,0,0.65);
+}
+
+/* ───────────────────────── Animations ───────────────────────── */
 @keyframes beacon-ring {
-  0% { transform: scale(1); opacity: 0.6; }
-  100% { transform: scale(2.4); opacity: 0; }
+  0%   { transform: scale(1);   opacity: 0.6; }
+  100% { transform: scale(2.4); opacity: 0;   }
 }
 
 @keyframes loader-pop {
-  0%, 100% { transform: scale(0.8); opacity: 0.55; }
-  50% { transform: scale(1.12); opacity: 1; }
+  0%, 100% { transform: scale(0.8);  opacity: 0.55; }
+  50%      { transform: scale(1.12); opacity: 1;    }
 }
 
-@keyframes antd-spin-rotate {
-  to { transform: rotate(405deg); }
+@keyframes antd-spin-rotate { to { transform: rotate(405deg); } }
+@keyframes antd-spin-fade   { to { opacity: 1; } }
+
+@keyframes pulseRing {
+  0%   { box-shadow: 0 0 0 0   rgba(184,137,62,0.55); }
+  100% { box-shadow: 0 0 0 8px rgba(184,137,62,0);    }
 }
 
-@keyframes antd-spin-fade {
-  to { opacity: 1; }
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
 }
 
+@keyframes tickerScroll {
+  from { transform: translateX(0);    }
+  to   { transform: translateX(-50%); }
+}
+
+/* ───────────────────────── Base ───────────────────────── */
 @layer base {
-  html {
-    zoom: 1.1;
-  }
+  html { zoom: 1.1; }
+
   body {
-    @apply bg-ivory text-ink antialiased;
-    font-family: 'DM Sans', sans-serif;
+    background-color: var(--bg);
+    color: var(--ink);
+    font-family: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 13.5px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
-  .font-mono {
-    font-family: 'DM Mono', monospace;
-  }
+
+  .font-mono   { font-family: 'Geist Mono', ui-monospace, monospace; }
+  .font-serif  { font-family: 'Fraunces', serif; }
+  .font-sans   { font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; }
+
+  .tabular-nums { font-variant-numeric: tabular-nums; }
+}
+
+/* ───────────────────────── Header backdrop helper ───────────────────────── */
+.app-header-backdrop {
+  background-color: color-mix(in oklab, var(--bg) 78%, transparent);
+  -webkit-backdrop-filter: saturate(180%) blur(18px);
+          backdrop-filter: saturate(180%) blur(18px);
+  border-bottom: 1px solid var(--line);
 }

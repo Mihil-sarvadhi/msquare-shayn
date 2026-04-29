@@ -59,9 +59,11 @@ async function downloadAndInsertBulkData(url: string): Promise<number> {
     const orderId = item.__parentId as string;
     if (!orders[orderId]) continue;
     const price = item.originalUnitPriceSet as { shopMoney: { amount: string } } | undefined;
+    const product = item.product as { id?: string } | undefined;
     await ShopifyOrderLineitem.create({
       order_id: orderId,
       sku: (item.sku as string | undefined) || undefined,
+      product_id: product?.id || undefined,
       title: item.title as string,
       quantity: item.quantity as number,
       unit_price: parseFloat(price?.shopMoney?.amount || '0'),

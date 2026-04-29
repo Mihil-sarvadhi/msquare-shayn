@@ -25,7 +25,7 @@ export default function RevenueChart({ data, loading }: RevenueChartProps) {
   return (
     <ResponsiveContainer width="100%" height={200}>
       <LineChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F0EBE0" />
+        <CartesianGrid strokeDasharray="2 3" vertical={false} stroke="var(--line)" />
         <XAxis
           dataKey="ts"
           type="number"
@@ -33,13 +33,13 @@ export default function RevenueChart({ data, loading }: RevenueChartProps) {
           domain={['dataMin', 'dataMax']}
           ticks={tickTs}
           tickFormatter={(ts: number) => formatDate(new Date(ts).toISOString().split('T')[0])}
-          tick={{ fontSize: 11, fill: '#8C7B64' }}
+          tick={{ fontSize: 10, fill: 'var(--muted-2)' }}
           axisLine={false}
           tickLine={false}
         />
         <YAxis
           tickFormatter={formatINR}
-          tick={{ fontSize: 11, fill: '#8C7B64' }}
+          tick={{ fontSize: 10, fill: 'var(--muted-2)' }}
           axisLine={false}
           tickLine={false}
           width={60}
@@ -48,12 +48,12 @@ export default function RevenueChart({ data, loading }: RevenueChartProps) {
         <Tooltip
           formatter={(val: number) => [formatINR(val), 'Revenue']}
           labelFormatter={(ts: number) => formatDate(new Date(ts).toISOString().split('T')[0])}
-          contentStyle={{ borderRadius: 8, border: '1px solid #F0EBE0', fontSize: 12 }}
+          contentStyle={{ borderRadius: 10, border: '1px solid var(--line)', backgroundColor: 'var(--surface)', fontSize: 12, color: 'var(--ink)' }}
         />
         <Line
           type="monotone"
           dataKey="revenue"
-          stroke="#B8860B"
+          stroke="var(--accent)"
           strokeWidth={2}
           dot={false}
           activeDot={{ r: 4 }}

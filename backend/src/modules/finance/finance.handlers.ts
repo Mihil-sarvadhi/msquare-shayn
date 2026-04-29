@@ -2,9 +2,7 @@ import axios from 'axios';
 import { logger } from '@logger/logger';
 import { SOURCE } from '@constant';
 import {
-  fetchBalanceTransactions,
   fetchLocations,
-  fetchPayouts,
   fetchRefundsDelta,
   fetchReturnsDelta,
   fetchTransactionsDelta,
@@ -13,9 +11,7 @@ import {
   type ShopifyOrderWithTransactions,
 } from '@modules/shopify/shopify.connector';
 import {
-  mapBalanceTransaction,
   mapLocation,
-  mapPayout,
   mapRefunds,
   mapReturns,
   mapTransactions,
@@ -24,11 +20,6 @@ import { upsertLocations } from './locations.repository';
 import { upsertRefunds } from './refunds.repository';
 import { upsertReturns } from './returns.repository';
 import { upsertTransactions } from './transactions.repository';
-import { upsertPayouts } from './payouts.repository';
-import {
-  linkBalanceTransactionsToPayouts,
-  upsertBalanceTransactions,
-} from './balance-transactions.repository';
 import type {
   ResourceHandler,
   SyncResult,
@@ -90,56 +81,6 @@ export const locationsHandler: ResourceHandler = {
     const rows = result.map(mapLocation);
     const count = await upsertLocations(rows);
     return { resource: 'locations', source: SOURCE.SHOPIFY, records_synced: count, duration_ms };
-  },
-};
-
-export const payoutsHandler: ResourceHandler = {
-  source: SOURCE.SHOPIFY,
-  resource: 'payouts',
-  backfill: async (): Promise<SyncResult> => {
-    const { result, duration_ms } = await timed(() => fetchPayouts(SHOPIFY_BACKFILL_FROM));
-    const rows = result.map(mapPayout);
-    const count = await upsertPayouts(rows);
-    await linkBalanceTransactionsToPayouts();
-    return { resource: 'payouts', source: SOURCE.SHOPIFY, records_synced: count, duration_ms };
-  },
-  incremental: async ({ sinceDate }): Promise<SyncResult> => {
-    const { result, duration_ms } = await timed(() => fetchPayouts(sinceDate));
-    const rows = result.map(mapPayout);
-    const count = await upsertPayouts(rows);
-    await linkBalanceTransactionsToPayouts();
-    return { resource: 'payouts', source: SOURCE.SHOPIFY, records_synced: count, duration_ms };
-  },
-};
-
-export const balanceTransactionsHandler: ResourceHandler = {
-  source: SOURCE.SHOPIFY,
-  resource: 'balance_transactions',
-  backfill: async (): Promise<SyncResult> => {
-    const { result, duration_ms } = await timed(() =>
-      fetchBalanceTransactions(SHOPIFY_BACKFILL_FROM),
-    );
-    const rows = result.map(mapBalanceTransaction);
-    const count = await upsertBalanceTransactions(rows);
-    await linkBalanceTransactionsToPayouts();
-    return {
-      resource: 'balance_transactions',
-      source: SOURCE.SHOPIFY,
-      records_synced: count,
-      duration_ms,
-    };
-  },
-  incremental: async ({ sinceDate }): Promise<SyncResult> => {
-    const { result, duration_ms } = await timed(() => fetchBalanceTransactions(sinceDate));
-    const rows = result.map(mapBalanceTransaction);
-    const count = await upsertBalanceTransactions(rows);
-    await linkBalanceTransactionsToPayouts();
-    return {
-      resource: 'balance_transactions',
-      source: SOURCE.SHOPIFY,
-      records_synced: count,
-      duration_ms,
-    };
   },
 };
 

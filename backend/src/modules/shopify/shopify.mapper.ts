@@ -59,6 +59,20 @@ const n = (v: string | undefined): number => parseFloat(v || '0') || 0;
 const opt = <T>(v: T | null | undefined): T | undefined =>
   v === null || v === undefined ? undefined : v;
 
+// Shopify's `sourceName` returns the app's API client ID (numeric string) for
+// orders placed via custom apps (Gokwik COD, Return Prime, etc.) instead of a
+// friendly name. Shopify Analytics shows the app's actual `app.name` for those.
+// Prefer app.name when sourceName looks like a bare app ID (purely digits).
+function resolveChannel(
+  sourceName: string | null | undefined,
+  app: { id: string; name: string } | null | undefined,
+): string | undefined {
+  const src = sourceName?.trim() || '';
+  const appName = app?.name?.trim() || '';
+  if (src && /^\d+$/.test(src) && appName) return appName;
+  return src || appName || undefined;
+}
+
 export function mapShopifyOrder(order: ShopifyOrderData): ShopifyOrderRow {
   const gateways = order.paymentGatewayNames || [];
   const isCOD =
@@ -100,7 +114,7 @@ export function mapShopifyOrder(order: ShopifyOrderData): ShopifyOrderRow {
     test: opt(order.test) ?? undefined,
     note: opt(order.note) || undefined,
     tags: order.tags && order.tags.length > 0 ? order.tags : undefined,
-    channel: opt(order.sourceName) || undefined,
+    channel: resolveChannel(order.sourceName, order.app),
     location_id: order.physicalLocation?.id || undefined,
     source_identifier: opt(order.sourceIdentifier) || undefined,
     revenue,
@@ -204,7 +218,10 @@ export function mapBulkOrder(raw: Record<string, unknown>): ShopifyOrderRow {
     test: (raw.test as boolean | undefined) ?? undefined,
     note: (raw.note as string | undefined) || undefined,
     tags: tags && tags.length > 0 ? tags : undefined,
-    channel: (raw.sourceName as string | undefined) || undefined,
+    channel: resolveChannel(
+      raw.sourceName as string | null | undefined,
+      raw.app as { id: string; name: string } | null | undefined,
+    ),
     location_id: physicalLocation?.id || undefined,
     source_identifier: (raw.sourceIdentifier as string | undefined) || undefined,
     revenue,

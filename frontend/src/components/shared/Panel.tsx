@@ -29,16 +29,35 @@ export function Panel({ title, subtitle, action, className, children }: PanelPro
   const hasHeader = Boolean(title.trim() || subtitle || action);
 
   return (
-    <div className={cn('bg-[var(--surface)] rounded-xl border border-[var(--border)] p-4 flex flex-col', className)}>
+    <div
+      className={cn(
+        'bg-[var(--surface)] rounded-[14px] border border-[var(--line)]',
+        'px-[22px] py-[20px] flex flex-col gap-[14px]',
+        'transition-[border-color,box-shadow] duration-200',
+        'hover:border-[var(--line-2)]',
+        className,
+      )}
+    >
       {hasHeader && (
-        <div className="flex items-start justify-between mb-3 gap-2 shrink-0">
+        <div className="flex items-start justify-between gap-3 flex-wrap shrink-0">
           <div className="min-w-0">
-            {title.trim() && <h3 className="font-semibold text-sm text-[var(--text)] leading-tight">{title}</h3>}
-            {subtitle && <p className="text-xs text-[var(--text-subtle)] mt-0.5">{subtitle}</p>}
+            {title.trim() && (
+              <h3
+                className={cn(
+                  'text-[14.5px] font-semibold leading-[1.25] tracking-tightish',
+                  'text-[var(--ink)]',
+                )}
+              >
+                {title}
+              </h3>
+            )}
+            {subtitle && (
+              <p className="mt-[3px] text-[11.5px] leading-[1.3] text-[var(--muted)]">
+                {subtitle}
+              </p>
+            )}
           </div>
-          <div className="flex items-center gap-1 shrink-0">
-            {action}
-          </div>
+          <div className="flex items-center gap-1 shrink-0">{action}</div>
         </div>
       )}
       <div className="flex-1 min-h-0">{children}</div>

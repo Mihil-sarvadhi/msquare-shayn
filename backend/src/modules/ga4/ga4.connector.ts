@@ -133,7 +133,6 @@ export function getPeriodTotals(startDate: string, endDate: string): Promise<GA4
       { name: 'activeUsers' },
       { name: 'newUsers' },
       { name: 'screenPageViews' },
-      { name: 'bounceRate' },
       { name: 'averageSessionDuration' },
     ],
   });

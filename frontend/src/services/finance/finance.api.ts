@@ -4,12 +4,12 @@ import type {
   FinanceKpisApi,
   PaginationApi,
   PaymentMethodSplitApi,
-  PayoutDetailApi,
-  PayoutSummaryApi,
   RefundRowApi,
   RefundsSummaryApi,
-  RevenueBreakdownPointApi,
+  RevenueBreakdownComparisonApi,
   SalesBreakdownApi,
+  SalesByChannelApi,
+  SalesByProductApi,
   TxRowApi,
 } from '@app/types/finance-api';
 
@@ -38,12 +38,12 @@ export const financeApi = {
 
   getRevenueBreakdown: (params: RangeParams & { group_by: 'day' | 'week' | 'month' }) =>
     baseService
-      .get<ApiEnvelope<RevenueBreakdownPointApi[]>>(API_ENDPOINTS.finance.revenueBreakdown, {
+      .get<ApiEnvelope<RevenueBreakdownComparisonApi>>(API_ENDPOINTS.finance.revenueBreakdown, {
         params,
       })
       .then((r) => r.data.data),
 
-  getSalesBreakdown: (params: RangeParams & { mode?: 'computed' | 'shopify_native' }) =>
+  getSalesBreakdown: (params: RangeParams) =>
     baseService
       .get<ApiEnvelope<SalesBreakdownApi>>(API_ENDPOINTS.finance.salesBreakdown, { params })
       .then((r) => r.data.data),
@@ -55,14 +55,14 @@ export const financeApi = {
       })
       .then((r) => r.data.data),
 
-  listPayouts: (params: PaginatedParams & { status?: string }) =>
+  getSalesByChannel: (params: RangeParams) =>
     baseService
-      .get<ApiEnvelope<PayoutSummaryApi[]>>(API_ENDPOINTS.finance.payouts, { params })
-      .then((r) => ({ rows: r.data.data, pagination: r.data.pagination })),
+      .get<ApiEnvelope<SalesByChannelApi>>(API_ENDPOINTS.finance.salesByChannel, { params })
+      .then((r) => r.data.data),
 
-  getPayoutDetail: (id: number) =>
+  getSalesByProduct: (params: RangeParams & { limit?: number }) =>
     baseService
-      .get<ApiEnvelope<PayoutDetailApi>>(API_ENDPOINTS.finance.payoutDetail(id))
+      .get<ApiEnvelope<SalesByProductApi>>(API_ENDPOINTS.finance.salesByProduct, { params })
       .then((r) => r.data.data),
 
   listRefunds: (params: PaginatedParams & { reason?: string }) =>
@@ -83,17 +83,22 @@ export const financeApi = {
   /**
    * Convenience: fetch all overview data in parallel for the finance dashboard.
    */
-  fetchOverview: async (
-    params: RangeParams & { salesBreakdownMode?: 'computed' | 'shopify_native' },
-  ) => {
-    const { salesBreakdownMode, ...rangeOnly } = params;
-    const [kpis, breakdown, paymentSplit, refundsSummary, salesBreakdown] = await Promise.all([
-      financeApi.getKpis(rangeOnly),
-      financeApi.getRevenueBreakdown({ ...rangeOnly, group_by: 'day' }),
-      financeApi.getPaymentMethodSplit(rangeOnly),
-      financeApi.getRefundsSummary(rangeOnly),
-      financeApi.getSalesBreakdown({ ...rangeOnly, mode: salesBreakdownMode ?? 'computed' }),
+  fetchOverview: async (params: RangeParams) => {
+    const [
+      kpis, breakdown, paymentSplit, refundsSummary, salesBreakdown,
+      salesByChannel, salesByProduct,
+    ] = await Promise.all([
+      financeApi.getKpis(params),
+      financeApi.getRevenueBreakdown({ ...params, group_by: 'day' }),
+      financeApi.getPaymentMethodSplit(params),
+      financeApi.getRefundsSummary(params),
+      financeApi.getSalesBreakdown(params),
+      financeApi.getSalesByChannel(params),
+      financeApi.getSalesByProduct({ ...params, limit: 5 }),
     ]);
-    return { kpis, breakdown, paymentSplit, refundsSummary, salesBreakdown };
+    return {
+      kpis, breakdown, paymentSplit, refundsSummary, salesBreakdown,
+      salesByChannel, salesByProduct,
+    };
   },
 };

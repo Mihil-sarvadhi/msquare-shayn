@@ -21,9 +21,9 @@ export function MarketingFinancePage() {
   if (marketing.error) {
     return (
       <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center">
-        <div className="bg-white rounded-xl border border-[var(--neg-soft)] p-8 text-center max-w-md">
-          <p className="text-[var(--neg)] font-semibold mb-2">Connection Error</p>
-          <p className="text-[var(--text-muted)] text-sm">{marketing.error}</p>
+        <div className="bg-[var(--surface)] rounded-xl border border-[var(--red-soft)] p-8 text-center max-w-md">
+          <p className="text-[var(--red)] font-semibold mb-2">Connection Error</p>
+          <p className="text-[var(--muted)] text-sm">{marketing.error}</p>
         </div>
       </div>
     );
@@ -38,8 +38,8 @@ export function MarketingFinancePage() {
       <div className="bg-[var(--bg)]">
         <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 pt-4 pb-6 space-y-4">
           <div>
-            <h1 className="text-2xl font-semibold text-[var(--text)]">Marketing & Promotions</h1>
-            <p className="text-sm text-[var(--text-muted)] mt-0.5">
+            <h1 className="text-[18px] font-semibold tracking-tightish text-[var(--ink)] leading-[1.25]">Marketing &amp; Promotions</h1>
+            <p className="text-[11.5px] text-[var(--muted)] mt-0.5">
               Discount codes, price rules, gift card liability
             </p>
           </div>
@@ -78,8 +78,8 @@ export function MarketingFinancePage() {
                   className={cn(
                     'px-5 py-3 text-sm font-medium capitalize transition-colors',
                     tab === t
-                      ? 'border-b-2 border-[#8b6f3a] text-[var(--text)]'
-                      : 'text-[var(--text-muted)] hover:text-[var(--text)]',
+                      ? 'border-b-2 border-[var(--accent)] text-[var(--ink)]'
+                      : 'text-[var(--muted)] hover:text-[var(--ink)]',
                   )}
                 >
                   {t.replace('-', ' ')}

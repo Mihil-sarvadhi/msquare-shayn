@@ -15,7 +15,15 @@ export interface RevenueBreakdownPointApi {
   discounts: number;
   refunds: number;
   tax: number;
-  net: number;
+  /** Per-day Total sales — sums to the Sales Breakdown's Total sales row. */
+  total: number;
+  /** Order count for the day (excluding voided/cancelled/test). */
+  orders: number;
+}
+
+export interface RevenueBreakdownComparisonApi {
+  current: { from: string; to: string; points: RevenueBreakdownPointApi[] };
+  previous: { from: string; to: string; points: RevenueBreakdownPointApi[] };
 }
 
 export interface PaymentMethodSplitApi {
@@ -24,39 +32,34 @@ export interface PaymentMethodSplitApi {
   breakdown_by_gateway: { gateway: string; count: number; amount: number }[];
 }
 
+export interface SalesByChannelEntryApi {
+  name: string;
+  amount: number;
+}
+
+export interface SalesByChannelApi {
+  current: { from: string; to: string; total: number; channels: SalesByChannelEntryApi[] };
+  previous: { from: string; to: string; total: number; channels: SalesByChannelEntryApi[] };
+}
+
+export interface SalesByProductEntryApi {
+  product_id: string;
+  title: string;
+  vendor: string | null;
+  product_type: string | null;
+  amount: number;
+  units: number;
+}
+
+export interface SalesByProductApi {
+  current: { from: string; to: string; total: number; products: SalesByProductEntryApi[] };
+  previous: { from: string; to: string; total: number; products: SalesByProductEntryApi[] };
+}
+
 export interface RefundsSummaryApi {
   refund_rate_over_time: { date: string; rate: number }[];
   top_reasons: { reason: string; count: number; amount: number }[];
   refunds_by_sku: { sku: string; count: number; amount: number }[];
-}
-
-export interface PayoutSummaryApi {
-  id: number;
-  source_payout_id: string;
-  payout_date: string | null;
-  status: string;
-  amount: number;
-  currency: string;
-  bank_summary: Record<string, unknown> | null;
-  charges_gross: number | null;
-  refunds_gross: number | null;
-  adjustments_gross: number | null;
-  fees_total: number | null;
-}
-
-export interface BalanceTransactionApi {
-  id: number;
-  type: string;
-  amount: number;
-  fee: number | null;
-  net: number | null;
-  processed_at: string | null;
-  transaction_id: string | null;
-}
-
-export interface PayoutDetailApi {
-  payout: PayoutSummaryApi;
-  balance_transactions: BalanceTransactionApi[];
 }
 
 export interface RefundRowApi {

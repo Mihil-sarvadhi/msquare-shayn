@@ -16,18 +16,13 @@ import {
 import type { MarketingTrendItem, CreativeFatigueItem } from '@app/types/analytics';
 import type { Campaign } from '@app/types/dashboard';
 
-const ACCENT = '#8b6f3a';
-const POS    = '#2d7a5f';
-const NEG    = '#b8433a';
-const WARN   = '#c4871f';
-const AI     = '#5b4299';
-const MUTED  = '#a39f92';
+import { ACCENT, POS, NEG, WARN, AI, MUTED, TEAL } from '@utils/constants/palette';
 
 const OBJ_COLORS: Record<string, string> = {
   OUTCOME_SALES: ACCENT, OUTCOME_TRAFFIC: POS, OUTCOME_AWARENESS: AI,
   CONVERSIONS: WARN, LINK_CLICKS: NEG,
 };
-const FALLBACK_COLORS = [ACCENT, POS, AI, WARN, NEG, '#6b5529'];
+const FALLBACK_COLORS = [ACCENT, POS, AI, WARN, NEG, TEAL];
 
 /* ── helpers ── */
 function fmtTrendDate(d: string) {
@@ -84,8 +79,8 @@ function MarketingTrendChart({ data }: { data: MarketingTrendItem[] }) {
   /* Custom dot: render anomaly marker */
   const AnomalyDot = (props: { cx?: number; cy?: number; payload?: { anomaly?: boolean; partial?: boolean } }) => {
     const { cx = 0, cy = 0, payload } = props;
-    if (payload?.anomaly) return <circle cx={cx} cy={cy} r={4} fill="#f59e0b" stroke="#fff" strokeWidth={1.5} />;
-    if (payload?.partial) return <circle cx={cx} cy={cy} r={3} fill={ACCENT} stroke="#fff" strokeWidth={1} opacity={0.6} />;
+    if (payload?.anomaly) return <circle cx={cx} cy={cy} r={4} fill={WARN} stroke="var(--surface)" strokeWidth={1.5} />;
+    if (payload?.partial) return <circle cx={cx} cy={cy} r={3} fill={ACCENT} stroke="var(--surface)" strokeWidth={1} opacity={0.6} />;
     return <></>;
   };
 
@@ -93,7 +88,7 @@ function MarketingTrendChart({ data }: { data: MarketingTrendItem[] }) {
     <div>
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={enriched} margin={{ top: 10, right: 48, left: 0, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e8e6df" vertical={false} />
+          <CartesianGrid strokeDasharray="2 3" stroke="var(--line)" vertical={false} />
           <XAxis
             dataKey="date"
             tickFormatter={fmtTrendDate}
@@ -125,7 +120,7 @@ function MarketingTrendChart({ data }: { data: MarketingTrendItem[] }) {
               if (!active || !payload?.length) return null;
               const pt = enriched.find((d) => d.date === label);
               return (
-                <div className="bg-[#1a1814] text-white rounded-lg px-3 py-2 text-xs shadow-lg border border-white/10 min-w-[160px]">
+                <div className="bg-[var(--ink)] text-[var(--surface)] rounded-lg px-3 py-2 text-xs shadow-lg border border-[var(--line-3)] min-w-[160px]">
                   <p className="text-[#a39f92] mb-1.5 font-medium">{fmtTrendDate(label as string)}</p>
                   {pt?.noData ? (
                     <p className="text-amber-400">No Meta data for this date</p>
@@ -139,7 +134,7 @@ function MarketingTrendChart({ data }: { data: MarketingTrendItem[] }) {
                       )}
                       {payload.map((entry, i) => (
                         <p key={i} style={{ color: entry.color as string }} className="leading-snug">
-                          <span className="text-white/60">{entry.name}: </span>
+                          <span className="text-[var(--surface)]/60">{entry.name}: </span>
                           {entry.name === 'ROAS'
                             ? `${Number(entry.value ?? 0).toFixed(2)}x`
                             : fmtShortINR(Number(entry.value ?? 0))}
@@ -150,7 +145,7 @@ function MarketingTrendChart({ data }: { data: MarketingTrendItem[] }) {
                 </div>
               );
             }}
-            cursor={{ stroke: 'rgba(139,111,58,0.15)', strokeWidth: 1 }}
+            cursor={{ stroke: 'rgba(184,137,62,0.15)', strokeWidth: 1 }}
           />
           {/* Ad Spend — solid red */}
           <Line
@@ -207,7 +202,7 @@ function MarketingTrendChart({ data }: { data: MarketingTrendItem[] }) {
           ROAS
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: '#f59e0b' }} />
+          <span className="w-3 h-3 rounded-full inline-block" style={{ backgroundColor: WARN }} />
           Anomaly
         </span>
       </div>
@@ -359,7 +354,7 @@ function CreativeFatigueChart({ data }: { data: CreativeFatigueItem[] }) {
     <div>
       <ResponsiveContainer width="100%" height={240}>
         <LineChart data={enriched} margin={{ top: 10, right: 48, left: 0, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e8e6df" vertical={false} />
+          <CartesianGrid strokeDasharray="2 3" stroke="var(--line)" vertical={false} />
           <XAxis
             dataKey="label"
             tick={{ fontSize: 10, fill: MUTED }}
@@ -389,11 +384,11 @@ function CreativeFatigueChart({ data }: { data: CreativeFatigueItem[] }) {
             content={({ active, payload, label }) => {
               if (!active || !payload?.length) return null;
               return (
-                <div className="bg-[#1a1814] text-white rounded-lg px-3 py-2 text-xs shadow-lg border border-white/10 min-w-[140px]">
+                <div className="bg-[var(--ink)] text-[var(--surface)] rounded-lg px-3 py-2 text-xs shadow-lg border border-[var(--line-3)] min-w-[140px]">
                   <p className="text-[#a39f92] mb-1.5 font-medium">{label as string}</p>
                   {payload.map((entry, i) => (
                     <p key={i} style={{ color: entry.color as string }} className="leading-snug">
-                      <span className="text-white/60">{entry.name}: </span>
+                      <span className="text-[var(--surface)]/60">{entry.name}: </span>
                       {entry.name === 'Frequency'
                         ? Number(entry.value ?? 0).toFixed(2)
                         : `${Number(entry.value ?? 0).toFixed(2)}%`}
@@ -402,13 +397,13 @@ function CreativeFatigueChart({ data }: { data: CreativeFatigueItem[] }) {
                 </div>
               );
             }}
-            cursor={{ stroke: 'rgba(139,111,58,0.15)', strokeWidth: 1 }}
+            cursor={{ stroke: 'rgba(184,137,62,0.15)', strokeWidth: 1 }}
           />
           <Line
             yAxisId="freq"
             type="monotone"
             dataKey="frequency"
-            stroke="#e07b39"
+            stroke={WARN}
             strokeWidth={2}
             dot={false}
             activeDot={{ r: 4 }}
@@ -419,7 +414,7 @@ function CreativeFatigueChart({ data }: { data: CreativeFatigueItem[] }) {
             yAxisId="ctr"
             type="monotone"
             dataKey="ctr"
-            stroke="#5b5fc7"
+            stroke={AI}
             strokeWidth={2}
             dot={false}
             activeDot={{ r: 4 }}
@@ -430,11 +425,11 @@ function CreativeFatigueChart({ data }: { data: CreativeFatigueItem[] }) {
       </ResponsiveContainer>
       <div className="flex items-center justify-center gap-6 mt-1 text-xs text-[var(--text-muted)]">
         <span className="flex items-center gap-1.5">
-          <span className="w-5 h-0.5 inline-block rounded" style={{ backgroundColor: '#e07b39' }} />
+          <span className="w-5 h-0.5 inline-block rounded" style={{ backgroundColor: WARN }} />
           Frequency
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-5 h-0.5 inline-block rounded" style={{ backgroundColor: '#5b5fc7' }} />
+          <span className="w-5 h-0.5 inline-block rounded" style={{ backgroundColor: AI }} />
           CTR %
         </span>
       </div>

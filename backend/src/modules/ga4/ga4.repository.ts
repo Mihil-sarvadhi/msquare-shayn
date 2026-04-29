@@ -28,7 +28,7 @@ export interface CountryActiveUsersRow {
 }
 export interface SummaryRow {
   total_sessions: string; total_users: string; total_new_users: string;
-  total_page_views: string; avg_bounce_rate: string; avg_session_duration: string;
+  total_page_views: string; avg_session_duration: string;
 }
 export interface PagesScreensRow {
   page_title: string;
@@ -150,7 +150,6 @@ export async function getSummary(since: string, until: string): Promise<SummaryR
        COALESCE(SUM(active_users), 0)     AS total_users,
        COALESCE(SUM(new_users), 0)        AS total_new_users,
        COALESCE(SUM(page_views), 0)       AS total_page_views,
-       COALESCE(AVG(bounce_rate), 0)      AS avg_bounce_rate,
        COALESCE(AVG(avg_session_duration), 0) AS avg_session_duration
      FROM ga4_traffic_daily
      WHERE date BETWEEN :since AND :until`,

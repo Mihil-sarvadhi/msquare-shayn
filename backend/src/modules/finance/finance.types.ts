@@ -15,7 +15,40 @@ export interface RevenueBreakdownPoint {
   discounts: number;
   refunds: number;
   tax: number;
-  net: number;
+  /** Total sales for the day, distributed using the period's effective tax rate
+   *  so the daily series sums to the Sales Breakdown's "Total sales" total exactly. */
+  total: number;
+  /** Number of orders created on this day — needed for per-day AOV. */
+  orders: number;
+}
+
+export interface RevenueBreakdownComparison {
+  current: { from: string; to: string; points: RevenueBreakdownPoint[] };
+  previous: { from: string; to: string; points: RevenueBreakdownPoint[] };
+}
+
+export interface SalesByChannelEntry {
+  name: string;
+  amount: number;
+}
+
+export interface SalesByChannel {
+  current: { from: string; to: string; total: number; channels: SalesByChannelEntry[] };
+  previous: { from: string; to: string; total: number; channels: SalesByChannelEntry[] };
+}
+
+export interface SalesByProductEntry {
+  product_id: string;
+  title: string;
+  vendor: string | null;
+  product_type: string | null;
+  amount: number;
+  units: number;
+}
+
+export interface SalesByProduct {
+  current: { from: string; to: string; total: number; products: SalesByProductEntry[] };
+  previous: { from: string; to: string; total: number; products: SalesByProductEntry[] };
 }
 
 export interface PaymentMethodSplit {
@@ -28,35 +61,6 @@ export interface RefundsSummary {
   refund_rate_over_time: { date: string; rate: number }[];
   top_reasons: { reason: string; count: number; amount: number }[];
   refunds_by_sku: { sku: string; count: number; amount: number }[];
-}
-
-export interface PayoutSummary {
-  id: number;
-  source_payout_id: string;
-  payout_date: string | null;
-  status: string;
-  amount: number;
-  currency: string;
-  bank_summary: Record<string, unknown> | null;
-  charges_gross: number | null;
-  refunds_gross: number | null;
-  adjustments_gross: number | null;
-  fees_total: number | null;
-}
-
-export interface BalanceTransactionSummary {
-  id: number;
-  type: string;
-  amount: number;
-  fee: number | null;
-  net: number | null;
-  processed_at: string | null;
-  transaction_id: string | null;
-}
-
-export interface PayoutDetail {
-  payout: PayoutSummary;
-  balance_transactions: BalanceTransactionSummary[];
 }
 
 export type GroupBy = 'day' | 'week' | 'month';
@@ -87,6 +91,7 @@ export interface SalesBreakdownDailyPoint {
   return_fees: number;
   taxes: number;
   total_sales: number;
+  order_count: number;
 }
 
 export interface SalesBreakdown {

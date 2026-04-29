@@ -14,6 +14,7 @@ const ORDER_NODE_FIELDS = `
   displayFinancialStatus displayFulfillmentStatus returnStatus
   paymentGatewayNames
   sourceName sourceIdentifier
+  app { id name }
   physicalLocation { id }
   currencyCode presentmentCurrencyCode customerAcceptsMarketing
   risk { assessments { riskLevel } }
@@ -46,6 +47,7 @@ const ORDERS_QUERY = `
           lineItems(first: 20) {
             edges { node {
               sku title quantity
+              product { id }
               variant { id title }
               originalUnitPriceSet { shopMoney { amount } }
             }}
@@ -110,6 +112,7 @@ export interface ShopifyOrder {
   paymentGatewayNames: string[];
   sourceName?: string | null;
   sourceIdentifier?: string | null;
+  app?: { id: string; name: string } | null;
   physicalLocation?: { id: string } | null;
   currencyCode?: string | null;
   presentmentCurrencyCode?: string | null;
@@ -142,6 +145,7 @@ export interface ShopifyOrder {
         sku: string;
         title: string;
         quantity: number;
+        product?: { id: string } | null;
         variant?: { id: string; title: string };
         originalUnitPriceSet: { shopMoney: { amount: string } };
       };
@@ -234,6 +238,7 @@ function buildBulkOrdersQuery(): string {
       closed closedAt confirmed test tags note
       displayFinancialStatus displayFulfillmentStatus returnStatus paymentGatewayNames
       sourceName sourceIdentifier
+      app { id name }
       physicalLocation { id }
       currencyCode presentmentCurrencyCode customerAcceptsMarketing
       risk { assessments { riskLevel } }
@@ -249,7 +254,7 @@ function buildBulkOrdersQuery(): string {
       shippingAddress { address1 address2 city province country countryCode zip phone }
       billingAddress { city province country zip }
       customer { id email firstName lastName defaultAddress { city province } }
-      lineItems { edges { node { sku title quantity originalUnitPriceSet { shopMoney { amount } } }}}
+      lineItems { edges { node { sku title quantity product { id } originalUnitPriceSet { shopMoney { amount } } }}}
     }}}}""") { bulkOperation { id status } userErrors { field message } }
   }
 `;
@@ -370,148 +375,6 @@ export async function fetchLocations(): Promise<ShopifyLocation[]> {
   return all;
 }
 
-export interface ShopifyPayout {
-  id: string;
-  issuedAt: string;
-  status: string;
-  net: { amount: string; currencyCode: string };
-  summary: {
-    chargesGross: { amount: string };
-    adjustmentsGross: { amount: string };
-    chargesFee: { amount: string };
-    refundsFee: { amount: string };
-    adjustmentsFee: { amount: string };
-  };
-  bankAccount: {
-    accountNumberLastDigits: string | null;
-    bankName: string | null;
-  } | null;
-}
-
-const PAYOUTS_QUERY = `
-  query Payouts($cursor: String) {
-    shopifyPaymentsAccount {
-      payouts(first: 50, after: $cursor) {
-        edges {
-          cursor
-          node {
-            id issuedAt status
-            net { amount currencyCode }
-            summary {
-              chargesGross { amount }
-              adjustmentsGross { amount }
-              chargesFee { amount }
-              refundsFee { amount }
-              adjustmentsFee { amount }
-            }
-            bankAccount { accountNumberLastDigits bankName }
-          }
-        }
-        pageInfo { hasNextPage endCursor }
-      }
-    }
-  }
-`;
-
-export async function fetchPayouts(sinceDate: Date | null): Promise<ShopifyPayout[]> {
-  const all: ShopifyPayout[] = [];
-  let cursor: string | null = null;
-  let hasNextPage = true;
-  type Resp = {
-    shopifyPaymentsAccount: {
-      payouts: {
-        edges: { node: ShopifyPayout }[];
-        pageInfo: { hasNextPage: boolean; endCursor: string };
-      };
-    } | null;
-  };
-  while (hasNextPage) {
-    const data: Resp = await graphqlRequest<Resp>(PAYOUTS_QUERY, { cursor });
-    if (!data.shopifyPaymentsAccount) break;
-    const nodes = data.shopifyPaymentsAccount.payouts.edges.map((e) => e.node);
-    if (sinceDate) {
-      const filtered = nodes.filter((p) => new Date(p.issuedAt) >= sinceDate);
-      all.push(...filtered);
-      if (filtered.length < nodes.length) break;
-    } else {
-      all.push(...nodes);
-    }
-    hasNextPage = data.shopifyPaymentsAccount.payouts.pageInfo.hasNextPage;
-    cursor = data.shopifyPaymentsAccount.payouts.pageInfo.endCursor;
-    if (hasNextPage) await new Promise((r) => setTimeout(r, 300));
-  }
-  return all;
-}
-
-export interface ShopifyBalanceTransaction {
-  id: string;
-  type: string;
-  test: boolean;
-  transactionDate: string;
-  amount: { amount: string };
-  fee: { amount: string };
-  net: { amount: string };
-  associatedPayout: { id: string } | null;
-  associatedOrder: { id: string } | null;
-  sourceId: string | null;
-  sourceType: string | null;
-  sourceOrderTransactionId: string | null;
-}
-
-const BALANCE_TX_QUERY = `
-  query BalanceTransactions($cursor: String) {
-    shopifyPaymentsAccount {
-      balanceTransactions(first: 100, after: $cursor) {
-        edges {
-          cursor
-          node {
-            id type test transactionDate
-            amount { amount }
-            fee { amount }
-            net { amount }
-            associatedPayout { id }
-            associatedOrder { id }
-            sourceId sourceType sourceOrderTransactionId
-          }
-        }
-        pageInfo { hasNextPage endCursor }
-      }
-    }
-  }
-`;
-
-export async function fetchBalanceTransactions(
-  sinceDate: Date | null,
-): Promise<ShopifyBalanceTransaction[]> {
-  const all: ShopifyBalanceTransaction[] = [];
-  let cursor: string | null = null;
-  let hasNextPage = true;
-  type Resp = {
-    shopifyPaymentsAccount: {
-      balanceTransactions: {
-        edges: { node: ShopifyBalanceTransaction }[];
-        pageInfo: { hasNextPage: boolean; endCursor: string };
-      };
-    } | null;
-  };
-  while (hasNextPage) {
-    const data: Resp = await graphqlRequest<Resp>(BALANCE_TX_QUERY, { cursor });
-    if (!data.shopifyPaymentsAccount) break;
-    const nodes = data.shopifyPaymentsAccount.balanceTransactions.edges.map((e) => e.node);
-    if (sinceDate) {
-      const filtered = nodes.filter((t) => new Date(t.transactionDate) >= sinceDate);
-      all.push(...filtered);
-      if (filtered.length < nodes.length) break;
-    } else {
-      all.push(...nodes);
-    }
-    hasNextPage = data.shopifyPaymentsAccount.balanceTransactions.pageInfo.hasNextPage;
-    cursor = data.shopifyPaymentsAccount.balanceTransactions.pageInfo.endCursor;
-    if (hasNextPage) await new Promise((r) => setTimeout(r, 300));
-  }
-  return all;
-}
-
 export interface ShopifyRefundLineItem {
   quantity: number;
   restockType: string | null;
@@ -592,10 +455,15 @@ export interface ShopifyReturnLineItem {
   returnReason: string | null;
   // ReturnLineItemType is an interface; pricing fields live on the ReturnLineItem
   // concrete implementor and are reached via the inline fragment in the query.
+  // We use `discountedUnitPriceAfterAllDiscountsSet` (line + order-level discounts)
+  // because Shopify's "Returns" report subtracts ALL discounts on returned items,
+  // not just line-level ones. `discountedUnitPriceSet` (the prior field) only
+  // accounted for line discounts and over-counted Returns by the order-level
+  // discount allocation.
   fulfillmentLineItem: {
     lineItem: {
       sku: string | null;
-      discountedUnitPriceSet: { shopMoney: { amount: string; currencyCode: string } };
+      discountedUnitPriceAfterAllDiscountsSet: { shopMoney: { amount: string; currencyCode: string } };
       originalUnitPriceSet: { shopMoney: { amount: string } };
     } | null;
   } | null;
@@ -641,7 +509,7 @@ const RETURNS_DELTA_QUERY = `
                     fulfillmentLineItem {
                       lineItem {
                         sku
-                        discountedUnitPriceSet { shopMoney { amount currencyCode } }
+                        discountedUnitPriceAfterAllDiscountsSet { shopMoney { amount currencyCode } }
                         originalUnitPriceSet { shopMoney { amount } }
                       }
                     }
@@ -1268,176 +1136,3 @@ export async function fetchDisputes(): Promise<ShopifyDispute[]> {
   return all;
 }
 
-/* ============================================================================
- * ShopifyQL — exact-match analytics via Shopify's own query language.
- * Used by the "Verified by Shopify" toggle on the Sales Breakdown card so
- * numbers match `Analytics → Reports → Total sales breakdown` 1:1.
- * Requires `read_analytics` scope.
- * ========================================================================= */
-
-export interface ShopifyqlSalesBreakdownTotals {
-  gross_sales: number;
-  discounts: number;
-  returns: number;
-  net_sales: number;
-  shipping_charges: number;
-  return_fees: number;
-  taxes: number;
-  total_sales: number;
-}
-
-export interface ShopifyqlSalesBreakdownDailyPoint extends ShopifyqlSalesBreakdownTotals {
-  date: string; // YYYY-MM-DD
-}
-
-export interface ShopifyqlSalesBreakdown {
-  totals: ShopifyqlSalesBreakdownTotals;
-  daily: ShopifyqlSalesBreakdownDailyPoint[];
-}
-
-// Shopify Admin GraphQL 2025-01+ flattened the response: shopifyqlQuery now returns
-// `ShopifyqlQueryResponse` directly (not a `TableResponse | ShopifyqlError` union),
-// `parseErrors` became `[String!]!`, and `rowData` was renamed to `rows: JSON!`
-// (array of objects keyed by column name).
-const SHOPIFYQL_QUERY = `
-  query Q($q: String!) {
-    shopifyqlQuery(query: $q) {
-      parseErrors
-      tableData {
-        columns { name dataType displayName }
-        rows
-      }
-    }
-  }
-`;
-
-type ShopifyqlRow = Record<string, string | number | null>;
-
-interface ShopifyqlResp {
-  shopifyqlQuery: {
-    parseErrors: string[];
-    tableData: {
-      columns: { name: string; dataType: string; displayName: string }[];
-      rows: ShopifyqlRow[];
-    } | null;
-  } | null;
-}
-
-function parseMoney(s: string | null | undefined): number {
-  if (!s) return 0;
-  // ShopifyQL money columns may come back as `"₹1,234.50"` or numeric strings depending on
-  // CURRENCY clause + dataType. Strip everything that isn't a digit/sign/decimal.
-  const cleaned = s.replace(/[^0-9.\-]/g, '');
-  const n = parseFloat(cleaned);
-  return Number.isNaN(n) ? 0 : n;
-}
-
-/**
- * Run a ShopifyQL "Total sales breakdown" report for the given window.
- * Returns daily rows + summary totals matching Shopify's Analytics → Reports.
- */
-export async function fetchSalesBreakdownViaShopifyQL(
-  fromDate: Date,
-  toDate: Date,
-): Promise<ShopifyqlSalesBreakdown> {
-  const fromStr = fromDate.toISOString().slice(0, 10);
-  const toStr = toDate.toISOString().slice(0, 10);
-
-  // ShopifyQL date literals are bare `YYYY-MM-DD` (no quotes). Single-quoted strings
-  // are STRING_ tokens and rejected by the parser. SINCE/UNTIL with bare date literals
-  // are inclusive on both ends, matching the Analytics → Reports UI behaviour.
-  const ql = `
-    FROM sales
-    SHOW gross_sales, discounts, returns, net_sales, shipping_charges, return_fees, taxes, total_sales
-    SINCE ${fromStr} UNTIL ${toStr}
-    GROUP BY day
-    ORDER BY day ASC
-    LIMIT 1000
-  `.trim();
-
-  const resp = await graphqlRequest<ShopifyqlResp>(SHOPIFYQL_QUERY, { q: ql });
-  const r = resp.shopifyqlQuery;
-  if (!r) {
-    throw new Error('ShopifyQL error: empty response');
-  }
-  if (r.parseErrors?.length) {
-    throw new Error(`ShopifyQL parse errors: ${r.parseErrors.join('; ')}`);
-  }
-  if (!r.tableData) {
-    return {
-      daily: [],
-      totals: {
-        gross_sales: 0,
-        discounts: 0,
-        returns: 0,
-        net_sales: 0,
-        shipping_charges: 0,
-        return_fees: 0,
-        taxes: 0,
-        total_sales: 0,
-      },
-    };
-  }
-
-  // Pick the day column name; ShopifyQL labels GROUP BY day as `day` but fall back
-  // to the first column if the schema ever shifts.
-  const dayKey =
-    r.tableData.columns.find((c) => c.name === 'day')?.name ??
-    r.tableData.columns[0]?.name ??
-    'day';
-  const get = (row: ShopifyqlRow, col: string): string => {
-    const v = row[col];
-    if (v === null || v === undefined) return '0';
-    return typeof v === 'number' ? String(v) : v;
-  };
-
-  const daily: ShopifyqlSalesBreakdownDailyPoint[] = r.tableData.rows.map((row) => {
-    const rawDate = String(row[dayKey] ?? '');
-    // Shopify returns ISO timestamps; slice to YYYY-MM-DD for display alignment.
-    const date = rawDate.slice(0, 10);
-    return {
-      date,
-      gross_sales: parseMoney(get(row, 'gross_sales')),
-      discounts: parseMoney(get(row, 'discounts')),
-      returns: parseMoney(get(row, 'returns')),
-      net_sales: parseMoney(get(row, 'net_sales')),
-      shipping_charges: parseMoney(get(row, 'shipping_charges')),
-      return_fees: parseMoney(get(row, 'return_fees')),
-      taxes: parseMoney(get(row, 'taxes')),
-      total_sales: parseMoney(get(row, 'total_sales')),
-    };
-  });
-
-  const totals = daily.reduce<ShopifyqlSalesBreakdownTotals>(
-    (acc, d) => ({
-      gross_sales: acc.gross_sales + d.gross_sales,
-      discounts: acc.discounts + Math.abs(d.discounts), // discounts arrive negative; surface as positive magnitude
-      returns: acc.returns + Math.abs(d.returns),
-      net_sales: acc.net_sales + d.net_sales,
-      shipping_charges: acc.shipping_charges + d.shipping_charges,
-      return_fees: acc.return_fees + Math.abs(d.return_fees),
-      taxes: acc.taxes + d.taxes,
-      total_sales: acc.total_sales + d.total_sales,
-    }),
-    {
-      gross_sales: 0,
-      discounts: 0,
-      returns: 0,
-      net_sales: 0,
-      shipping_charges: 0,
-      return_fees: 0,
-      taxes: 0,
-      total_sales: 0,
-    },
-  );
-
-  // Surface absolute magnitudes per row too (so frontend doesn't need to know the sign convention).
-  const dailyAbs = daily.map((d) => ({
-    ...d,
-    discounts: Math.abs(d.discounts),
-    returns: Math.abs(d.returns),
-    return_fees: Math.abs(d.return_fees),
-  }));
-
-  return { daily: dailyAbs, totals };
-}

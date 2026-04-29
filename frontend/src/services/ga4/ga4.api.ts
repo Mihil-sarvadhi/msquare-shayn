@@ -87,14 +87,14 @@ export async function fetchGA4(range: RangeState) {
     await Promise.all([
       safe(get<GA4Summary>(e.summary, rangeParams), {
         total_sessions: 0, total_users: 0, total_new_users: 0,
-        total_page_views: 0, avg_bounce_rate: 0, avg_session_duration: 0,
+        total_page_views: 0, avg_session_duration: 0,
       }),
       safe(previousRange ? get<GA4Summary>(e.summary, previousRange) : Promise.resolve({
         total_sessions: 0, total_users: 0, total_new_users: 0,
-        total_page_views: 0, avg_bounce_rate: 0, avg_session_duration: 0,
+        total_page_views: 0, avg_session_duration: 0,
       }), {
         total_sessions: 0, total_users: 0, total_new_users: 0,
-        total_page_views: 0, avg_bounce_rate: 0, avg_session_duration: 0,
+        total_page_views: 0, avg_session_duration: 0,
       }),
       safe(get<GA4TrafficDaily[]>(e.overview, rangeParams), []),
       safe(get<GA4Channel[]>(e.channels, rangeParams), []),
@@ -107,11 +107,11 @@ export async function fetchGA4(range: RangeState) {
 
   const normalizedSummary = numify(summary, [
     'total_sessions', 'total_users', 'total_new_users',
-    'total_page_views', 'avg_bounce_rate', 'avg_session_duration',
+    'total_page_views', 'avg_session_duration',
   ]);
   const normalizedSummaryPrevious = numify(summaryPrevious, [
     'total_sessions', 'total_users', 'total_new_users',
-    'total_page_views', 'avg_bounce_rate', 'avg_session_duration',
+    'total_page_views', 'avg_session_duration',
   ]);
 
   const summaryInsights: GA4SummaryInsights = {
@@ -119,14 +119,13 @@ export async function fetchGA4(range: RangeState) {
     users_delta_pct: deltaPct(normalizedSummary.total_users, normalizedSummaryPrevious.total_users),
     new_users_delta_pct: deltaPct(normalizedSummary.total_new_users, normalizedSummaryPrevious.total_new_users),
     page_views_delta_pct: deltaPct(normalizedSummary.total_page_views, normalizedSummaryPrevious.total_page_views),
-    bounce_rate_delta_pct: deltaPct(normalizedSummary.avg_bounce_rate, normalizedSummaryPrevious.avg_bounce_rate),
     avg_session_duration_delta_pct: deltaPct(normalizedSummary.avg_session_duration, normalizedSummaryPrevious.avg_session_duration),
   };
 
   return {
     summary: numify(summary, [
       'total_sessions', 'total_users', 'total_new_users',
-      'total_page_views', 'avg_bounce_rate', 'avg_session_duration',
+      'total_page_views', 'avg_session_duration',
     ]),
     summaryInsights,
     overview: overview.map((r) => numify(r, [

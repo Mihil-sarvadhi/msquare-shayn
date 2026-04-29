@@ -323,7 +323,7 @@ function PerformanceTab() {
                 tickFormatter={(v) => v ?? '-'}
               />
               <Tooltip formatter={(v: number) => formatNum(v)} />
-              <Bar dataKey="units_sold" fill="#8b6f3a" name="Units Sold" />
+              <Bar dataKey="units_sold" fill="var(--accent)" name="Units Sold" />
             </BarChart>
           </ResponsiveContainer>
         )}
@@ -456,9 +456,9 @@ export function CatalogPage() {
   if (catalog.error) {
     return (
       <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center">
-        <div className="bg-white rounded-xl border border-[var(--neg-soft)] p-8 text-center max-w-md">
-          <p className="text-[var(--neg)] font-semibold mb-2">Connection Error</p>
-          <p className="text-[var(--text-muted)] text-sm">{catalog.error}</p>
+        <div className="bg-[var(--surface)] rounded-xl border border-[var(--red-soft)] p-8 text-center max-w-md">
+          <p className="text-[var(--red)] font-semibold mb-2">Connection Error</p>
+          <p className="text-[var(--muted)] text-sm">{catalog.error}</p>
         </div>
       </div>
     );
@@ -474,8 +474,8 @@ export function CatalogPage() {
         <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 pt-4 pb-6 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-semibold text-[var(--text)]">Catalog & Inventory</h1>
-              <p className="text-sm text-[var(--text-muted)] mt-0.5">
+              <h1 className="text-[18px] font-semibold tracking-tightish text-[var(--ink)] leading-[1.25]">Catalog &amp; Inventory</h1>
+              <p className="text-[11.5px] text-[var(--muted)] mt-0.5">
                 {rangeLabel(range)} · Products, stock, margin
               </p>
             </div>
@@ -519,8 +519,8 @@ export function CatalogPage() {
                   className={cn(
                     'px-5 py-3 text-sm font-medium capitalize transition-colors',
                     tab === t
-                      ? 'border-b-2 border-[var(--accent, #8b6f3a)] text-[var(--text)]'
-                      : 'text-[var(--text-muted)] hover:text-[var(--text)]',
+                      ? 'border-b-2 border-[var(--accent)] text-[var(--ink)]'
+                      : 'text-[var(--muted)] hover:text-[var(--ink)]',
                   )}
                 >
                   {t}
