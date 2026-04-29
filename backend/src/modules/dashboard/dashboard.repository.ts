@@ -18,7 +18,7 @@ import type {
 } from './dashboard.types';
 
 export async function getKpis(since: string, until: string): Promise<KpiResult> {
-  const [shopifyKPIs, metaKPIs, ithinkKPIs] = await Promise.all([
+  const [shopifyKPIs, metaKPIs, ithinkKPIs, lifetimeRow] = await Promise.all([
     sequelize.query<{
       total_revenue: string;
       total_orders: string;
@@ -95,6 +95,13 @@ export async function getKpis(since: string, until: string): Promise<KpiResult> 
        WHERE order_date BETWEEN :since AND :until`,
       { type: QueryTypes.SELECT, replacements: { since, until } },
     ),
+    // Lifetime customer count — independent of the date range. Ticker uses this
+    // for its "Customers" tile so the number reflects all customers ever, not
+    // just the window's unique buyers.
+    sequelize.query<{ lifetime_customers: string }>(
+      `SELECT COUNT(*)::text AS lifetime_customers FROM shopify_customers`,
+      { type: QueryTypes.SELECT, replacements: {} },
+    ),
   ]);
 
   const s = shopifyKPIs[0];
@@ -125,6 +132,7 @@ export async function getKpis(since: string, until: string): Promise<KpiResult> 
     ndr: parseInt(i.ndr, 10),
     rtoRate: parseFloat(rtoRate),
     cancelledOrders: parseInt(s.cancelled_orders, 10),
+    lifetimeCustomers: parseInt(lifetimeRow[0]?.lifetime_customers ?? '0', 10),
   };
 }
 

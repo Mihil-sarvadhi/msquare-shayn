@@ -23,6 +23,8 @@ export interface KpiResult {
   ndr: number;
   rtoRate: number;
   cancelledOrders: number;
+  /** Lifetime customer count from `shopify_customers` (range-independent). */
+  lifetimeCustomers: number;
 }
 
 export interface RevenueTrendRow {

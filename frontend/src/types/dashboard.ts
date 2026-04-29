@@ -5,6 +5,8 @@ export interface KPIs {
   purchases: number; purchaseValue: number; roas: number;
   totalShipments: number; delivered: number; rto: number;
   ofd: number; ndr: number; rtoRate: number; cancelledOrders: number;
+  /** Lifetime customer count (range-independent). */
+  lifetimeCustomers: number;
 }
 
 export interface RevenueTrendItem { date: string; revenue: number; orders: number; }

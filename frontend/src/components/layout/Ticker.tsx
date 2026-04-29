@@ -186,7 +186,9 @@ export function Ticker() {
     { label: 'RTO',     value: `${(kpis?.rtoRate ?? 0).toFixed(1)}%`,       delta: ppDiff(kpis?.rtoRate,     prevKpis?.rtoRate, { invert: true }) },
     { label: 'NDR',     value: formatNum(kpis?.ndr ?? 0),                   delta: countDiff(kpis?.ndr,      prevKpis?.ndr,     { invert: true }) },
     { label: 'Fulfilled', value: `${fulfilled.toFixed(0)}%`,                delta: ppDiff(fulfilled,         prevFulfilled)                },
-    { label: 'Customers', value: formatNum(kpis?.customers ?? 0),           delta: countDiff(kpis?.customers, prevKpis?.customers)         },
+    // Lifetime total — independent of the date range, so no delta. Shows the
+    // full customer base size (matches Shopify Admin → Customers count).
+    { label: 'Customers', value: formatNum(kpis?.lifetimeCustomers ?? 0)                                                                    },
     { label: 'Carts',   value: formatNum(abandonedCarts?.count ?? 0)                                                                       },
     { label: 'Ad spend', value: compactINR(kpis?.adSpend),                  delta: pct(kpis?.adSpend,        prevKpis?.adSpend)            },
   ], [leadLabel, kpis, prevKpis, abandonedCarts, netRev, fulfilled, prevFulfilled]);
