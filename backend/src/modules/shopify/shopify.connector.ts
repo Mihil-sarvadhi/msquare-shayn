@@ -1,5 +1,7 @@
 import axios from 'axios';
 import { environment } from '@config/config';
+import { AppError } from '@utils/appError';
+import { ERROR_TYPES } from '@constant/errorTypes.constant';
 
 const SHOPIFY_ENDPOINT = `https://${environment.shopify.storeDomain}/admin/api/${environment.shopify.apiVersion}/graphql.json`;
 
@@ -1136,3 +1138,92 @@ export async function fetchDisputes(): Promise<ShopifyDispute[]> {
   return all;
 }
 
+/* ============================================================================
+ * Shopify Analytics — Sessions via shopifyqlQuery.
+ *
+ * `shopifyqlQuery` is a Query field (not a Mutation). Response shape on this
+ * store's API version (verified 2026-04-29 via probe-shopifyql.ts):
+ *
+ *   type ShopifyqlQueryResponse {
+ *     parseErrors: [String!]
+ *     tableData: ShopifyqlTableData
+ *   }
+ *   type ShopifyqlTableData {
+ *     columns: [...]
+ *     rows: JSON          # array of objects keyed by column name
+ *   }
+ *
+ * Only the `sessions` dataset (columns: sessions, conversion_rate) is
+ * accessible on Shayn's plan tier. Cart-event datasets return
+ * "Schema Error: Invalid dataset" — Added-to-cart is not synced.
+ * ========================================================================= */
+
+export interface AnalyticsDailyRow {
+  /** 'YYYY-MM-DD' in store time zone (Asia/Kolkata). */
+  date: string;
+  sessions: number;
+}
+
+interface ShopifyqlRow {
+  /** ShopifyQL returns DAY_TIMESTAMP as 'YYYY-MM-DD'. */
+  day: string;
+  /** Numeric ShopifyQL column comes back as string. */
+  sessions: string;
+}
+
+interface ShopifyqlResponse {
+  parseErrors: string[];
+  tableData: {
+    columns: Array<{ name: string; dataType: string }>;
+    rows: ShopifyqlRow[] | null;
+  } | null;
+}
+
+const SHOPIFYQL_QUERY = `
+  query RunShopifyQL($q: String!) {
+    shopifyqlQuery(query: $q) {
+      parseErrors
+      tableData {
+        columns { name dataType }
+        rows
+      }
+    }
+  }
+`;
+
+export async function runShopifyQLQuery(query: string): Promise<ShopifyqlResponse> {
+  type Resp = { shopifyqlQuery: ShopifyqlResponse };
+  const data = await graphqlRequest<Resp>(SHOPIFYQL_QUERY, { q: query });
+  if (data.shopifyqlQuery.parseErrors?.length) {
+    throw new AppError({
+      errorType: ERROR_TYPES.INTERNAL_ERROR,
+      message: `ShopifyQL parse errors for query "${query}": ${JSON.stringify(data.shopifyqlQuery.parseErrors)}`,
+      code: 'SHOPIFYQL_PARSE_ERROR',
+    });
+  }
+  return data.shopifyqlQuery;
+}
+
+/**
+ * Per-day Sessions for the given window. `untilDate` is exclusive in
+ * ShopifyQL's `UNTIL` semantics, so callers can pass `now()` and the
+ * query will return data through the latest available bucket.
+ */
+export async function fetchAnalyticsDaily(
+  sinceDate: Date,
+  untilDate: Date,
+): Promise<AnalyticsDailyRow[]> {
+  const since = sinceDate.toISOString().slice(0, 10);
+  const until = untilDate.toISOString().slice(0, 10);
+  const q = `FROM sessions SHOW sessions SINCE ${since} UNTIL ${until} GROUP BY day`;
+
+  const resp = await runShopifyQLQuery(q);
+  const rows = resp.tableData?.rows ?? [];
+  return rows
+    .map((r) => ({
+      date: r.day?.slice(0, 10),
+      sessions: parseInt(r.sessions ?? '0', 10) || 0,
+    }))
+    .filter((r) => r.date)
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
