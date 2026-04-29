@@ -1,4 +1,4 @@
-import { Activity, IndianRupee, UserCheck, PackageCheck, ShoppingBag } from 'lucide-react';
+import { Activity, IndianRupee, UserCheck, ShoppingBag } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAppSelector } from '@store/hooks';
 import { KpiCard } from '@components/shared/KpiCard';
@@ -22,12 +22,12 @@ interface Tile {
 }
 
 /**
- * Five-tile strip mirroring Shopify Admin's Overview KPIs:
- * Sessions · Gross sales · Returning customer rate · Orders fulfilled · Orders.
+ * Four-tile strip mirroring Shopify Admin's Overview KPIs:
+ * Sessions · Gross sales · Returning customer rate · Orders.
  *
  * Sessions come from `shopify_analytics_daily` (Shopify Analytics
  * `shopifyqlQuery`). Gross sales reuses `buildBreakdown.totals.gross_sales`
- * per project memory — no recomputation. The other three are derived from
+ * per project memory — no recomputation. The other two are derived from
  * `shopify_orders`.
  *
  * Renders nothing until both `kpis` and `salesBreakdown` are populated, so it
@@ -63,12 +63,6 @@ export function StorefrontKpiStrip() {
       icon: UserCheck,
     },
     {
-      label: 'Orders fulfilled',
-      pair: kpis.orders_fulfilled,
-      format: (n) => formatNum(n),
-      icon: PackageCheck,
-    },
-    {
       label: 'Orders',
       pair: kpis.orders,
       format: (n) => formatNum(n),
@@ -77,7 +71,7 @@ export function StorefrontKpiStrip() {
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3">
       {tiles.map((t) => (
         <KpiCard
           key={t.label}

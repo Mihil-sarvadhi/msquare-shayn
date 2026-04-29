@@ -13,7 +13,6 @@ async function main() {
   console.log('Storefront tiles:');
   console.log('  sessions:               ', k.sessions);
   console.log('  returning_customer_rate:', k.returning_customer_rate);
-  console.log('  orders_fulfilled:       ', k.orders_fulfilled);
   console.log('  orders:                 ', k.orders);
   console.log('Existing financials:');
   console.log('  gross_revenue:          ', k.gross_revenue.toFixed(2));

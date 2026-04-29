@@ -1162,27 +1162,20 @@ export interface AnalyticsDailyRow {
   /** 'YYYY-MM-DD' in store time zone (Asia/Kolkata). */
   date: string;
   sessions: number;
-  /** Orders that had at least one fulfillment on this day (Shopify-bucketed by fulfillment date). */
-  orders_fulfilled: number;
 }
 
-interface SessionsRow {
+interface ShopifyqlRow {
   /** ShopifyQL returns DAY_TIMESTAMP as 'YYYY-MM-DD'. */
   day: string;
   /** Numeric ShopifyQL column comes back as string. */
   sessions: string;
 }
 
-interface FulfillmentsRow {
-  day: string;
-  orders_fulfilled: string;
-}
-
-interface ShopifyqlResponse<R = Record<string, string>> {
+interface ShopifyqlResponse {
   parseErrors: string[];
   tableData: {
     columns: Array<{ name: string; dataType: string }>;
-    rows: R[] | null;
+    rows: ShopifyqlRow[] | null;
   } | null;
 }
 
@@ -1198,10 +1191,8 @@ const SHOPIFYQL_QUERY = `
   }
 `;
 
-export async function runShopifyQLQuery<R = Record<string, string>>(
-  query: string,
-): Promise<ShopifyqlResponse<R>> {
-  type Resp = { shopifyqlQuery: ShopifyqlResponse<R> };
+export async function runShopifyQLQuery(query: string): Promise<ShopifyqlResponse> {
+  type Resp = { shopifyqlQuery: ShopifyqlResponse };
   const data = await graphqlRequest<Resp>(SHOPIFYQL_QUERY, { q: query });
   if (data.shopifyqlQuery.parseErrors?.length) {
     throw new AppError({
@@ -1214,13 +1205,9 @@ export async function runShopifyQLQuery<R = Record<string, string>>(
 }
 
 /**
- * Per-day Sessions and Orders fulfilled for the given window.
- * Two ShopifyQL datasets queried in parallel and merged on `date`:
- *   - `FROM sessions SHOW sessions GROUP BY day`              (storefront sessions)
- *   - `FROM fulfillments SHOW orders_fulfilled GROUP BY day`  (orders fulfilled, by fulfillment date)
- *
- * `untilDate` is exclusive in ShopifyQL's UNTIL semantics, so callers can pass
- * `now()` to get data through the latest available bucket.
+ * Per-day Sessions for the given window. `untilDate` is exclusive in
+ * ShopifyQL's `UNTIL` semantics, so callers can pass `now()` and the
+ * query will return data through the latest available bucket.
  */
 export async function fetchAnalyticsDaily(
   sinceDate: Date,
@@ -1228,30 +1215,15 @@ export async function fetchAnalyticsDaily(
 ): Promise<AnalyticsDailyRow[]> {
   const since = sinceDate.toISOString().slice(0, 10);
   const until = untilDate.toISOString().slice(0, 10);
+  const q = `FROM sessions SHOW sessions SINCE ${since} UNTIL ${until} GROUP BY day`;
 
-  const [sessionsResp, fulfillmentsResp] = await Promise.all([
-    runShopifyQLQuery<SessionsRow>(
-      `FROM sessions SHOW sessions SINCE ${since} UNTIL ${until} GROUP BY day`,
-    ),
-    runShopifyQLQuery<FulfillmentsRow>(
-      `FROM fulfillments SHOW orders_fulfilled SINCE ${since} UNTIL ${until} GROUP BY day`,
-    ),
-  ]);
-
-  const byDate = new Map<string, AnalyticsDailyRow>();
-  for (const r of sessionsResp.tableData?.rows ?? []) {
-    const date = r.day?.slice(0, 10);
-    if (!date) continue;
-    const cur = byDate.get(date) ?? { date, sessions: 0, orders_fulfilled: 0 };
-    cur.sessions = parseInt(r.sessions ?? '0', 10) || 0;
-    byDate.set(date, cur);
-  }
-  for (const r of fulfillmentsResp.tableData?.rows ?? []) {
-    const date = r.day?.slice(0, 10);
-    if (!date) continue;
-    const cur = byDate.get(date) ?? { date, sessions: 0, orders_fulfilled: 0 };
-    cur.orders_fulfilled = parseInt(r.orders_fulfilled ?? '0', 10) || 0;
-    byDate.set(date, cur);
-  }
-  return Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date));
+  const resp = await runShopifyQLQuery(q);
+  const rows = resp.tableData?.rows ?? [];
+  return rows
+    .map((r) => ({
+      date: r.day?.slice(0, 10),
+      sessions: parseInt(r.sessions ?? '0', 10) || 0,
+    }))
+    .filter((r) => r.date)
+    .sort((a, b) => a.date.localeCompare(b.date));
 }

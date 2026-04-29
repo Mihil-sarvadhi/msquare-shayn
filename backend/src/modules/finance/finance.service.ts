@@ -243,11 +243,8 @@ async function returnsTotalExclTax(from: Date, to: Date): Promise<number> {
 }
 
 /**
- * Storefront KPIs for the new Finance tile strip:
+ * Storefront KPIs for the Finance tile strip:
  *  - sessions                 = SUM(shopify_analytics_daily.sessions)
- *  - orders_fulfilled         = SUM(shopify_analytics_daily.orders_fulfilled)
- *                              (Shopify ShopifyQL `FROM fulfillments` — bucketed
- *                               by fulfillment date, matches Shopify Admin)
  *  - orders                   = COUNT(shopify_orders) in window (test=false)
  *  - returning_customer_rate  = distinct returning customers / distinct customers × 100
  *
@@ -261,15 +258,13 @@ async function returnsTotalExclTax(from: Date, to: Date): Promise<number> {
 interface StorefrontMetrics {
   sessions: number;
   returning_customer_rate: number; // 0-100
-  orders_fulfilled: number;
   orders: number;
 }
 
 async function storefrontMetrics(from: Date, to: Date): Promise<StorefrontMetrics> {
   const [analyticsRows, orderRows] = await Promise.all([
-    sequelize.query<{ sessions: string; orders_fulfilled: string }>(
-      `SELECT COALESCE(SUM(sessions), 0)::text         AS sessions,
-              COALESCE(SUM(orders_fulfilled), 0)::text AS orders_fulfilled
+    sequelize.query<{ sessions: string }>(
+      `SELECT COALESCE(SUM(sessions), 0)::text AS sessions
          FROM shopify_analytics_daily
          WHERE source = :source
            AND date BETWEEN (:from)::date AND (:to)::date`,
@@ -307,12 +302,10 @@ async function storefrontMetrics(from: Date, to: Date): Promise<StorefrontMetric
     distinct_customers: '0',
     returning_customers: '0',
   };
-  const a = analyticsRows[0] ?? { sessions: '0', orders_fulfilled: '0' };
   const distinctCustomers = parseInt(o.distinct_customers, 10);
   const returningCustomers = parseInt(o.returning_customers, 10);
   return {
-    sessions: parseInt(a.sessions, 10),
-    orders_fulfilled: parseInt(a.orders_fulfilled, 10),
+    sessions: parseInt(analyticsRows[0]?.sessions ?? '0', 10),
     orders: parseInt(o.orders, 10),
     returning_customer_rate:
       distinctCustomers > 0 ? (returningCustomers / distinctCustomers) * 100 : 0,
@@ -362,7 +355,6 @@ export async function getKpis(from: Date, to: Date): Promise<FinanceKpis> {
       value: sf.returning_customer_rate,
       previous: sfPrev.returning_customer_rate,
     },
-    orders_fulfilled: { value: sf.orders_fulfilled, previous: sfPrev.orders_fulfilled },
     orders: { value: sf.orders, previous: sfPrev.orders },
   };
 }

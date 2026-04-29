@@ -18,8 +18,6 @@ export interface FinanceKpis {
   sessions: KpiPair;
   /** % of orders placed by customers with at least one prior order, 0-100. */
   returning_customer_rate: KpiPair;
-  /** Orders fulfilled in the window (FULFILLED or PARTIALLY_FULFILLED). */
-  orders_fulfilled: KpiPair;
   /** Orders created in the window (excluding test orders). */
   orders: KpiPair;
 }
