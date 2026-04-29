@@ -33,3 +33,8 @@ export type { DisputeStatus } from './Dispute';
 export { JudgemeReview } from './JudgemeReview';
 export { JudgemeProduct } from './JudgemeProduct';
 export { JudgemeStoreSummary } from './JudgemeStoreSummary';
+export { UnicommerceOrder } from './UnicommerceOrder';
+export { UnicommerceOrderItem } from './UnicommerceOrderItem';
+export { UnicommerceShipment } from './UnicommerceShipment';
+export { UnicommerceReturn } from './UnicommerceReturn';
+export { UnicommerceInventory } from './UnicommerceInventory';
