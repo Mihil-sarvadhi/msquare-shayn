@@ -1,5 +1,9 @@
 import cron from 'node-cron';
-import { syncShopifyOrders, syncAbandonedCheckouts } from '@modules/shopify/shopify.sync';
+import {
+  syncShopifyOrders,
+  syncAbandonedCheckouts,
+  syncAnalyticsDaily,
+} from '@modules/shopify/shopify.sync';
 import { syncMetaInsights } from '@modules/meta/meta.sync';
 import { syncIthinkShipments, syncDailyRemittance } from '@modules/ithink/ithink.sync';
 import { syncJudgeMe } from '@modules/judgeme/judgeme.sync';
@@ -17,6 +21,12 @@ export function startScheduler(): void {
     logger.info('[Cron] Running Shopify sync...');
     await syncShopifyOrders();
     await syncAbandonedCheckouts();
+  }, TZ);
+
+  // Hourly — Shopify Analytics (sessions). Trailing 7 days re-synced each run.
+  cron.schedule('0 * * * *', async () => {
+    logger.info('[Cron] Running Shopify analytics sync...');
+    await syncAnalyticsDaily();
   }, TZ);
 
   // Every 15 min — Phase 2 orchestrator (finance + future slices)

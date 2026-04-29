@@ -21,6 +21,7 @@
     "probe:returns-split": "tsx src/scripts/probe-returns-split.ts",
     "backfill:shopify:transactions": "tsx src/scripts/backfill-refunds.ts transactions",
     "backfill:shopify:locations": "tsx src/scripts/backfill-refunds.ts locations",
+    "backfill:shopify:analytics": "tsx src/scripts/backfill-analytics.ts",
     "backfill:meta": "tsx src/modules/meta/meta.backfill.ts",
     "backfill:ithink": "tsx src/modules/ithink/ithink.backfill.ts",
     "backfill:judgeme": "tsx src/modules/judgeme/judgeme.backfill.ts",

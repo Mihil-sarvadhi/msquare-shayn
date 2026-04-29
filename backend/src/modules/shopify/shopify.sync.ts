@@ -5,17 +5,20 @@ import {
   ShopifyOrderLineitem,
   ShopifyCustomer,
   ShopifyAbandonedCheckout,
+  ShopifyAnalyticsDaily,
   ConnectorHealth,
 } from '@db/models';
 import {
   fetchRecentOrders,
   fetchAbandonedCheckouts,
   fetchCustomers,
+  fetchAnalyticsDaily,
   type ShopifyOrder as ShopifyOrderData,
   type ShopifyCustomer as ShopifyCustomerData,
 } from './shopify.connector';
 import { mapShopifyOrder } from './shopify.mapper';
 import { logger } from '@logger/logger';
+import { SOURCE } from '@constant';
 
 export async function syncShopifyCustomers(): Promise<number> {
   const customers: ShopifyCustomerData[] = await fetchCustomers();
@@ -108,5 +111,40 @@ export async function syncAbandonedCheckouts(): Promise<void> {
     logger.info(`[Shopify] Synced ${count} abandoned checkouts`);
   } catch (err) {
     logger.error(`[Shopify] Abandoned checkout sync error: ${(err as Error).message}`);
+  }
+}
+
+/**
+ * Trailing 7-day refresh of `shopify_analytics_daily`.
+ * Shopify Analytics may re-stamp events for ~2 days; 7 is a safe buffer.
+ * Idempotent (upsert on `(source, date)`).
+ */
+export async function syncAnalyticsDaily(): Promise<number> {
+  try {
+    const until = new Date();
+    const since = new Date(until.getTime() - 7 * 86400000);
+    const rows = await fetchAnalyticsDaily(since, until);
+    if (rows.length === 0) {
+      logger.info('[Shopify] Analytics sync: 0 rows');
+      return 0;
+    }
+    const now = new Date();
+    await ShopifyAnalyticsDaily.bulkCreate(
+      rows.map((r) => ({
+        source: SOURCE.SHOPIFY,
+        date: r.date,
+        sessions: r.sessions,
+        synced_at: now,
+      })),
+      {
+        updateOnDuplicate: ['sessions', 'synced_at', 'updated_at'],
+        conflictAttributes: ['source', 'date'],
+      },
+    );
+    logger.info(`[Shopify] Analytics sync: upserted ${rows.length} day rows`);
+    return rows.length;
+  } catch (err) {
+    logger.error(`[Shopify] Analytics sync error: ${(err as Error).message}`);
+    return 0;
   }
 }
