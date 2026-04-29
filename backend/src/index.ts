@@ -7,7 +7,6 @@ import { logger } from '@logger/logger';
 import { startScheduler } from '@modules/jobs/scheduler';
 import { registerFinanceResources } from '@modules/finance';
 import { registerCatalogResources } from '@modules/catalog';
-import { registerMarketingResources } from '@modules/marketing';
 
 // BigInt serialization for JSON responses
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -33,8 +32,7 @@ const startServer = async () => {
 
   registerFinanceResources();
   registerCatalogResources();
-  registerMarketingResources();
-  logger.info('Finance + Catalog + Marketing resource handlers registered.');
+  logger.info('Finance + Catalog resource handlers registered.');
 
   startScheduler();
 

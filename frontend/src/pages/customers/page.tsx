@@ -300,7 +300,7 @@ export function CustomersPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Panel
               title="Customer Segments"
-              subtitle="Buyers by order frequency"
+              subtitle="Shopify · Buyers by order frequency"
               info={{ what: 'Customers grouped by total number of orders placed in the selected period.', source: 'Shopify Orders', readIt: 'A healthy brand sees growing 2–3 order and 4+ order buckets over time — signal of repeat purchase habits forming.' }}
               ai={{ observation: 'Most customers are one-time buyers — the classic D2C retention challenge.', insight: 'Moving customers from 1 order to 2+ orders is the highest-leverage retention play. A second purchase signals product satisfaction and dramatically increases LTV.', metrics: [{ label: 'Total Customers', value: formatNum(customerOverview?.total_customers) }, { label: 'Repeat Rate', value: formatPct(customerOverview?.repeat_rate) }], actions: ['Launch post-purchase email series targeting 1-order customers', 'Offer 10% loyalty discount for second purchase within 60 days', 'Build a replenishment reminder for consumable products'] }}
             >
@@ -308,7 +308,7 @@ export function CustomersPage() {
             </Panel>
             <Panel
               title="New vs Returning"
-              subtitle="Customer mix this period"
+              subtitle="Shopify · Customer mix this period"
               info={{ what: 'Comparison of new customers (first ever order) vs returning customers in the period.', source: 'Shopify Orders' }}
               ai={{ observation: 'New customer acquisition is healthy but retention drives long-term profitability.', insight: `Repeat rate of ${formatPct(customerOverview?.repeat_rate)} ${(customerOverview?.repeat_rate ?? 0) > 30 ? 'is strong for D2C' : 'is below the 30% D2C benchmark'}. Each returning customer costs ~10× less to serve than acquiring a new one.`, actions: ['Set retention target: 35% repeat rate in 90 days', 'Implement loyalty programme with points per purchase', 'Segment email list: send win-back campaign to lapsed 90+ day buyers'] }}
             >
@@ -316,7 +316,7 @@ export function CustomersPage() {
             </Panel>
             <Panel
               title="Top Rated Products"
-              subtitle="Highest average ratings"
+              subtitle="Judge.me · Highest average ratings"
               info={{ what: 'Products with the highest average customer rating.', source: 'Judge.me Reviews', readIt: 'Products with 4.5★+ and 10+ reviews are reliable candidates for ad creative and bundles.' }}
               ai={{ observation: "Top-rated products are underutilised in marketing — they are the brand's social proof anchors.", insight: 'Feature your highest-rated products in Meta creatives, email headers, and homepage hero sections. Review velocity on these products directly supports search ranking on marketplaces.', actions: ['Use top-rated product reviews as ad testimonials', 'Bundle high-rated products with newer launches to drive trial', 'Create a "Best Reviewed" collection page for organic SEO'] }}
             >
@@ -327,7 +327,7 @@ export function CustomersPage() {
           {/* Top Customers Table */}
           <Panel
             title="Top Customers"
-            subtitle="Highest lifetime value buyers this period"
+            subtitle="Shopify · Highest lifetime value buyers this period"
             info={{ what: 'Top 10 customers by total revenue in the selected period.', source: 'Shopify Orders' }}
             ai={{ observation: 'Top customers are disproportionately valuable and deserve white-glove treatment.', insight: 'Your top 10 customers likely represent 5–10% of total revenue. Direct outreach, exclusive previews, and personalised gifting for this segment delivers outsized retention ROI.', actions: ['Create a VIP segment for top 50 lifetime customers', 'Send handwritten thank-you notes to top 10 buyers', 'Offer exclusive early access to new collections for VIP customers'] }}
           >
@@ -336,7 +336,7 @@ export function CustomersPage() {
 
           <Panel
             title="Geographic Revenue"
-            subtitle="Revenue by state — all regions"
+            subtitle="Shopify · Revenue by state — all regions"
             info={{ what: 'Revenue contribution by customer state for the selected period.', source: 'Shopify Orders', readIt: 'Top 3 states typically contribute 40–60% of D2C revenue for India-focused brands.' }}
             ai={{ observation: 'Geographic concentration in top states presents both opportunity and risk.', insight: 'Heavy concentration in 1–2 states means brand reach is still limited. Geo-targeted campaigns in underserved states typically have lower CPAs due to less competition.', actions: ['Run geo-targeted Meta campaigns in top 5 underserved states', 'Partner with regional influencers in high-potential states', 'Analyse pincode-level RTO rates to identify high-risk zones'] }}
           >

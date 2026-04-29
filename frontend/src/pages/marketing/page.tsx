@@ -759,7 +759,7 @@ export function MarketingPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             <Panel
               title="Marketing Trend"
-              subtitle="Spend · Revenue · ROAS over time"
+              subtitle="Meta Ads · Spend · Revenue · ROAS over time"
               className="lg:col-span-2"
               info={{ what: 'Daily ad spend, Meta-attributed revenue, and ROAS over the selected period.', source: 'Meta Ads API', readIt: 'When the ROAS line rises while spend holds flat, efficiency is improving.' }}
               ai={{ observation: 'ROAS fluctuations often correlate with creative fatigue or audience saturation mid-period.', insight: 'Consistent ROAS decline over 5+ days signals creative fatigue. Refresh creatives before ROAS drops below 1.5x to avoid wasted spend.', actions: ['Refresh creatives when ROAS drops >20% from peak for 3 consecutive days', 'Scale spend only on days when ROAS > 2.5x', 'Set automated rules to pause campaigns at ROAS < 1x'] }}
@@ -768,7 +768,7 @@ export function MarketingPage() {
             </Panel>
             <Panel
               title="Meta Funnel"
-              subtitle="Impression → Click → Purchase"
+              subtitle="Meta Ads · Impression → Click → Purchase"
               info={{ what: 'Conversion funnel from Meta ad impressions to purchases.', how: 'CTR = Clicks / Impressions × 100. CVR = Purchases / Clicks × 100.', source: 'Meta Ads API', readIt: 'Healthy CTR is 1–3%. CVR > 2% indicates strong landing page performance.' }}
               ai={{ observation: 'A high CTR with low CVR signals strong creative but weak landing page or offer.', insight: 'Mid-funnel drop between click and purchase is a landing page or checkout friction issue — not an ad problem. Fix the page before increasing spend.', actions: ['A/B test landing page headlines and hero images', 'Reduce checkout steps to improve CVR', 'Add social proof (reviews, UGC) above the fold'] }}
             >
@@ -784,7 +784,7 @@ export function MarketingPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             <Panel
               title="Creative Fatigue — top spenders"
-              subtitle={`Frequency vs CTR · ${rangeLabel(range)}`}
+              subtitle={`Meta Ads · Frequency vs CTR · ${rangeLabel(range)}`}
               className="lg:col-span-2"
               info={{ what: 'Tracks frequency (avg impressions per person) and CTR for the top 5 campaigns by spend. Both are 7-day rolling averages to smooth daily noise.', how: 'Frequency = SUM(impressions) / SUM(reach). CTR = SUM(clicks) / SUM(impressions) × 100.', source: 'Meta Ads API', readIt: 'Rising frequency + falling CTR = creative fatigue. Audience has seen the ad too many times and is tuning it out. Refresh creatives or expand audience when frequency > 3 and CTR drops > 20%.' }}
               ai={{ observation: 'CTR typically drops 30–50% once frequency crosses 3× on a cold audience.', insight: 'Frequency above 3.5 with declining CTR is the clearest signal of creative burnout. The fix is new creative, not more budget — scaling spend into a fatigued audience multiplies waste.', actions: ['Refresh top creative when frequency > 3 for 5+ consecutive days', 'Duplicate winning ad sets with new creative variants', 'Expand lookalike audience size to lower frequency organically'] }}
@@ -793,7 +793,7 @@ export function MarketingPage() {
             </Panel>
             <Panel
               title="Spend by Objective"
-              subtitle="Budget allocation by campaign type"
+              subtitle="Meta Ads · Budget allocation by campaign type"
               info={{ what: 'Breakdown of total ad spend by Meta campaign objective.', source: 'Meta Ads API', readIt: 'Conversion campaigns should dominate — 60–70% of total spend for D2C.' }}
               ai={{ observation: 'Over-investment in awareness campaigns dilutes direct revenue attribution.', insight: '70% conversion + 20% retargeting + 10% awareness is the optimal D2C allocation. Awareness builds equity but rarely converts in-session.', actions: ['Allocate 70% to conversion campaigns', 'Run retargeting at 20% for cart abandonments', 'Limit awareness to 10% and measure brand search lift separately'] }}
             >

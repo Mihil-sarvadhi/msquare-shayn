@@ -305,7 +305,7 @@ function PerformanceTab() {
   const { bestSellers, slowMovers, margin } = useAppSelector((s) => s.catalog);
   return (
     <div className="space-y-4">
-      <Panel title="Best Sellers" subtitle="Top 20 by units sold in current range">
+      <Panel title="Best Sellers" subtitle="Shopify · Top 20 by units sold in current range">
         {bestSellers.length === 0 ? (
           <div className="h-[200px] flex items-center justify-center text-sm text-[var(--text-muted)]">
             No sales data for this range.
@@ -330,7 +330,7 @@ function PerformanceTab() {
       </Panel>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Panel title="Slow Movers" subtitle="Active SKUs with stock but no recent sales">
+        <Panel title="Slow Movers" subtitle="Shopify · Active SKUs with stock but no recent sales">
           {slowMovers.length === 0 ? (
             <p className="text-sm text-[var(--text-muted)]">No slow movers detected.</p>
           ) : (
@@ -357,7 +357,7 @@ function PerformanceTab() {
           )}
         </Panel>
 
-        <Panel title="Gross Margin" subtitle="Per SKU · N/A when COGS is missing in Shopify">
+        <Panel title="Gross Margin" subtitle="Shopify · Per SKU · N/A when COGS is missing">
           {margin.length === 0 ? (
             <p className="text-sm text-[var(--text-muted)]">No data.</p>
           ) : (

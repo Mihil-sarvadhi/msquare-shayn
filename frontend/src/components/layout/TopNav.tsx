@@ -43,8 +43,6 @@ const NAV = [
   { label: 'Dashboard',  to: '/dashboard'  },
   { label: 'Finance',    to: '/finance'    },
   { label: 'Catalog',    to: '/catalog'    },
-  { label: 'Promotions', to: '/promotions' },
-  { label: 'Risk',       to: '/risk'       },
   { label: 'Marketing',  to: '/marketing'  },
   { label: 'Customers',  to: '/customers'  },
   { label: 'Operations', to: '/operations' },

@@ -310,7 +310,7 @@ export function OperationsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <Panel
               title="Shipment Status"
-              subtitle="Current status breakdown"
+              subtitle="iThink · Current status breakdown"
               info={{ what: 'Distribution of all shipments by current logistics status.', source: 'iThink Logistics', readIt: 'Delivered % should be 60–70% for a healthy operations mix. High NDR indicates last-mile delivery issues.' }}
               ai={{ observation: 'Shipment status distribution reveals where bottlenecks exist in your fulfilment pipeline.', insight: 'High NDR (non-delivery report) counts usually mean incorrect addresses or customer unavailability. Pre-shipment address verification and IVR confirmation calls can cut NDR by 30–40%.', actions: ['Implement address validation at checkout using Pincode API', 'Set up automated NDR resolution flow with customer SMS', 'Monitor OFD-to-delivered conversion rate by courier'] }}
             >
@@ -318,7 +318,7 @@ export function OperationsPage() {
             </Panel>
             <Panel
               title="RTO by State"
-              subtitle="Geographic quality signal · flag states >20%"
+              subtitle="iThink + Shopify · Geographic quality signal · flag states >20%"
               className="lg:col-span-2"
               info={{ what: 'RTO rate (returns / shipments) for each customer state, ranked highest first.', source: 'iThink Logistics', readIt: 'States above 25% RTO rate warrant courier reassignment or COD blocking.' }}
               ai={{ observation: 'Geographic RTO concentration reveals problem markets that inflate overall RTO rate.', insight: 'Blocking COD in the top 3 high-RTO states often reduces overall RTO by 5–8 percentage points with minimal revenue impact, since these markets have high fake-order rates.', actions: ['Block COD for pincodes with > 30% historical RTO rate', 'Switch to prepaid-only for top-3 high-RTO states as pilot', 'Run address verification IVR for all COD orders in high-risk zones'] }}

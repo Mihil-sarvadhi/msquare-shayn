@@ -1144,12 +1144,12 @@ export function FinancePage() {
             <div className="lg:col-span-2">
               <Panel
                 title="Total sales over time"
-                subtitle="Daily total sales · breakdown in tooltip"
+                subtitle="Shopify · Daily total sales · breakdown in tooltip"
               >
                 <RevenueBreakdownChart />
               </Panel>
             </div>
-            <Panel title="Payment Methods" subtitle="COD vs Prepaid + gateway split">
+            <Panel title="Payment Methods" subtitle="Shopify · COD vs Prepaid + gateway split">
               <PaymentMethodDonut />
             </Panel>
           </div>
@@ -1164,13 +1164,13 @@ export function FinancePage() {
             </Panel>
             <Panel
               title="Average order value over time"
-              subtitle="Daily AOV · current vs prev"
+              subtitle="Shopify · Daily AOV · current vs prev"
             >
               <AvgOrderValueChart />
             </Panel>
             <Panel
               title="Total sales by product"
-              subtitle="Top 5 by total sales · current vs prev"
+              subtitle="Shopify · Top 5 by total sales · current vs prev"
             >
               <SalesByProductBars />
             </Panel>
@@ -1178,16 +1178,16 @@ export function FinancePage() {
 
           {/* Row 3: Refund rate chart + Refunds table */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Panel title="Refund Rate Trend" subtitle="Daily refund count / order count">
+            <Panel title="Refund Rate Trend" subtitle="Shopify · Daily refund count / order count">
               <RefundRateChart />
             </Panel>
-            <Panel title="Refund Breakdowns" subtitle="Top reasons + top SKUs">
+            <Panel title="Refund Breakdowns" subtitle="Shopify · Top reasons + top SKUs">
               <RefundsBreakdown />
             </Panel>
           </div>
 
           {/* Row 4: Refunds detail table */}
-          <Panel title="Refunds" subtitle="Per-refund detail">
+          <Panel title="Refunds" subtitle="Shopify · Per-refund detail">
             <RefundsTable />
           </Panel>
         </main>

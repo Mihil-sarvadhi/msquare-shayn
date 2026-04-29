@@ -642,7 +642,7 @@ export function ReviewsPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Panel
               title="Rating Summary"
-              subtitle="Overall score breakdown"
+              subtitle="Judge.me · Overall score breakdown"
               info={{ what: 'Store-level rating and percentage breakdown by star level.', source: 'Judge.me Reviews' }}
               ai={{ observation: `Store rating of ${Number(reviewsSummary?.store_rating ?? 0).toFixed(1)}★ ${(reviewsSummary?.store_rating ?? 0) >= 4.5 ? 'is excellent' : 'needs improvement'}.`, insight: 'Ratings above 4.5★ with 50+ reviews dramatically improve conversion rate. Focus on preventing 1–2 star reviews through proactive post-delivery follow-up rather than just collecting more 5★.', actions: ['Send review request 7 days after delivery confirmation', 'Respond to all 1–3 star reviews within 24 hours publicly', 'Incentivise photo reviews with 5% off next order'] }}
             >
@@ -650,7 +650,7 @@ export function ReviewsPage() {
             </Panel>
             <Panel
               title="Rating Trend"
-              subtitle="Average rating over time"
+              subtitle="Judge.me · Average rating over time"
               info={{ what: 'Average star rating of reviews received each day over the period.', source: 'Judge.me Reviews', readIt: 'Dips below 4.0 on specific dates warrant investigation — usually correlated with a product or fulfilment issue.' }}
               ai={{ observation: 'Rating trend shows overall product and experience quality signal over time.', insight: 'Identify exact dates where average rating drops sharply — these almost always correlate with a specific product batch, courier change, or packaging issue. Fix the root cause, not just the symptom.', actions: ['Correlate rating dips with shipment dates and courier used', 'Flag product titles appearing in 1-star reviews for QC review', 'Set alert when 7-day rolling rating drops below 4.2★'] }}
             >
@@ -658,7 +658,7 @@ export function ReviewsPage() {
             </Panel>
             <Panel
               title="Review Volume Trend"
-              subtitle="Daily review count"
+              subtitle="Judge.me · Daily review count"
               info={{ what: 'Number of reviews received each day in the selected period.', source: 'Judge.me Reviews', readIt: 'Sustained review volume indicates healthy post-purchase engagement. Spikes may correlate with campaigns.' }}
               ai={{ observation: 'Review velocity is a compound metric — it reflects both sales volume and post-purchase engagement quality.', insight: 'Low review rates (< 3% of orders) indicate your review request flow needs improvement. The subject line and timing of the request email are the biggest levers.', metrics: [{ label: 'Total Reviews', value: formatNum(reviewsSummary?.total_reviews) }, { label: 'With Photos', value: formatNum(reviewsSummary?.with_photos) }], actions: ['A/B test review request email subject lines', 'Send request at 7 days post-delivery (not at purchase)', 'Offer photo review incentive to boost UGC rate'] }}
             >
@@ -670,7 +670,7 @@ export function ReviewsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Panel
               title="Avg Rating Trend"
-              subtitle="Rating vs review count over time"
+              subtitle="Judge.me · Rating vs review count over time"
               info={{ what: 'Average star rating (line) overlaid on daily review count (bars). Dashed line marks the 4.5★ excellence threshold.', source: 'Judge.me Reviews', readIt: 'Watch for divergence: rising review count with falling rating signals a quality issue at scale.' }}
               ai={{ observation: 'Combining rating and volume reveals whether quality scales with growth.', insight: 'The most dangerous pattern is a steady rating decline masked by growing volume — the brand looks healthy in aggregate while new customers are quietly dissatisfied. Track the gap between the trend line and 4.5★ reference over time.', actions: ['Investigate any day the average drops below 4.2★', 'Cross-reference low-rating dates with fulfilment events', 'Set up weekly alert if 7-day rolling avg dips below 4.3★'] }}
             >
@@ -688,7 +688,7 @@ export function ReviewsPage() {
             */}
             <Panel
               title="Top vs Bottom Rated"
-              subtitle="Products by average rating"
+              subtitle="Judge.me · Products by average rating"
               info={{ what: 'Products sorted by average customer rating — top 5 and bottom 5.', source: 'Judge.me Reviews', readIt: 'Products below 3.5★ with 10+ reviews should be reviewed for quality issues or delisted.' }}
               ai={{ observation: 'Rating spread across products reveals quality consistency issues.', insight: 'Bottom-rated products are active brand risk — every new buyer who gets a poor experience is a potential negative review multiplied by their social reach. Consider pausing low-rated SKUs until quality is fixed.', actions: ['Pause advertising for products rated < 3.5★', 'Initiate quality review for bottom-rated SKUs', 'Bundle top-rated products with bottom-rated for forced trial with a safety net'] }}
             >
@@ -699,7 +699,7 @@ export function ReviewsPage() {
           {/* Recent Reviews Feed */}
           <Panel
             title="Recent Reviews"
-            subtitle="Latest customer feedback"
+            subtitle="Judge.me · Latest customer feedback"
             info={{ what: 'Most recent reviews submitted across all products in the selected period.', source: 'Judge.me Reviews' }}
             ai={{ observation: 'Recent reviews are a real-time signal of current product and delivery experience quality.', insight: 'Read recent 1-star reviews within 24 hours — they reveal operational issues faster than any dashboard metric. Common patterns: wrong product, damaged packaging, late delivery, poor quality. Each is actionable.', actions: ['Respond to every negative review within 24 hours', 'Use positive review language verbatim in ad copy', 'Forward product-quality complaints to the operations team immediately'] }}
           >

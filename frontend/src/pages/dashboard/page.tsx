@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ShieldCheck, Camera, ChevronRight,
@@ -18,7 +18,7 @@ import { CustomTooltip } from '@components/shared/CustomTooltip';
 import { formatINR, formatNum, formatDate } from '@utils/formatters';
 import { rangeLabel } from '@utils/common-functions/buildRangeParams';
 import { cn } from '@/lib/utils';
-import WorldMap, { type DataItem } from 'react-svg-worldmap';
+import WorldMap, { regions as worldRegions, type DataItem } from 'react-svg-worldmap';
 import {
   BarChart, Bar, PieChart, Pie, Cell,
   LineChart, Line,
@@ -346,7 +346,7 @@ function RevenueByChannelPanel({ data, range, className }: { data: RevenueTrendI
     <Panel
       className={className}
       title="Revenue by Channel"
-      subtitle={`Daily · ${rangeLabel(range)}`}
+      subtitle={`Shopify · Daily · ${rangeLabel(range)}`}
       info={{ what: 'Daily Shopify revenue over the selected period. Amazon, Flipkart, Myntra and Eternz channels will be added once connected.', source: 'Shopify Orders', readIt: 'Each bar = one day of revenue. Zero-revenue interior days may indicate a sync gap.' }}
       ai={{ observation: 'Revenue cadence reveals dependence on weekend spikes vs weekday consistency.', insight: 'Consistent mid-week revenue (Mon–Thu) indicates organic demand; spikes on weekends usually correlate with email campaigns or Meta ads. A healthy brand builds both.', actions: ['Launch campaigns Mon–Wed to lift weekday baseline', 'Schedule email sends for Tuesday 10am for best open rates', 'Track revenue per day-of-week to find highest-conversion day'] }}
     >
@@ -424,7 +424,7 @@ function RevenueVsSpendPanel({ data, range, className }: { data: RevenueVsSpendI
     <Panel
       className={className}
       title="Revenue vs Spend Trend"
-      subtitle={`Daily · ${rangeLabel(range)}`}
+      subtitle={`Shopify + Meta · Daily · ${rangeLabel(range)}`}
       info={{ what: 'Daily Shopify revenue overlaid with daily Meta ad spend on a dual Y-axis.', source: 'Shopify Orders + Meta Ads', readIt: 'When revenue spikes lead spend spikes by 1–2 days, it signals organic demand. When spend spikes first, it confirms paid acquisition is driving sales.' }}
       ai={{ observation: 'Revenue and ad spend correlation reveals how efficiently paid campaigns drive orders.', insight: 'A high correlation (spend up → revenue up same day) indicates paid dependency. Low correlation suggests organic pull or attribution lag. Healthy brands show revenue continuing to grow after spend pauses.', actions: ['Pause spend for 48h occasionally to measure organic baseline', 'Compare day-of-week patterns: is weekend revenue paid or organic?', 'Track revenue/spend ratio weekly as a quick efficiency gauge'] }}
     >
@@ -706,23 +706,132 @@ function ActiveUsersCountryMapCard({ data, loading, subtitle }: { data: GA4Count
   );
 
   const maxUsers = data.reduce((m, r) => Math.max(m, r.activeUsers), 0);
+  const minUsers = mapPoints.reduce<number>((m, r) => (m === 0 || r.value < m ? r.value : m), 0);
+
+  const logMin = useMemo(() => Math.log(Math.max(minUsers, 1)), [minUsers]);
+  const logMax = useMemo(() => Math.log(Math.max(maxUsers, minUsers + 1)), [maxUsers, minUsers]);
+
+  const styleFunction = useMemo(
+    () => ({ countryValue }: { countryValue?: number }) => {
+      if (countryValue === undefined || countryValue === null) {
+        return {
+          fill: ACCENT,
+          fillOpacity: 0.07,
+          stroke: 'var(--line)',
+          strokeWidth: 0.5,
+          cursor: 'default',
+        };
+      }
+      const t = logMax > logMin
+        ? (Math.log(Math.max(countryValue, 1)) - logMin) / (logMax - logMin)
+        : 1;
+      const opacity = 0.35 + 0.55 * Math.max(0, Math.min(1, t));
+      return {
+        fill: ACCENT,
+        fillOpacity: opacity,
+        stroke: 'var(--surface)',
+        strokeWidth: 0.6,
+        cursor: 'pointer',
+      };
+    },
+    [logMin, logMax],
+  );
+
+  const valueByIso = useMemo(() => {
+    const m = new Map<string, number>();
+    data.forEach((row) => {
+      const iso = COUNTRY_TO_ISO2[normalizeCountry(row.country)];
+      if (iso) m.set(iso.toUpperCase(), row.activeUsers);
+    });
+    return m;
+  }, [data]);
+
+  const mapWrapperRef = useRef<HTMLDivElement>(null);
+  const [hover, setHover] = useState<{ x: number; y: number; iso: string; name: string; value: number } | null>(null);
+
+  useEffect(() => {
+    const node = mapWrapperRef.current;
+    if (!node) return;
+    const stripTitles = () => {
+      node.querySelectorAll('svg title').forEach((t) => t.remove());
+    };
+    stripTitles();
+    const observer = new MutationObserver(stripTitles);
+    observer.observe(node, { subtree: true, childList: true });
+    return () => observer.disconnect();
+  }, []);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const wrapper = mapWrapperRef.current;
+    if (!wrapper) return;
+    const path = (e.target as Element | null)?.closest?.('path');
+    if (!path || !wrapper.contains(path)) {
+      if (hover) setHover(null);
+      return;
+    }
+    const parent = path.parentElement;
+    if (!parent || parent.tagName.toLowerCase() !== 'g') {
+      if (hover) setHover(null);
+      return;
+    }
+    const idx = Array.prototype.indexOf.call(parent.children, path);
+    const region = idx >= 0 ? worldRegions[idx] : undefined;
+    if (!region) {
+      if (hover) setHover(null);
+      return;
+    }
+    const value = valueByIso.get(region.code) ?? 0;
+    if (!value) {
+      if (hover) setHover(null);
+      return;
+    }
+    const wrapperRect = wrapper.getBoundingClientRect();
+    setHover({
+      x: e.clientX - wrapperRect.left,
+      y: e.clientY - wrapperRect.top,
+      iso: region.code,
+      name: region.name,
+      value,
+    });
+  };
+
+  const handleMouseLeave = () => setHover(null);
+
+  const hoverFlag = hover
+    ? String.fromCodePoint(...hover.iso.split('').map((c) => 127397 + c.charCodeAt(0)))
+    : '';
 
   const body = (() => {
     if (loading) return <div className="h-[240px] flex items-center justify-center text-sm text-[var(--text-subtle)]">Loading…</div>;
     if (!data.length) return <div className="h-[240px] flex items-center justify-center text-sm text-[var(--text-subtle)]">No country data</div>;
     return (
       <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-3 items-center">
-        <div className="ga4-worldmap relative bg-[var(--bg-2)] rounded-lg p-2">
+        <div
+          ref={mapWrapperRef}
+          className="ga4-worldmap relative bg-[var(--bg-2)] rounded-lg p-2"
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
+        >
           <WorldMap
             color={ACCENT}
-            valueSuffix=" users"
             size="responsive"
             backgroundColor="transparent"
-            tooltipBgColor="var(--ink)"
-            tooltipTextColor="var(--surface)"
+            strokeOpacity={0.6}
             data={mapPoints}
-            tooltipTextFunction={({ countryName, countryValue }: { countryName: string; countryValue?: number | null }) => `${countryName}: ${formatNum(countryValue ?? 0)} users`}
+            styleFunction={styleFunction}
+            tooltipTextFunction={() => ''}
           />
+          {hover ? (
+            <div
+              className="pointer-events-none absolute z-10 flex items-center gap-1.5 rounded-md bg-[var(--ink)] px-2.5 py-1.5 text-[11.5px] font-medium text-[var(--surface)] shadow-lg whitespace-nowrap"
+              style={{ left: hover.x + 12, top: hover.y + 12 }}
+            >
+              <span aria-hidden className="text-sm leading-none">{hoverFlag}</span>
+              <span>{hover.name}</span>
+              <span className="opacity-50">·</span>
+              <span className="tabular-nums">{formatNum(hover.value)} users</span>
+            </div>
+          ) : null}
         </div>
         <div className="flex flex-col">
           <div className="flex justify-between text-[10px] uppercase tracking-widish text-[var(--muted-2)] font-medium pb-1.5 border-b border-[var(--line)]">
@@ -922,7 +1031,7 @@ export function DashboardPage() {
 
             <Panel
               title="Recent Orders"
-              subtitle="Last 5 orders this period"
+              subtitle="Shopify · Last 5 orders this period"
               info={{ what: 'Total orders for the selected period and the 5 most recent orders.', source: 'Shopify Orders' }}
               ai={{ observation: 'Order velocity is the fastest real-time signal for campaign performance.', insight: 'Spikes in recent orders often correlate with email/SMS sends or social posts going viral. Use this to confirm paid campaign impact within minutes of launch.', actions: ['Monitor feed after every campaign launch', 'Alert on zero orders for > 2 hours during peak hours', 'Cross-reference high-value orders with campaign UTMs'] }}
             >
@@ -931,7 +1040,7 @@ export function DashboardPage() {
 
             <Panel
               title="Abandoned Carts"
-              subtitle="Recoverable revenue"
+              subtitle="Shopify · Recoverable revenue"
               info={{ what: 'Count of abandoned carts with their total cart value and average cart value.', source: 'Shopify Checkouts' }}
               ai={{ observation: 'Abandoned carts often recover at 8–12% with timely email + SMS sequences.', insight: 'Recovery emails sent within 2 hours convert 3× better than next-day sends. High cart value + abandonment can indicate COD anxiety or shipping cost surprise.', actions: ['Trigger recovery email within 2h of abandonment', 'Add trust badges and prepaid discounts near cart totals', 'A/B test "Complete your order" subject lines'] }}
             >
@@ -992,7 +1101,7 @@ export function DashboardPage() {
             <RevenueByChannelPanel data={revenueTrend} range={range} className="lg:col-span-2" />
             <Panel
               title="COD vs Prepaid"
-              subtitle="Payment mix"
+              subtitle="Shopify · Payment mix"
               info={{ what: 'Split between Cash on Delivery and Prepaid orders for the period.', source: 'Shopify Orders' }}
               ai={{ observation: `${codPct.toFixed(0)}% COD orders carry ~3× the RTO risk of prepaid.${prevCodPct !== undefined ? ` Previously ${prevCodPct.toFixed(0)}%.` : ''}`, insight: 'A 5% shift to prepaid meaningfully improves cash flow and RTO rate. Prepaid customers are also more intentional buyers.', actions: ['Offer ₹50–100 prepaid discount at checkout', 'Show trust signals (reviews, delivery guarantee) at checkout', 'Run prepaid-only flash sales monthly'] }}
             >
@@ -1011,23 +1120,23 @@ export function DashboardPage() {
 
           {/* ═══ ROW 5 · GA4 CONVERSION (3-col) ═══ */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <Panel title="Traffic Trend" subtitle={`Sessions · Users · New · ${rangeLabel(range)}`}>
+            <Panel title="Traffic Trend" subtitle={`GA4 · Sessions · Users · New · ${rangeLabel(range)}`}>
               <TrafficTrendChart data={ga4Overview} />
             </Panel>
-            <Panel title="Ecommerce Trend" subtitle="Revenue & transactions">
+            <Panel title="Ecommerce Trend" subtitle="GA4 · Revenue & transactions">
               <EcommerceTrend data={ga4Ecommerce} />
             </Panel>
-            <Panel title="Conversion Funnel" subtitle="Sessions → Checkouts → Purchases">
+            <Panel title="Conversion Funnel" subtitle="GA4 · Sessions → Checkouts → Purchases">
               <ConversionFunnel summary={ga4Summary} ecommerce={ga4Ecommerce} />
             </Panel>
           </div>
 
           {/* ═══ ROW 6 · TRAFFIC SOURCES + GEOGRAPHY (1/2 + 1/2) ═══ */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Panel title="Acquisition" subtitle={`Traffic by channel · ${rangeLabel(range)}`}>
+            <Panel title="Acquisition" subtitle={`GA4 · Traffic by channel · ${rangeLabel(range)}`}>
               <ChannelBreakdown data={ga4Channels} />
             </Panel>
-            <ActiveUsersCountryMapCard data={countryActiveUsers} loading={ga4Loading} subtitle={rangeLabel(range)} />
+            <ActiveUsersCountryMapCard data={countryActiveUsers} loading={ga4Loading} subtitle={`GA4 · ${rangeLabel(range)}`} />
           </div>
 
           {/* ═══ ROW 7 · CAMPAIGN + TOP PAGES (1/2 + 1/2) ═══ */}
@@ -1076,7 +1185,7 @@ export function DashboardPage() {
               </div>
             </Panel>
 
-            <Panel title="Top Pages & Screens" subtitle="Views · Users · Events · Bounce">
+            <Panel title="Top Pages & Screens" subtitle="GA4 · Views · Users · Events · Bounce">
               <TopPagesScreensTable data={pagesScreens} />
             </Panel>
           </div>
@@ -1085,7 +1194,8 @@ export function DashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Top 5 Products (Shopify) */}
             <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-5 flex flex-col">
-              <h3 className="font-semibold text-sm text-[var(--text)] mb-4">Top 5 Products</h3>
+              <h3 className="font-semibold text-sm text-[var(--text)]">Top 5 Products</h3>
+              <p className="mt-[3px] mb-4 text-[11.5px] leading-[1.3] text-[var(--muted)]">Shopify · top 5 by revenue</p>
               <div className="space-y-0">
                 <div className="grid grid-cols-[1.5rem_1fr_3rem_3.5rem] text-[10px] font-medium text-[var(--text-muted)] uppercase pb-1.5 border-b border-[var(--border)]">
                   <span>#</span><span>Product</span><span className="text-right">Units</span><span className="text-right">Revenue</span>
@@ -1126,7 +1236,8 @@ export function DashboardPage() {
 
             {/* Top Rated Products (Judge.me) */}
             <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-5">
-              <h3 className="font-semibold text-sm text-[var(--text)] mb-4">Top Rated Products</h3>
+              <h3 className="font-semibold text-sm text-[var(--text)]">Top Rated Products</h3>
+              <p className="mt-[3px] mb-4 text-[11.5px] leading-[1.3] text-[var(--muted)]">Judge.me · top 5 by rating</p>
               {topRatedProducts.length === 0 ? (
                 <p className="text-xs text-[var(--text-muted)] py-6 text-center">No data</p>
               ) : (
@@ -1149,7 +1260,8 @@ export function DashboardPage() {
 
             {/* Review Summary */}
             <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-5 flex flex-col">
-              <h3 className="font-semibold text-sm text-[var(--text)] mb-4">Review Summary</h3>
+              <h3 className="font-semibold text-sm text-[var(--text)]">Review Summary</h3>
+              <p className="mt-[3px] mb-4 text-[11.5px] leading-[1.3] text-[var(--muted)]">Judge.me · store rating & breakdown</p>
               {reviewsSummary ? (
                 <>
                   <div className="flex items-center gap-3 mb-3">
