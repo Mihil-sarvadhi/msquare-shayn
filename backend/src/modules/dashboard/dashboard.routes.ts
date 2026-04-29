@@ -5,6 +5,7 @@ const router = Router();
 
 router.get('/kpis', controller.kpisHandler);
 router.get('/revenue-trend', controller.revenueTrendHandler);
+router.get('/shipments-trend', controller.shipmentsTrendHandler);
 router.get('/meta-funnel', controller.metaFunnelHandler);
 router.get('/campaigns', controller.campaignsHandler);
 router.get('/top-products', controller.topProductsHandler);

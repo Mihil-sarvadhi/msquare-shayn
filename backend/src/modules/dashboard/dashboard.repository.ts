@@ -128,6 +128,40 @@ export async function getKpis(since: string, until: string): Promise<KpiResult> 
   };
 }
 
+export async function getShipmentsTrend(
+  since: string,
+  until: string,
+): Promise<{ date: string; total_shipments: number; delivered: number; rto: number; ofd: number; ndr: number }[]> {
+  const rows = await sequelize.query<{
+    date: string;
+    total_shipments: string;
+    delivered: string;
+    rto: string;
+    ofd: string;
+    ndr: string;
+  }>(
+    `SELECT order_date::date::text AS date,
+            COUNT(*) AS total_shipments,
+            SUM(CASE WHEN current_status_code = 'DL' THEN 1 ELSE 0 END) AS delivered,
+            SUM(CASE WHEN current_status_code LIKE 'RT%' THEN 1 ELSE 0 END) AS rto,
+            SUM(CASE WHEN current_status_code = 'UD' AND current_status LIKE '%Out For Delivery%' THEN 1 ELSE 0 END) AS ofd,
+            SUM(CASE WHEN current_status = 'Undelivered' THEN 1 ELSE 0 END) AS ndr
+       FROM ithink_shipments
+       WHERE order_date BETWEEN :since AND :until
+       GROUP BY order_date::date
+       ORDER BY date ASC`,
+    { type: QueryTypes.SELECT, replacements: { since, until } },
+  );
+  return rows.map((r) => ({
+    date: r.date,
+    total_shipments: parseInt(r.total_shipments, 10) || 0,
+    delivered: parseInt(r.delivered, 10) || 0,
+    rto: parseInt(r.rto, 10) || 0,
+    ofd: parseInt(r.ofd, 10) || 0,
+    ndr: parseInt(r.ndr, 10) || 0,
+  }));
+}
+
 export async function getRevenueTrend(since: string, until: string): Promise<RevenueTrendRow[]> {
   // Match getKpis: tax-EXCLUSIVE Shopify Analytics gross sales, test orders excluded.
   return sequelize.query<RevenueTrendRow>(

@@ -8,6 +8,8 @@ export type { DateRange };
 
 export const getKpis = (since: string, until: string) => repo.getKpis(since, until);
 export const getRevenueTrend = (since: string, until: string) => repo.getRevenueTrend(since, until);
+export const getShipmentsTrend = (since: string, until: string) =>
+  repo.getShipmentsTrend(since, until);
 export const getMetaFunnel = (since: string, until: string) => repo.getMetaFunnel(since, until);
 export const getCampaigns = (since: string, until: string) => repo.getCampaigns(since, until);
 export const getTopProducts = (since: string, until: string) => repo.getTopProducts(since, until);

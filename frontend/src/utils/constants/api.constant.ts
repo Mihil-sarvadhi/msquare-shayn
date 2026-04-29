@@ -2,6 +2,7 @@ export const API_ENDPOINTS = {
   dashboard: {
     kpis: '/dashboard/kpis',
     revenueTrend: '/dashboard/revenue-trend',
+    shipmentsTrend: '/dashboard/shipments-trend',
     metaFunnel: '/dashboard/meta-funnel',
     campaigns: '/dashboard/campaigns',
     topProducts: '/dashboard/top-products',
@@ -62,18 +63,6 @@ marketingTrend: '/analytics/marketing-trend',
     stockouts: '/catalog/stockouts',
     margin: '/catalog/margin',
     locations: '/catalog/locations',
-  },
-  marketing: {
-    kpis: '/marketing/kpis',
-    discountCodes: '/marketing/discount-codes',
-    codePerformance: (code: string) => `/marketing/discount-codes/${encodeURIComponent(code)}/performance`,
-    priceRules: '/marketing/price-rules',
-    giftCards: '/marketing/gift-cards',
-  },
-  risk: {
-    kpis: '/risk/kpis',
-    activeDisputes: '/risk/disputes/active',
-    disputes: '/risk/disputes',
   },
   health: '/health',
   sync: {

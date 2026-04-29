@@ -31,6 +31,15 @@ export async function revenueTrendHandler(req: Request, res: Response): Promise<
   }
 }
 
+export async function shipmentsTrendHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const { since, until } = resolve(req);
+    handleApiResponse(res, { data: await service.getShipmentsTrend(since, until) });
+  } catch (err) {
+    handleErrorResponse(res, errOpts(err));
+  }
+}
+
 export async function metaFunnelHandler(req: Request, res: Response): Promise<void> {
   try {
     const { since, until } = resolve(req);

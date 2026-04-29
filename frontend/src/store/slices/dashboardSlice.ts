@@ -7,7 +7,7 @@ const initialState: DashboardState = {
   kpis: null, prevKpis: null, revenueTrend: [], metaFunnel: null, campaigns: [],
   topProducts: [], logistics: [], abandonedCarts: null, health: [],
   reviewsSummary: null, topRatedProducts: [], recentReviews: [],
-  recentOrders: [], reviewsTrend: [], revenueVsSpend: [], netRevenue: null,
+  recentOrders: [], reviewsTrend: [], shipmentsTrend: [], revenueVsSpend: [], netRevenue: null,
   loading: false, error: null,
 };
 

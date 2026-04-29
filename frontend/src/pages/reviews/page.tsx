@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@store/hooks';
 import { fetchDashboard } from '@store/slices/dashboardSlice';
 import { DrawerProvider } from '@components/shared/DrawerContext';
@@ -567,6 +567,10 @@ export function ReviewsPage() {
   const fiveStarCount  = reviewsSummary?.five_star       ?? 0;
   const fiveStarPct    = totalReviews > 0 ? (fiveStarCount / totalReviews) * 100 : 0;
 
+  // Sparkline series from reviewsTrend (per-day avg_rating + review_count, oldest → newest).
+  const ratingSpark       = useMemo(() => reviewsTrend.map((r) => Number(r.avg_rating ?? 0)), [reviewsTrend]);
+  const reviewCountSpark  = useMemo(() => reviewsTrend.map((r) => Number(r.review_count ?? 0)), [reviewsTrend]);
+
   const showPageLoader = loading && !reviewsSummary;
 
   return (
@@ -588,6 +592,7 @@ export function ReviewsPage() {
                   : storeRating >= 4.0
                     ? 'Good · room to improve'
                     : 'Needs improvement'}
+              trend={ratingSpark}
               loading={loading}
             />
             <KpiCard
@@ -598,6 +603,7 @@ export function ReviewsPage() {
                 : totalReviews >= 50
                   ? 'Growing review base'
                   : 'Collect more reviews'}
+              trend={reviewCountSpark}
               loading={loading}
             />
             <KpiCard

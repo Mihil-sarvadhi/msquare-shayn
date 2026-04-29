@@ -30,6 +30,16 @@ export interface RevenueTrendRow {
   revenue: number;
   orders: number;
 }
+
+/** Per-day shipment counts by status, used by the Operations page sparklines. */
+export interface ShipmentsTrendRow {
+  date: string;
+  total_shipments: number;
+  delivered: number;
+  rto: number;
+  ofd: number;
+  ndr: number;
+}
 export interface MetaFunnelRow {
   spend: number;
   impressions: number;

@@ -6,7 +6,7 @@ import type {
   KPIs, RevenueTrendItem, MetaFunnel, Campaign, Product,
   LogisticsItem, AbandonedCarts, ConnectorHealth,
   ReviewsSummary, TopRatedProduct, RecentReview, RecentOrder, ReviewsTrendItem,
-  RevenueVsSpendItem, NetRevenueSnapshot,
+  RevenueVsSpendItem, NetRevenueSnapshot, ShipmentsTrendItem,
 } from '@app/types/dashboard';
 
 const get = <T>(url: string, params: Record<string, string>) =>
@@ -68,7 +68,7 @@ export async function fetchAllDashboard(range: RangeState) {
   const [
     kpis, revenueTrend, metaFunnel, campaigns, topProducts, logistics, abandonedCarts,
     health, reviewsSummary, topRatedProducts, recentReviews, recentOrders, reviewsTrend,
-    prevKpis, revenueVsSpendRaw, netRevenue,
+    prevKpis, revenueVsSpendRaw, netRevenue, shipmentsTrendRaw,
   ] = await Promise.all([
     get<KPIs>(API_ENDPOINTS.dashboard.kpis, params),
     get<RevenueTrendItem[]>(API_ENDPOINTS.dashboard.revenueTrend, params),
@@ -88,6 +88,7 @@ export async function fetchAllDashboard(range: RangeState) {
       : Promise.resolve(null),
     safe(get<{ date: string; revenue: string; ad_spend: string }[]>(API_ENDPOINTS.dashboard.revenueVsSpend, params), []),
     safe(get<NetRevenueSnapshot>(API_ENDPOINTS.analytics.netRevenue, params), null),
+    safe(get<ShipmentsTrendItem[]>(API_ENDPOINTS.dashboard.shipmentsTrend, params), []),
   ]);
 
   const revenueVsSpend: RevenueVsSpendItem[] = (revenueVsSpendRaw ?? []).map((r) => ({
@@ -123,6 +124,15 @@ export async function fetchAllDashboard(range: RangeState) {
     reviews_count:  Number(p.reviews_count),
   }));
 
+  const shipmentsTrend: ShipmentsTrendItem[] = (shipmentsTrendRaw ?? []).map((r) => ({
+    date: r.date,
+    total_shipments: Number(r.total_shipments),
+    delivered: Number(r.delivered),
+    rto: Number(r.rto),
+    ofd: Number(r.ofd),
+    ndr: Number(r.ndr),
+  }));
+
   return {
     kpis, revenueTrend, metaFunnel, campaigns, topProducts, logistics,
     abandonedCarts, health,
@@ -130,5 +140,6 @@ export async function fetchAllDashboard(range: RangeState) {
     topRatedProducts: topRatedProductsNorm,
     recentReviews,
     recentOrders, reviewsTrend: reviewsTrendNorm, prevKpis, revenueVsSpend, netRevenue,
+    shipmentsTrend,
   };
 }

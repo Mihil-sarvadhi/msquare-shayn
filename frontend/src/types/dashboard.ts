@@ -8,6 +8,14 @@ export interface KPIs {
 }
 
 export interface RevenueTrendItem { date: string; revenue: number; orders: number; }
+export interface ShipmentsTrendItem {
+  date: string;
+  total_shipments: number;
+  delivered: number;
+  rto: number;
+  ofd: number;
+  ndr: number;
+}
 export interface MetaFunnel {
   spend: number; impressions: number; clicks: number;
   purchases: number; purchase_value: number; roas: number;
@@ -91,6 +99,7 @@ export interface DashboardState {
   recentReviews: RecentReview[];
   recentOrders: RecentOrder[];
   reviewsTrend: ReviewsTrendItem[];
+  shipmentsTrend: ShipmentsTrendItem[];
   revenueVsSpend: RevenueVsSpendItem[];
   netRevenue: NetRevenueSnapshot | null;
   loading: boolean;

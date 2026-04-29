@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@store/hooks';
 import { fetchDashboard } from '@store/slices/dashboardSlice';
 import { fetchOperationsData } from '@store/slices/analyticsSlice';
@@ -173,11 +173,35 @@ function opsPctDelta(curr: number | undefined, prev: number | undefined): number
 
 export function OperationsPage() {
   const dispatch = useAppDispatch();
-  const { logistics, kpis, prevKpis, loading } = useAppSelector((s) => s.dashboard);
+  const { logistics, kpis, prevKpis, loading, shipmentsTrend } = useAppSelector((s) => s.dashboard);
   const {
     rtoByState, geoRevenue, loadingOperations,
   } = useAppSelector((s) => s.analytics);
   const range = useAppSelector((s) => s.range);
+
+  /* Sparkline series — daily counts from shipmentsTrend (oldest → newest). */
+  const shipmentsSpark = useMemo(
+    () => shipmentsTrend.map((d) => Number(d.total_shipments ?? 0)),
+    [shipmentsTrend],
+  );
+  const rtoRateSpark = useMemo(
+    () => shipmentsTrend.map((d) => {
+      const t = Number(d.total_shipments ?? 0);
+      return t > 0 ? (Number(d.rto ?? 0) / t) * 100 : 0;
+    }),
+    [shipmentsTrend],
+  );
+  const deliveredPctSpark = useMemo(
+    () => shipmentsTrend.map((d) => {
+      const t = Number(d.total_shipments ?? 0);
+      return t > 0 ? (Number(d.delivered ?? 0) / t) * 100 : 0;
+    }),
+    [shipmentsTrend],
+  );
+  const ndrSpark = useMemo(
+    () => shipmentsTrend.map((d) => Number(d.ndr ?? 0)),
+    [shipmentsTrend],
+  );
 
   useEffect(() => {
     dispatch(fetchDashboard(range));
@@ -231,6 +255,7 @@ export function OperationsPage() {
                   ? (shipmentsDelta > 10 ? 'Volume scaling up' : shipmentsDelta < -10 ? 'Volume declined' : 'Stable volume')
                   : 'vs prior period')
                 : 'dispatched this period'}
+              trend={shipmentsSpark}
               loading={isLoading}
             />
             <KpiCard
@@ -238,6 +263,8 @@ export function OperationsPage() {
               value={formatPct(rtoRate)}
               delta={hasPrevShipments && rtoRateDelta !== undefined ? -rtoRateDelta : undefined}
               sub={`${formatNum(kpis?.rto ?? 0)} returns · ${rtoRate > 25 ? 'Critical — above 25%' : rtoRate > 15 ? 'High — needs action' : rtoRate > 8 ? 'Moderate' : 'Good'}`}
+              trend={rtoRateSpark}
+              invertDelta
               loading={isLoading}
             />
             <KpiCard
@@ -255,6 +282,7 @@ export function OperationsPage() {
               label="Delivered"
               value={formatPct(deliveredPct)}
               sub={`${formatNum(deliveredCount)} delivered · ${deliveredPct > 70 ? 'Strong delivery rate' : deliveredPct > 50 ? 'Average' : 'Below target'}`}
+              trend={deliveredPctSpark}
               loading={isLoading}
             />
             <KpiCard
@@ -262,6 +290,8 @@ export function OperationsPage() {
               value={formatNum(kpis?.ndr ?? 0)}
               delta={hasPrevNdr && ndrDelta !== undefined ? -ndrDelta : undefined}
               sub={`pending delivery · ${(kpis?.ndr ?? 0) > 50 ? 'High — escalate' : (kpis?.ndr ?? 0) > 20 ? 'Monitor closely' : 'Under control'}`}
+              trend={ndrSpark}
+              invertDelta
               loading={isLoading}
             />
           </div>
