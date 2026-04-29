@@ -42,4 +42,7 @@ export interface CatalogKpis {
   stockouts: number;
   avg_margin_pct: number | null;
   total_inventory_value: number;
+  /** Cumulative count of active products created on/before each day in the window
+   *  (oldest → newest). Drives the Active SKUs sparkline. */
+  active_skus_daily: number[];
 }

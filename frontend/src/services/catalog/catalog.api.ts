@@ -40,9 +40,9 @@ interface InventoryListParams {
 }
 
 export const catalogApi = {
-  getKpis: () =>
+  getKpis: (params?: { from: string; to: string }) =>
     baseService
-      .get<ApiEnvelope<CatalogKpisApi>>(API_ENDPOINTS.catalog.kpis)
+      .get<ApiEnvelope<CatalogKpisApi>>(API_ENDPOINTS.catalog.kpis, { params })
       .then((r) => r.data.data),
 
   listProducts: (params: ProductsListParams) =>

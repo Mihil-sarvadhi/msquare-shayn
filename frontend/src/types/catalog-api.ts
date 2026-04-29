@@ -3,6 +3,8 @@ export interface CatalogKpisApi {
   stockouts: number;
   avg_margin_pct: number | null;
   total_inventory_value: number;
+  /** Cumulative active-products count per day for the window. Drives Active SKUs sparkline. */
+  active_skus_daily: number[];
 }
 
 export interface ProductRowApi {

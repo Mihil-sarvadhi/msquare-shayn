@@ -486,24 +486,33 @@ export function CatalogPage() {
             <KpiCard
               label="Active SKUs"
               value={formatNum(k?.active_skus)}
+              sub="cumulative · catalog growth"
+              trend={k?.active_skus_daily}
               loading={catalog.loading}
             />
             <KpiCard
               label="Stockouts"
-              labelTooltip="Variants with available ≤ 0"
+              labelTooltip="Variants with available ≤ 0 (current state — no daily history without inventory snapshots)"
               value={formatNum(k?.stockouts)}
+              sub="point-in-time"
               loading={catalog.loading}
             />
             <KpiCard
               label="Avg Margin %"
-              labelTooltip="Average gross margin across SKUs with COGS set"
+              labelTooltip="Average gross margin across SKUs with COGS set in Shopify"
               value={k?.avg_margin_pct === null || k?.avg_margin_pct === undefined ? 'N/A' : `${k.avg_margin_pct.toFixed(1)}%`}
+              sub={k?.avg_margin_pct === null || k?.avg_margin_pct === undefined
+                ? 'No COGS set in Shopify'
+                : 'point-in-time'}
               loading={catalog.loading}
             />
             <KpiCard
               label="Inventory Value"
               labelTooltip="Sum of available × cost across all variants"
               value={formatINR(k?.total_inventory_value)}
+              sub={(k?.total_inventory_value ?? 0) === 0
+                ? 'No COGS set in Shopify'
+                : 'point-in-time'}
               loading={catalog.loading}
             />
           </div>

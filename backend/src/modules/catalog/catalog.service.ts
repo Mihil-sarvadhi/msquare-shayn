@@ -25,14 +25,43 @@ import type {
   SlowMoverRow,
 } from './catalog.types';
 
-export async function getCatalogKpis(): Promise<CatalogKpis> {
-  const [active_skus, stockouts, avg_margin_pct, total_inventory_value] = await Promise.all([
-    countActiveSkus(),
-    countStockouts(0),
-    avgMarginPct(),
-    totalInventoryValue(),
-  ]);
-  return { active_skus, stockouts, avg_margin_pct, total_inventory_value };
+export async function getCatalogKpis(
+  from: Date | null = null,
+  to: Date | null = null,
+): Promise<CatalogKpis> {
+  const [active_skus, stockouts, avg_margin_pct, total_inventory_value, active_skus_daily] =
+    await Promise.all([
+      countActiveSkus(),
+      countStockouts(0),
+      avgMarginPct(),
+      totalInventoryValue(),
+      from && to ? activeSkusDaily(from, to) : Promise.resolve([] as number[]),
+    ]);
+  return { active_skus, stockouts, avg_margin_pct, total_inventory_value, active_skus_daily };
+}
+
+/**
+ * Cumulative count of active products that existed on/before each day in the
+ * window. We only have product `created_at` in DB (no archive timestamp), so
+ * "active on day D" approximates to "status = 'active' today AND created_at <= D".
+ * Good enough for a sparkline showing catalog growth.
+ */
+async function activeSkusDaily(from: Date, to: Date): Promise<number[]> {
+  const rows = await sequelize.query<{ date: string; cum: string }>(
+    `WITH days AS (
+       SELECT generate_series((:from)::date, (:to)::date, '1 day'::interval)::date AS d
+     )
+     SELECT d::text AS date,
+            (SELECT COUNT(*)
+               FROM products
+               WHERE source = :source
+                 AND status = 'active'
+                 AND created_at <= (days.d + INTERVAL '1 day'))::text AS cum
+       FROM days
+       ORDER BY d ASC`,
+    { type: QueryTypes.SELECT, replacements: { source: SOURCE.SHOPIFY, from, to } },
+  );
+  return rows.map((r) => parseInt(r.cum, 10) || 0);
 }
 
 export async function listProducts(params: ProductsListParams) {

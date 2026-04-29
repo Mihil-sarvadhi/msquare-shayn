@@ -61,7 +61,7 @@ export const fetchCatalogOverview = createAsyncThunk(
   async (range: RangeState) => {
     const params = buildFinanceRangeParams(range);
     const [kpis, bestSellers, slowMovers, margin] = await Promise.all([
-      catalogApi.getKpis(),
+      catalogApi.getKpis(params),
       catalogApi.getBestSellers(params),
       catalogApi.getSlowMovers(params),
       catalogApi.getMargin(),

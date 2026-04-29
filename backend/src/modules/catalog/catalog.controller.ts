@@ -27,9 +27,14 @@ const inventoryQuerySchema = z.object({
   search: z.string().optional(),
 });
 
-export async function kpisHandler(_req: Request, res: Response, next: NextFunction) {
+export async function kpisHandler(req: Request, res: Response, next: NextFunction) {
   try {
-    const data = await service.getCatalogKpis();
+    // Range is optional — when present we also return active_skus_daily
+    // (cumulative active-product count per day). Without it the daily series is empty.
+    const parsed = rangeSchema.partial().parse(req.query);
+    const from = parsed.from ? new Date(parsed.from) : null;
+    const to = parsed.to ? new Date(parsed.to) : null;
+    const data = await service.getCatalogKpis(from, to);
     handleApiResponse(res, { data });
   } catch (err) {
     next(err);
