@@ -678,7 +678,6 @@ export function MarketingPage() {
   const prevMerValid    = hasPrevSpend && (prevKpis?.revenue ?? 0) > 0;
 
   // Sparklines for the top KPI strip — derived from marketingTrend (per-day Meta Ads data).
-  // CAC has no daily series (depends on per-day customer acquisition data not exposed here).
   const spendSpark   = useMemo(() => marketingTrend.map((d) => Number(d.spend          ?? 0)), [marketingTrend]);
   const revenueSpark = useMemo(() => marketingTrend.map((d) => Number(d.purchase_value ?? 0)), [marketingTrend]);
   const roasSpark    = useMemo(() => marketingTrend.map((d) => Number(d.roas           ?? 0)), [marketingTrend]);
@@ -687,6 +686,16 @@ export function MarketingPage() {
       const r = Number(d.purchase_value ?? 0);
       const s = Number(d.spend ?? 0);
       return r > 0 ? s / r : 0;
+    }),
+    [marketingTrend],
+  );
+  // CAC = ad spend ÷ new customers, per day. new_customers comes from
+  // shopify_orders' first-ever order date joined into marketingTrend.
+  const cacSpark     = useMemo(
+    () => marketingTrend.map((d) => {
+      const c = Number(d.new_customers ?? 0);
+      const s = Number(d.spend ?? 0);
+      return c > 0 ? s / c : 0;
     }),
     [marketingTrend],
   );
@@ -740,6 +749,8 @@ export function MarketingPage() {
               value={formatINR(cac)}
               delta={hasPrevCustomers ? (cacDelta !== undefined ? -cacDelta : undefined) : undefined}
               sub={cacInsight(cac, hasPrevCustomers ? cacDelta : undefined)}
+              trend={cacSpark}
+              invertDelta
               loading={isLoading}
             />
           </div>

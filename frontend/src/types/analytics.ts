@@ -52,6 +52,8 @@ export interface MarketingTrendItem {
   roas: number | null;
   ctr: number | null;
   cpp: number | null;
+  /** New customers (first-ever order this day). Used to compute per-day CAC. */
+  new_customers: number | null;
 }
 
 export interface AttributionGap {

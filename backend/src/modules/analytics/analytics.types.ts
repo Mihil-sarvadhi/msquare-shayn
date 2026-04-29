@@ -79,6 +79,8 @@ export interface MarketingTrendRow {
   roas: string | null;
   ctr: string | null;
   cpp: string | null;
+  /** New customers (first-ever order on this day) — drives the CAC sparkline. */
+  new_customers: string | null;
 }
 
 export interface AttributionGapRow {

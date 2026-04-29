@@ -238,9 +238,25 @@ export async function getMarketingTrend(
   until: string,
 ): Promise<MarketingTrendRow[]> {
   return sequelize.query<MarketingTrendRow>(
-    `SELECT d.date::text,
+    `WITH first_ever AS (
+       SELECT COALESCE(NULLIF(customer_id, ''), NULLIF(LOWER(customer_email), '')) AS customer_key,
+              MIN((created_at AT TIME ZONE 'Asia/Kolkata')::date) AS first_date
+         FROM shopify_orders
+         WHERE COALESCE(test, FALSE) = FALSE
+           AND COALESCE(NULLIF(customer_id, ''), NULLIF(LOWER(customer_email), '')) IS NOT NULL
+         GROUP BY customer_key
+     ),
+     new_customers_daily AS (
+       SELECT first_date AS date,
+              COUNT(*)::text AS new_customers
+         FROM first_ever
+         WHERE first_date BETWEEN :since AND :until
+         GROUP BY first_date
+     )
+     SELECT d.date::text,
             m.spend, m.purchases, m.purchase_value,
-            m.roas, m.ctr, m.cpp
+            m.roas, m.ctr, m.cpp,
+            COALESCE(nc.new_customers, '0') AS new_customers
      FROM generate_series(:since::date, :until::date, '1 day'::interval) AS d(date)
      LEFT JOIN (
        SELECT date,
@@ -258,6 +274,7 @@ export async function getMarketingTrend(
        WHERE date BETWEEN :since AND :until
        GROUP BY date
      ) m ON m.date = d.date
+     LEFT JOIN new_customers_daily nc ON nc.date = d.date
      ORDER BY d.date ASC`,
     { type: QueryTypes.SELECT, replacements: { since, until } },
   );
