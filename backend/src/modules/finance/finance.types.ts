@@ -20,6 +20,9 @@ export interface FinanceKpis {
   returning_customer_rate: KpiPair;
   /** Orders created in the window (excluding test orders). */
   orders: KpiPair;
+  /** Per-day sessions across the window (Asia/Kolkata day buckets), oldest → newest.
+   *  Drives the storefront-strip Sessions sparkline. */
+  sessions_daily: number[];
 }
 
 export interface RevenueBreakdownPoint {

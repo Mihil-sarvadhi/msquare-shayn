@@ -20,6 +20,8 @@ export interface FinanceKpisApi {
   returning_customer_rate: KpiPairApi;
   /** Orders created in the window (excluding test orders). */
   orders: KpiPairApi;
+  /** Per-day sessions (oldest → newest) for the window. Drives Sessions sparkline. */
+  sessions_daily: number[];
 }
 
 export interface RevenueBreakdownPointApi {
@@ -127,6 +129,8 @@ export interface SalesBreakdownDailyPointApi {
   return_fees: number;
   taxes: number;
   total_sales: number;
+  /** Orders placed on this day (excluding test orders). Drives the per-day Orders sparkline. */
+  order_count: number;
 }
 
 export interface SalesBreakdownApi {

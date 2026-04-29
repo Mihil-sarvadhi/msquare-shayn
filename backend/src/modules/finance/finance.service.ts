@@ -317,12 +317,20 @@ export async function getKpis(from: Date, to: Date): Promise<FinanceKpis> {
   const prevTo = new Date(from.getTime() - 1);
   const prevFrom = new Date(prevTo.getTime() - ms);
 
-  const [orders, refundsSummary, returnsExcl, sf, sfPrev] = await Promise.all([
+  const [orders, refundsSummary, returnsExcl, sf, sfPrev, sessionsDaily] = await Promise.all([
     orderTotals(from, to),
     refundSummaryAggregates(from, to),
     returnsTotalExclTax(from, to),
     storefrontMetrics(from, to),
     storefrontMetrics(prevFrom, prevTo),
+    sequelize.query<{ sessions: string }>(
+      `SELECT COALESCE(sessions, 0)::text AS sessions
+         FROM shopify_analytics_daily
+         WHERE source = :source
+           AND date BETWEEN (:from)::date AND (:to)::date
+         ORDER BY date ASC`,
+      { type: QueryTypes.SELECT, replacements: { source: SOURCE.SHOPIFY, from, to } },
+    ),
   ]);
 
   // Mirror Shopify Sales Breakdown exactly:
@@ -356,6 +364,7 @@ export async function getKpis(from: Date, to: Date): Promise<FinanceKpis> {
       previous: sfPrev.returning_customer_rate,
     },
     orders: { value: sf.orders, previous: sfPrev.orders },
+    sessions_daily: sessionsDaily.map((r) => parseInt(r.sessions, 10) || 0),
   };
 }
 

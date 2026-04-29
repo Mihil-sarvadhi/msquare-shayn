@@ -52,9 +52,10 @@ export function StorefrontKpiStrip() {
     previous: breakdown.previous.totals.gross_sales,
   };
 
-  // SalesBreakdownDailyPointApi doesn't carry order_count, so the orders tile
-  // stays sparkline-less for now (would need a backend daily series to add).
-  const ordersSpark: number[] | undefined = undefined;
+  // Sessions sparkline now lives on `kpis.sessions_daily` (per-day series).
+  const sessionsSpark = kpis.sessions_daily;
+  // Orders sparkline reads order_count from breakdown.daily.
+  const ordersSpark = breakdown.current.daily.map((d) => Number(d.order_count ?? 0));
 
   const tiles: Tile[] = [
     {
@@ -62,6 +63,7 @@ export function StorefrontKpiStrip() {
       pair: kpis.sessions,
       format: (n) => formatNum(n),
       icon: Activity,
+      trend: sessionsSpark,
     },
     {
       label: 'Gross sales',
