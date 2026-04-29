@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Activity, IndianRupee, UserCheck, ShoppingBag } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAppSelector } from '@store/hooks';
@@ -19,6 +20,7 @@ interface Tile {
   pair: KpiPair;
   format: (n: number) => string;
   icon: LucideIcon;
+  trend?: number[];
 }
 
 /**
@@ -36,12 +38,23 @@ interface Tile {
 export function StorefrontKpiStrip() {
   const kpis = useAppSelector((s) => s.finance.kpis);
   const breakdown = useAppSelector((s) => s.finance.salesBreakdown);
+
+  // Hooks must run on every render — derive sparklines first, gate render last.
+  const grossSpark = useMemo(
+    () => breakdown?.current.daily.map((d) => Number(d.gross_sales ?? 0)) ?? [],
+    [breakdown],
+  );
+
   if (!kpis || !breakdown) return null;
 
   const grossPair: KpiPair = {
     value: breakdown.current.totals.gross_sales,
     previous: breakdown.previous.totals.gross_sales,
   };
+
+  // SalesBreakdownDailyPointApi doesn't carry order_count, so the orders tile
+  // stays sparkline-less for now (would need a backend daily series to add).
+  const ordersSpark: number[] | undefined = undefined;
 
   const tiles: Tile[] = [
     {
@@ -55,6 +68,7 @@ export function StorefrontKpiStrip() {
       pair: grossPair,
       format: (n) => formatINRFull(n),
       icon: IndianRupee,
+      trend: grossSpark,
     },
     {
       label: 'Returning customer rate',
@@ -67,6 +81,7 @@ export function StorefrontKpiStrip() {
       pair: kpis.orders,
       format: (n) => formatNum(n),
       icon: ShoppingBag,
+      trend: ordersSpark,
     },
   ];
 
@@ -79,6 +94,8 @@ export function StorefrontKpiStrip() {
           value={t.format(t.pair.value)}
           delta={pctDelta(t.pair)}
           icon={t.icon}
+          sub="vs prev"
+          trend={t.trend}
         />
       ))}
     </div>

@@ -1,11 +1,23 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@store/hooks';
 import { fetchFinanceOverview } from '@store/slices/financeSlice';
 import { fetchRefunds, setRefundsPage } from '@store/slices/refundsSlice';
 import { Panel } from '@components/shared/Panel';
 import { PageLoader } from '@components/shared/PageLoader';
+import { KpiCard } from '@components/shared/KpiCard';
+import {
+  IndianRupee,
+  BadgePercent,
+  Undo2,
+  Coins,
+  Truck,
+  Receipt,
+  Landmark,
+  Wallet,
+} from 'lucide-react';
 import { formatINR, formatINRFull, formatNum, formatDate } from '@utils/formatters';
 import { StorefrontKpiStrip } from './components/StorefrontKpiStrip';
+import type { SalesBreakdownDailyPointApi, SalesBreakdownTotalsApi } from '@app/types/finance-api';
 import {
   CartesianGrid,
   Cell,
@@ -1000,6 +1012,71 @@ function SalesBreakdownPanel() {
   );
 }
 
+/* ─────────────────── Sales Breakdown — 8 KpiCard tiles ─────────────────── */
+type BreakdownKey = keyof Omit<SalesBreakdownTotalsApi, 'order_count'>;
+interface BreakdownTileSpec {
+  key: BreakdownKey;
+  label: string;
+  /** Going up is "good" by default; set true for cost lines (discounts, returns, return_fees). */
+  invert?: boolean;
+  highlight?: boolean;
+  icon: typeof IndianRupee;
+}
+const BREAKDOWN_TILES: BreakdownTileSpec[] = [
+  { key: 'gross_sales',      label: 'Gross sales',  icon: IndianRupee },
+  { key: 'discounts',        label: 'Discounts',    icon: BadgePercent, invert: true },
+  { key: 'returns',          label: 'Returns',      icon: Undo2,        invert: true },
+  { key: 'net_sales',        label: 'Net sales',    icon: Coins },
+  { key: 'shipping_charges', label: 'Shipping',     icon: Truck },
+  { key: 'return_fees',      label: 'Return fees',  icon: Receipt,      invert: true },
+  { key: 'taxes',            label: 'Taxes',        icon: Landmark },
+  { key: 'total_sales',      label: 'Total sales',  icon: Wallet,       highlight: true },
+];
+
+function SalesBreakdownTiles({
+  current, previous, daily, prevFrom, prevTo,
+}: {
+  current: SalesBreakdownTotalsApi;
+  previous: SalesBreakdownTotalsApi;
+  daily: SalesBreakdownDailyPointApi[];
+  prevFrom: string;
+  prevTo: string;
+}) {
+  // One sparkline series per key, derived once from the daily points.
+  const sparkByKey = useMemo(() => {
+    const out: Record<BreakdownKey, number[]> = {} as Record<BreakdownKey, number[]>;
+    for (const t of BREAKDOWN_TILES) {
+      out[t.key] = daily.map((d) => Number(d[t.key] ?? 0));
+    }
+    return out;
+  }, [daily]);
+
+  return (
+    <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] px-5 py-4">
+      <div className="mb-3">
+        <h3 className="text-sm font-semibold text-[var(--ink)]">Total Sales Breakdown</h3>
+        <p className="text-[11px] text-[var(--muted)] mt-0.5">
+          Computed from synced orders · vs prior {prevFrom} → {prevTo}
+        </p>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3">
+        {BREAKDOWN_TILES.map((t) => (
+          <KpiCard
+            key={t.key}
+            label={t.label}
+            value={formatINRFull(current[t.key])}
+            delta={pctDelta(current[t.key], previous[t.key]) ?? undefined}
+            sub="vs prev"
+            icon={t.icon}
+            trend={sparkByKey[t.key]}
+            invertDelta={t.invert}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ─────────────────── PAGE ─────────────────── */
 export function FinancePage() {
   const dispatch = useAppDispatch();
@@ -1043,73 +1120,15 @@ export function FinancePage() {
               Renders nothing until kpis + salesBreakdown are loaded. */}
           <StorefrontKpiStrip />
 
-          {/* Total Sales Breakdown — 8 KPI tiles (Shopify-spec, with vs-prev deltas) */}
+          {/* Total Sales Breakdown — 8 KPI tiles (Shopify-spec, with vs-prev deltas + sparklines) */}
           {finance.salesBreakdown && (
-            <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] px-5 py-4">
-              <div className="mb-3">
-                <h3 className="text-sm font-semibold text-[var(--text)]">Total Sales Breakdown</h3>
-                <p className="text-[11px] text-[var(--text-subtle)] mt-0.5">
-                  Computed from synced orders · vs prior {finance.salesBreakdown.previous.from} → {finance.salesBreakdown.previous.to}
-                </p>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-                {[
-                  { key: 'gross_sales', label: 'Gross sales', sign: 1 as const },
-                  { key: 'discounts', label: 'Discounts', sign: -1 as const },
-                  { key: 'returns', label: 'Returns', sign: -1 as const },
-                  { key: 'net_sales', label: 'Net sales', sign: 1 as const },
-                  { key: 'shipping_charges', label: 'Shipping', sign: 1 as const },
-                  { key: 'return_fees', label: 'Return fees', sign: -1 as const },
-                  { key: 'taxes', label: 'Taxes', sign: 1 as const },
-                  { key: 'total_sales', label: 'Total sales', sign: 1 as const, highlight: true },
-                ].map((row) => {
-                  const cur =
-                    (finance.salesBreakdown!.current.totals as unknown as Record<string, number>)[row.key] ?? 0;
-                  const prev =
-                    (finance.salesBreakdown!.previous.totals as unknown as Record<string, number>)[row.key] ?? 0;
-                  const deltaPct = prev !== 0 ? ((cur - prev) / Math.abs(prev)) * 100 : null;
-                  return (
-                    <div
-                      key={row.key}
-                      className={cn(
-                        'rounded-lg border px-3 py-2',
-                        row.highlight
-                          ? 'border-[var(--pos)] bg-[var(--pos-soft)]'
-                          : 'border-[var(--border)] bg-[var(--bg)]',
-                      )}
-                    >
-                      <p
-                        className={cn(
-                          'text-[10px] uppercase tracking-wide font-semibold',
-                          row.highlight ? 'text-[var(--pos)]' : 'text-[var(--text-subtle)]',
-                        )}
-                      >
-                        {row.label}
-                      </p>
-                      <p
-                        className={cn(
-                          'text-base font-semibold tabular-nums mt-0.5',
-                          row.sign === -1 ? 'text-[var(--neg)]' : 'text-[var(--text)]',
-                        )}
-                      >
-                        {row.sign === -1 && cur > 0 ? '−' : ''}
-                        {formatINRFull(Math.abs(cur))}
-                      </p>
-                      {deltaPct !== null && (
-                        <p
-                          className={cn(
-                            'text-[10px] mt-0.5',
-                            deltaPct >= 0 ? 'text-[var(--pos)]' : 'text-[var(--neg)]',
-                          )}
-                        >
-                          {deltaPct >= 0 ? '↑' : '↓'} {Math.abs(deltaPct).toFixed(1)}% vs prev
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            <SalesBreakdownTiles
+              current={finance.salesBreakdown.current.totals}
+              previous={finance.salesBreakdown.previous.totals}
+              daily={finance.salesBreakdown.current.daily}
+              prevFrom={finance.salesBreakdown.previous.from}
+              prevTo={finance.salesBreakdown.previous.to}
+            />
           )}
 
           {/* Sales Breakdown — detailed table view */}
