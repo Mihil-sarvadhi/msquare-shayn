@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { QueryTypes } from 'sequelize';
 import { sequelize } from '@db/sequelize';
 import { ConnectorHealth, UnicommerceOrder, UnicommerceOrderItem } from '@db/models';
@@ -102,7 +103,7 @@ async function syncOrderDetail(
   summary: UCOrderSummary,
   channel: string,
   ctx: ProgressContext,
-): Promise<boolean> {
+): Promise<'ok' | 'skipped' | 'failed'> {
   const startedAt = Date.now();
   const prefix = progressPrefix(ctx);
   try {
@@ -111,7 +112,7 @@ async function syncOrderDetail(
       logger.warn(
         `[Unicommerce] ${prefix} ${summary.code} → skipped (successful=false: ${detail.message ?? 'no message'})`,
       );
-      return false;
+      return 'skipped';
     }
     const dto = detail.saleOrderDTO;
     await upsertOrder(dto);
@@ -125,80 +126,79 @@ async function syncOrderDetail(
       `[Unicommerce] ${prefix} ${summary.code} (${dto.channel ?? channel}) ` +
         `${items.length} items, ${dto.status ?? '?'}, ordered ${orderDate}, ${ms}ms → ok`,
     );
-    return true;
+    return 'ok';
   } catch (err) {
+    // 404 = order code visible to search but not retrievable (orphan / wrong
+    // facility / stale). Warn and skip — these are not real failures.
+    if (axios.isAxiosError(err) && err.response?.status === 404) {
+      logger.warn(`[Unicommerce] ${prefix} ${summary.code} → skipped (404 not found)`);
+      return 'skipped';
+    }
     logger.error(`[Unicommerce] ${prefix} ${summary.code} → error: ${(err as Error).message}`);
-    return false;
+    return 'failed';
   }
 }
 
 /**
- * Pull all orders for a date range across all channels (and a channel-less
- * sweep so any uncategorised orders are still captured). For each order, fetch
- * full detail to resolve line items and pricing.
+ * Pull all orders for a date range in a single sweep. We don't filter by
+ * channel at search time — observed behaviour is that the Uniware
+ * `saleOrder/search` body field for channel is silently ignored on this
+ * tenant, so a per-channel loop just multiplies API calls without changing
+ * results. Each order's own `channel` (read from the detail DTO) is what
+ * we persist, so the dashboard's channel filter still works exactly the
+ * same way.
  */
 export async function syncOrders(fromDate: string, toDate: string): Promise<number> {
-  let total = 0;
-  // include null channel to capture orders without channel-specific tagging
-  const channelsToSweep: Array<UnicommerceChannel | null> = [...UNICOMMERCE_CHANNELS, null];
+  const startedAt = Date.now();
+  let start = 0;
+  let synced = 0;
+  let skipped = 0;
+  let failed = 0;
+  let position = 0;
+  let expected: number | null = null;
+  const channelLabel = 'ALL';
 
-  for (const channel of channelsToSweep) {
-    const channelLabel = channel ?? 'NO_CHANNEL';
-    let start = 0;
-    let synced = 0;
-    let failed = 0;
-    let position = 0;
-    let expected: number | null = null;
-    const channelStartedAt = Date.now();
+  logger.info(`[Unicommerce] ── Range ${fromDate.slice(0, 10)} → ${toDate.slice(0, 10)} ──`);
 
-    logger.info(
-      `[Unicommerce] ── Channel ${channelLabel} | ${fromDate.slice(0, 10)} → ${toDate.slice(0, 10)} ──`,
-    );
+  while (true) {
+    let response;
+    try {
+      response = await connector.searchOrders(fromDate, toDate, null, start, PAGE_SIZE);
+    } catch (err) {
+      logger.error(`[Unicommerce] searchOrders failed (start=${start}): ${(err as Error).message}`);
+      break;
+    }
+    const orders = response.saleOrderSummaries ?? response.elements ?? [];
+    if (expected === null && typeof response.totalRecords === 'number') {
+      expected = response.totalRecords;
+      logger.info(`[Unicommerce] ${expected} order(s) expected in range`);
+    }
+    if (!orders.length) break;
 
-    while (true) {
-      let response;
-      try {
-        response = await connector.searchOrders(fromDate, toDate, channel, start, PAGE_SIZE);
-      } catch (err) {
-        logger.error(
-          `[Unicommerce] searchOrders failed (${channelLabel}, start=${start}): ${(err as Error).message}`,
-        );
-        break;
-      }
-      const orders = response.saleOrderSummaries ?? response.elements ?? [];
-      if (expected === null && typeof response.totalRecords === 'number') {
-        expected = response.totalRecords;
-        logger.info(`[Unicommerce] ${channelLabel}: ${expected} order(s) expected`);
-      }
-      if (!orders.length) break;
-
-      for (const summary of orders) {
-        position++;
-        const ok = await syncOrderDetail(summary, channel ?? summary.channel ?? channelLabel, {
-          channelLabel,
-          position,
-          expected,
-        });
-        if (ok) {
-          synced++;
-          total++;
-        } else {
-          failed++;
-        }
-        await sleep(ORDER_DETAIL_DELAY_MS);
-      }
-
-      if (orders.length < PAGE_SIZE) break;
-      start += PAGE_SIZE;
+    for (const summary of orders) {
+      position++;
+      const channelFromSummary = summary.channel ?? 'UNKNOWN';
+      const result = await syncOrderDetail(summary, channelFromSummary, {
+        channelLabel,
+        position,
+        expected,
+      });
+      if (result === 'ok') synced++;
+      else if (result === 'skipped') skipped++;
+      else failed++;
+      await sleep(ORDER_DETAIL_DELAY_MS);
     }
 
-    const durationS = Math.round((Date.now() - channelStartedAt) / 1000);
-    logger.info(
-      `[Unicommerce] ── Channel ${channelLabel} done — ${synced} ok, ${failed} failed, ${durationS}s ──`,
-    );
+    if (orders.length < PAGE_SIZE) break;
+    start += PAGE_SIZE;
   }
 
-  return total;
+  const durationS = Math.round((Date.now() - startedAt) / 1000);
+  logger.info(
+    `[Unicommerce] ── Range done — ${synced} ok, ${skipped} skipped, ${failed} failed, ${durationS}s ──`,
+  );
+
+  return synced;
 }
 
 /**

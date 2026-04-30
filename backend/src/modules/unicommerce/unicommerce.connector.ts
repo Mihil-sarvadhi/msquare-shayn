@@ -234,10 +234,16 @@ export async function searchOrders(
   return post<UCOrderSearchResponse>('/services/rest/v1/oms/saleOrder/search', body);
 }
 
+/**
+ * Look up a single sale order by its `code`. We deliberately omit
+ * `facilityCodes` here so the API resolves the order across whichever
+ * facility it actually belongs to — search returns codes from any
+ * facility the user has access to, and constraining `get` to a single
+ * facility makes legitimately-cross-facility orders 404 unnecessarily.
+ */
 export async function getOrderDetails(orderCode: string): Promise<UCOrderDetailResponse> {
   return post<UCOrderDetailResponse>('/services/rest/v1/oms/saleOrder/get', {
     code: orderCode,
-    facilityCodes: [facilityCode()],
     paymentDetailRequired: true,
   });
 }
