@@ -313,7 +313,7 @@ export async function getChannelReturns(filters: UnicommerceFilters): Promise<Ch
        JOIN unicommerce_order_items i ON i.order_code = o.order_code
        WHERE (o.order_date AT TIME ZONE 'Asia/Kolkata')::date BETWEEN :since AND :until
          AND o.status IS DISTINCT FROM 'CANCELLED'
-         AND ${CHANNEL_FILTER_CLAUSE}
+         AND (:channel::text IS NULL OR o.channel ILIKE '%' || :channel || '%')
        GROUP BY COALESCE(o.channel, 'UNKNOWN')
      ),
      returned AS (
@@ -328,7 +328,7 @@ export async function getChannelReturns(filters: UnicommerceFilters): Promise<Ch
        ) AS ret
        WHERE (o.order_date AT TIME ZONE 'Asia/Kolkata')::date BETWEEN :since AND :until
          AND jsonb_typeof(ret->'returnItems') = 'array'
-         AND ${CHANNEL_FILTER_CLAUSE}
+         AND (:channel::text IS NULL OR o.channel ILIKE '%' || :channel || '%')
        GROUP BY COALESCE(o.channel, 'UNKNOWN')
      )
      SELECT
