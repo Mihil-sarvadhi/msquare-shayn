@@ -5,6 +5,8 @@ import type {
   ChannelComparisonRow,
   ChannelReturnsRow,
   ChannelSummaryRow,
+  FastMovingSkuRow,
+  InventorySummary,
   OrderStatusRow,
   ProductByChannelRow,
   RecentOrderRow,
@@ -14,6 +16,7 @@ import type {
   TopProductRow,
   TopProductWithPctRow,
   UnicommerceFilters,
+  ZeroOrderSkuRow,
 } from './unicommerce.types';
 
 /**
@@ -454,6 +457,74 @@ export async function getTopProductsWithPct(
     {
       type: QueryTypes.SELECT,
       replacements: { since, until, channel: channel ?? null, limit },
+    },
+  );
+}
+
+/* ── Inventory KPIs ──────────────────────────────────────────────────── */
+
+export async function getInventorySummary(): Promise<InventorySummary> {
+  const rows = await sequelize.query<InventorySummary>(
+    `SELECT
+       COUNT(*)::int                                   AS total_skus,
+       SUM(CASE WHEN available_qty <= 0 THEN 1 ELSE 0 END)::int AS out_of_stock_skus,
+       CASE WHEN COUNT(*) > 0
+            THEN ROUND((SUM(CASE WHEN available_qty <= 0 THEN 1 ELSE 0 END)::numeric
+                        / COUNT(*) * 100)::numeric, 2)::float
+            ELSE 0 END                                 AS out_of_stock_pct
+     FROM unicommerce_inventory`,
+    { type: QueryTypes.SELECT },
+  );
+  return (
+    rows[0] ?? {
+      total_skus: 0,
+      out_of_stock_skus: 0,
+      out_of_stock_pct: 0,
+    }
+  );
+}
+
+export async function getFastMovingSkus(limit = 20): Promise<FastMovingSkuRow[]> {
+  return sequelize.query<FastMovingSkuRow>(
+    `SELECT
+       inv.sku,
+       (SELECT i.product_name
+          FROM unicommerce_order_items i
+         WHERE i.sku = inv.sku
+         ORDER BY i.synced_at DESC NULLS LAST
+         LIMIT 1)                              AS product_name,
+       inv.available_qty                       AS inventory,
+       inv.sales_last_30_days,
+       inv.days_of_inventory::float            AS days_of_inventory
+     FROM unicommerce_inventory inv
+     WHERE inv.sales_last_30_days > 0
+     ORDER BY inv.sales_last_30_days DESC, inv.available_qty DESC
+     LIMIT :limit`,
+    {
+      type: QueryTypes.SELECT,
+      replacements: { limit },
+    },
+  );
+}
+
+export async function getZeroOrderSkus(limit = 20): Promise<ZeroOrderSkuRow[]> {
+  return sequelize.query<ZeroOrderSkuRow>(
+    `SELECT
+       inv.sku,
+       (SELECT i.product_name
+          FROM unicommerce_order_items i
+         WHERE i.sku = inv.sku
+         ORDER BY i.synced_at DESC NULLS LAST
+         LIMIT 1)                  AS product_name,
+       inv.available_qty           AS inventory
+     FROM unicommerce_inventory inv
+     WHERE inv.sales_last_30_days = 0
+       AND inv.available_qty > 0
+     ORDER BY inv.available_qty DESC
+     LIMIT :limit`,
+    {
+      type: QueryTypes.SELECT,
+      replacements: { limit },
     },
   );
 }

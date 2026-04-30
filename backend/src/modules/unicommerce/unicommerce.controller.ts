@@ -68,6 +68,30 @@ export async function recentOrdersHandler(req: Request, res: Response): Promise<
   }
 }
 
+export async function inventorySummaryHandler(_req: Request, res: Response): Promise<void> {
+  try {
+    handleApiResponse(res, { data: await service.getInventorySummary() });
+  } catch (err) {
+    handleErrorResponse(res, errOpts(err));
+  }
+}
+
+export async function fastMovingSkusHandler(req: Request, res: Response): Promise<void> {
+  try {
+    handleApiResponse(res, { data: await service.getFastMovingSkus(query(req)) });
+  } catch (err) {
+    handleErrorResponse(res, errOpts(err));
+  }
+}
+
+export async function zeroOrderSkusHandler(req: Request, res: Response): Promise<void> {
+  try {
+    handleApiResponse(res, { data: await service.getZeroOrderSkus(query(req)) });
+  } catch (err) {
+    handleErrorResponse(res, errOpts(err));
+  }
+}
+
 export async function todaySnapshotHandler(_req: Request, res: Response): Promise<void> {
   try {
     handleApiResponse(res, { data: await service.getTodaySnapshot() });

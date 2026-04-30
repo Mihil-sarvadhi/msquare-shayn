@@ -237,9 +237,14 @@ export interface UCReturnDetailResponse {
 
 export interface UCInventorySnapshot {
   itemSKU?: string;
+  itemTypeSKU?: string;
   inventory?: number;
   inventoryOnHold?: number;
   inventoryDamaged?: number;
+  badInventory?: number;
+  inventoryNotSynced?: number;
+  virtualInventory?: number;
+  batchRecallQuantity?: number;
   totalInventory?: number;
   facilityCode?: string;
 }
@@ -287,34 +292,24 @@ export async function getOrderDetails(orderCode: string): Promise<UCOrderDetailR
   });
 }
 
-export async function searchOrderItems(
-  fromDate: string,
-  toDate: string,
-  channel: string | null = null,
-  start = 0,
-  length = 50,
-): Promise<UCOrderSearchResponse> {
+// `saleOrderItem/search` was removed — Uniware returns 404 for it. Line
+// items live inside the saleOrderDTO.saleOrderItems array of saleOrder/get.
+
+/**
+ * Search shipping packages. Live testing showed `fromDate`/`toDate` are not
+ * supported on this endpoint — pagination is via `displayStart` and rows are
+ * narrowed by `status` or `channel` only.
+ */
+export async function searchShipments(
+  options: { status?: string; channel?: string; start?: number; length?: number } = {},
+): Promise<UCShipmentSearchResponse> {
+  const { status, channel, start = 0, length = 50 } = options;
   const body: Record<string, unknown> = {
-    fromDate,
-    toDate,
-    dateType: 'CREATED',
     searchOptions: { displayLength: length, displayStart: start } satisfies UCSearchOptions,
   };
+  if (status) body.status = status;
   if (channel) body.channel = channel;
-  return post<UCOrderSearchResponse>('/services/rest/v1/oms/saleorderitem/search', body);
-}
-
-export async function searchShipments(
-  fromDate: string,
-  toDate: string,
-  start = 0,
-  length = 50,
-): Promise<UCShipmentSearchResponse> {
-  return post<UCShipmentSearchResponse>('/services/rest/v1/oms/shippingpackage/search', {
-    fromDate,
-    toDate,
-    searchOptions: { displayLength: length, displayStart: start } satisfies UCSearchOptions,
-  });
+  return post<UCShipmentSearchResponse>('/services/rest/v1/oms/shippingpackage/search', body);
 }
 
 export async function getShipmentDetails(shipmentCode: string): Promise<UCShipmentDetailResponse> {
@@ -327,16 +322,50 @@ export async function getReturnDetails(shipmentCode: string): Promise<UCReturnDe
   return post<UCReturnDetailResponse>('/services/rest/v1/oms/return/get', { shipmentCode });
 }
 
-export async function getInventory(skuCodes: string[]): Promise<UCInventorySnapshotResponse> {
-  return post<UCInventorySnapshotResponse>('/services/rest/v1/inventory/inventorysnapshot/get', {
-    skuCodes,
-    facilityCode: facilityCode(),
+/**
+ * Inventory snapshot for a list of SKUs. Verified against the live API:
+ * the body field is `itemTypeSKUs` (NOT `skuCodes`), and `facilityCode`
+ * must NOT be in the body (it's already pinned via the `Facility` header).
+ */
+export async function getInventory(itemTypeSKUs: string[]): Promise<UCInventorySnapshotResponse> {
+  // NB: case matters — Uniware's routing is case-sensitive and this endpoint
+  // is camelCase (`inventorySnapshot`). Lowercase 404s. Same per-endpoint
+  // inconsistency as `saleorder/get` (lowercase) vs `saleOrder/search`
+  // (camelCase).
+  return post<UCInventorySnapshotResponse>('/services/rest/v1/inventory/inventorySnapshot/get', {
+    itemTypeSKUs,
+  });
+}
+
+/**
+ * Search returns. Live API uses `created: { from, to }` rather than
+ * `fromDate`/`toDate`, and `returnType` is required ("RETURN" for
+ * customer returns, "RTO" for return-to-origin).
+ */
+export interface UCReturnSearchResponse {
+  successful: boolean;
+  message?: string;
+  elements?: UCReturnDTO[];
+  returns?: UCReturnDTO[];
+  totalRecords?: number;
+}
+
+export async function searchReturns(
+  fromIso: string,
+  toIso: string,
+  options: { returnType?: 'RETURN' | 'RTO'; start?: number; length?: number } = {},
+): Promise<UCReturnSearchResponse> {
+  const { returnType = 'RETURN', start = 0, length = 50 } = options;
+  return post<UCReturnSearchResponse>('/services/rest/v1/oms/return/search', {
+    returnType,
+    created: { from: fromIso, to: toIso },
+    searchOptions: { displayLength: length, displayStart: start } satisfies UCSearchOptions,
   });
 }
 
 export async function searchFacilities(): Promise<UCFacilityResponse> {
   return post<UCFacilityResponse>(
-    '/services/rest/v1/master/facility/search',
+    '/services/rest/v1/facility/search',
     { facilityStatus: 'ALL' },
     false,
   );

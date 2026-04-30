@@ -59,6 +59,26 @@ export interface CategoryRow {
   pct_of_total: number;
 }
 
+export interface InventorySummary {
+  total_skus: number;
+  out_of_stock_skus: number;
+  out_of_stock_pct: number;
+}
+
+export interface FastMovingSkuRow {
+  sku: string;
+  product_name: string | null;
+  inventory: number;
+  sales_last_30_days: number;
+  days_of_inventory: number | null;
+}
+
+export interface ZeroOrderSkuRow {
+  sku: string;
+  product_name: string | null;
+  inventory: number;
+}
+
 export interface TodaySnapshot {
   today_date: string;
   yesterday_date: string;

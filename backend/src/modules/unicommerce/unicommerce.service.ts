@@ -36,6 +36,11 @@ export const getReturns = (q: UnicommerceQuery) => repo.getReturns(buildFilters(
 export const getRecentOrders = (q: UnicommerceQuery) => repo.getRecentOrders(buildFilters(q));
 export const getChannelReturns = (q: UnicommerceQuery) => repo.getChannelReturns(buildFilters(q));
 export const getTodaySnapshot = () => repo.getTodaySnapshot();
+export const getInventorySummary = () => repo.getInventorySummary();
+export const getFastMovingSkus = (q: UnicommerceQuery) =>
+  repo.getFastMovingSkus(parseLimit(q, 20, 100));
+export const getZeroOrderSkus = (q: UnicommerceQuery) =>
+  repo.getZeroOrderSkus(parseLimit(q, 20, 100));
 export const getTopCategories = (q: UnicommerceQuery) => repo.getTopCategories(buildFilters(q));
 export const getTopProductsByChannel = (q: UnicommerceQuery) =>
   repo.getTopProductsByChannel(buildFilters(q), parseLimit(q, 20, 50));

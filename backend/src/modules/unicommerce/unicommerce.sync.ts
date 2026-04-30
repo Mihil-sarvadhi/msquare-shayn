@@ -6,7 +6,13 @@ import * as connector from './unicommerce.connector';
 import type { UCAddress, UCOrderDTO, UCOrderItem, UCOrderSummary } from './unicommerce.connector';
 import { logger } from '@logger/logger';
 
-export const UNICOMMERCE_CHANNELS = ['FLIPKART', 'AMAZON', 'MYNTRA', 'ETERNZ'] as const;
+export const UNICOMMERCE_CHANNELS = [
+  'SHOPIFY_SHAYN',
+  'FLIPKART',
+  'AMAZON',
+  'MYNTRA',
+  'ETERNZ',
+] as const;
 export type UnicommerceChannel = (typeof UNICOMMERCE_CHANNELS)[number];
 
 const PAGE_SIZE = 50;

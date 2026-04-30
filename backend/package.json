@@ -28,6 +28,7 @@
     "backfill:ga4": "tsx src/modules/ga4/ga4.backfill.ts",
     "backfill:unicommerce": "tsx src/modules/unicommerce/unicommerce.backfill.ts",
     "backfill:unicommerce:fixup": "tsx src/modules/unicommerce/unicommerce.fixup.ts",
+    "backfill:unicommerce:inventory": "tsx src/modules/unicommerce/unicommerce.inventory.ts",
     "ga4:token": "node scripts/getGA4Token.js"
   },
   "dependencies": {

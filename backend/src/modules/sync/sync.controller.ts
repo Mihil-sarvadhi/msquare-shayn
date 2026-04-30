@@ -12,6 +12,7 @@ import {
   triggerAllSync,
   triggerUnicommerceSync,
   triggerUnicommerceBackfill,
+  triggerUnicommerceInventorySync,
 } from './sync.service';
 
 // All sync handlers respond 202 immediately and run in background to avoid client timeout.
@@ -37,12 +38,20 @@ export function syncIthinkHandler(_req: Request, res: Response): void {
 export async function syncIthinkBackfillHandler(req: Request, res: Response): Promise<void> {
   const { since, until } = req.query as { since?: string; until?: string };
   if (!since || !until) {
-    handleErrorResponse(res, { statusCode: 400, message: 'since and until query params required (YYYY-MM-DD)', error: 'BAD_REQUEST' });
+    handleErrorResponse(res, {
+      statusCode: 400,
+      message: 'since and until query params required (YYYY-MM-DD)',
+      error: 'BAD_REQUEST',
+    });
     return;
   }
   const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
   if (!dateRegex.test(since) || !dateRegex.test(until)) {
-    handleErrorResponse(res, { statusCode: 400, message: 'since and until must be YYYY-MM-DD format', error: 'BAD_REQUEST' });
+    handleErrorResponse(res, {
+      statusCode: 400,
+      message: 'since and until must be YYYY-MM-DD format',
+      error: 'BAD_REQUEST',
+    });
     return;
   }
   fireAndForget(res, 'ithink-backfill', () => triggerIthinkBackfill(since, until));
@@ -79,4 +88,8 @@ export function syncUnicommerceHandler(_req: Request, res: Response): void {
 
 export function syncUnicommerceBackfillHandler(_req: Request, res: Response): void {
   fireAndForget(res, 'unicommerce-backfill', triggerUnicommerceBackfill);
+}
+
+export function syncUnicommerceInventoryHandler(_req: Request, res: Response): void {
+  fireAndForget(res, 'unicommerce-inventory', triggerUnicommerceInventorySync);
 }

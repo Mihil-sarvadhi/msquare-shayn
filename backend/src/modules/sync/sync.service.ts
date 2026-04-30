@@ -12,6 +12,7 @@ import { syncGA4Data, syncGA4Realtime } from '@modules/ga4/ga4.sync';
 import { generateToken } from '@modules/ga4/ga4.token';
 import { syncUnicommerce } from '@modules/unicommerce/unicommerce.sync';
 import { unicommerceBackfill } from '@modules/unicommerce/unicommerce.backfill';
+import { syncInventory as syncUnicommerceInventory } from '@modules/unicommerce/unicommerce.inventory';
 import { logger } from '@logger/logger';
 import type { SyncResult } from './sync.types';
 
@@ -77,6 +78,11 @@ export async function triggerUnicommerceSync(): Promise<SyncResult> {
 export async function triggerUnicommerceBackfill(): Promise<SyncResult> {
   await unicommerceBackfill();
   return { message: 'Unicommerce backfill triggered' };
+}
+
+export async function triggerUnicommerceInventorySync(): Promise<SyncResult> {
+  await syncUnicommerceInventory();
+  return { message: 'Unicommerce inventory sync triggered' };
 }
 
 export async function triggerAllSync(): Promise<SyncResult & { results: Record<string, string> }> {

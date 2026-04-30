@@ -5,6 +5,8 @@ import type {
   ChannelComparisonRow,
   ChannelReturnsRow,
   ChannelSummaryRow,
+  FastMovingSkuRow,
+  InventorySummary,
   OrderStatusRow,
   ProductByChannelRow,
   RecentOrderRow,
@@ -13,6 +15,7 @@ import type {
   TodaySnapshot,
   TopProductRow,
   TopProductWithPctRow,
+  ZeroOrderSkuRow,
 } from '@app/types/unicommerce-api';
 
 interface ApiEnvelope<T> {
@@ -69,6 +72,28 @@ export const unicommerceApi = {
   getTodaySnapshot: () =>
     baseService
       .get<{ success: boolean; data: TodaySnapshot }>(API_ENDPOINTS.unicommerce.todaySnapshot)
+      .then((r) => r.data.data),
+
+  /** Inventory snapshot — independent of the range filter. */
+  getInventorySummary: () =>
+    baseService
+      .get<{ success: boolean; data: InventorySummary }>(
+        API_ENDPOINTS.unicommerce.inventorySummary,
+      )
+      .then((r) => r.data.data),
+
+  getFastMovingSkus: () =>
+    baseService
+      .get<{ success: boolean; data: FastMovingSkuRow[] }>(
+        API_ENDPOINTS.unicommerce.inventoryFastMoving,
+      )
+      .then((r) => r.data.data),
+
+  getZeroOrderSkus: () =>
+    baseService
+      .get<{ success: boolean; data: ZeroOrderSkuRow[] }>(
+        API_ENDPOINTS.unicommerce.inventoryZeroOrders,
+      )
       .then((r) => r.data.data),
 
   fetchOverview: async (params: UnicommerceParams) => {

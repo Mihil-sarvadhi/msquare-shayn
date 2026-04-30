@@ -14,6 +14,7 @@ import { useAppDispatch, useAppSelector } from '@store/hooks';
 import {
   fetchUnicommerceOverview,
   fetchUnicommerceTodaySnapshot,
+  fetchUnicommerceInventory,
   setSelectedChannel,
   type ChannelTab,
 } from '@store/slices/unicommerceSlice';
@@ -190,6 +191,9 @@ export function MarketplacePage() {
   const topProductsByChannel = useAppSelector((s) => s.unicommerce.topProductsByChannel);
   const channelReturns = useAppSelector((s) => s.unicommerce.channelReturns);
   const todaySnapshot = useAppSelector((s) => s.unicommerce.todaySnapshot);
+  const inventorySummary = useAppSelector((s) => s.unicommerce.inventorySummary);
+  const fastMovingSkus = useAppSelector((s) => s.unicommerce.fastMovingSkus);
+  const zeroOrderSkus = useAppSelector((s) => s.unicommerce.zeroOrderSkus);
 
   useEffect(() => {
     dispatch(fetchUnicommerceOverview({ range, channel: selectedChannel }));
@@ -202,6 +206,16 @@ export function MarketplacePage() {
     const id = setInterval(() => {
       dispatch(fetchUnicommerceTodaySnapshot());
     }, 5 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [dispatch]);
+
+  // Inventory snapshot refreshes when the inventory sync runs (typically
+  // hourly), so a 10-minute poll is plenty.
+  useEffect(() => {
+    dispatch(fetchUnicommerceInventory());
+    const id = setInterval(() => {
+      dispatch(fetchUnicommerceInventory());
+    }, 10 * 60 * 1000);
     return () => clearInterval(id);
   }, [dispatch]);
 
@@ -305,8 +319,8 @@ export function MarketplacePage() {
 
   return (
     <div className="px-5 sm:px-7 py-5 flex flex-col gap-5">
-      {/* Today / Yesterday strip — independent of the range picker */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {/* Snapshot KPI strip — Today/Yesterday + Inventory, independent of the range picker */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <SnapshotCard
           label="Today's Revenue"
           value={todaySnapshot ? formatINRExact(todaySnapshot.today_revenue) : '—'}
@@ -322,6 +336,22 @@ export function MarketplacePage() {
           comparison={
             todaySnapshot
               ? `Yesterday's Order Items: ${formatNum(todaySnapshot.yesterday_order_items)}`
+              : ' '
+          }
+        />
+        <SnapshotCard
+          label="Total Counts of SKU's"
+          value={inventorySummary ? formatNum(inventorySummary.total_skus) : '—'}
+          comparison=" "
+        />
+        <SnapshotCard
+          label="Out of Stock % of SKU's"
+          value={
+            inventorySummary ? `${inventorySummary.out_of_stock_pct.toFixed(2)}%` : '—'
+          }
+          comparison={
+            inventorySummary
+              ? `${formatNum(inventorySummary.out_of_stock_skus)} SKUs at zero`
               : ' '
           }
         />
@@ -901,6 +931,81 @@ export function MarketplacePage() {
               </div>
             )}
           </Panel>
+
+          {/* Inventory tables — Fast Moving (left) + Zero Orders (right) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Panel title="Inventory Availability of Fast Moving SKUs">
+              {fastMovingSkus.length === 0 ? (
+                <EmptyState message="Inventory not synced yet — run npm run backfill:unicommerce:inventory" />
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[12px]">
+                    <thead>
+                      <tr className="text-left text-[10px] uppercase tracking-widish text-[var(--muted)]">
+                        <th className="py-2">SKU Code</th>
+                        <th className="py-2">SKU Name</th>
+                        <th className="py-2 text-right">Inventory</th>
+                        <th className="py-2 text-right">Sale (30d)</th>
+                        <th className="py-2 text-right">Days of Inv.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {fastMovingSkus.map((row) => (
+                        <tr key={row.sku} className="border-t border-[var(--line)]">
+                          <td className="py-2 text-[var(--ink)] font-mono">{row.sku}</td>
+                          <td className="py-2 text-[var(--ink-2)] truncate max-w-[260px]">
+                            {row.product_name ?? '—'}
+                          </td>
+                          <td className="py-2 text-right tabular-nums">
+                            {formatNum(row.inventory)}
+                          </td>
+                          <td className="py-2 text-right tabular-nums font-medium text-[var(--ink)]">
+                            {formatNum(row.sales_last_30_days)}
+                          </td>
+                          <td className="py-2 text-right tabular-nums text-[var(--muted)]">
+                            {row.days_of_inventory != null
+                              ? Number(row.days_of_inventory).toFixed(0)
+                              : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Panel>
+
+            <Panel title="Products with Zero Order">
+              {zeroOrderSkus.length === 0 ? (
+                <EmptyState message="No zero-order SKUs (or inventory not synced)" />
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[12px]">
+                    <thead>
+                      <tr className="text-left text-[10px] uppercase tracking-widish text-[var(--muted)]">
+                        <th className="py-2">SKU</th>
+                        <th className="py-2">Name</th>
+                        <th className="py-2 text-right">Inventory</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {zeroOrderSkus.map((row) => (
+                        <tr key={row.sku} className="border-t border-[var(--line)]">
+                          <td className="py-2 text-[var(--ink)] font-mono">{row.sku}</td>
+                          <td className="py-2 text-[var(--ink-2)] truncate max-w-[300px]">
+                            {row.product_name ?? '—'}
+                          </td>
+                          <td className="py-2 text-right tabular-nums font-medium text-[var(--ink)]">
+                            {formatNum(row.inventory)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Panel>
+          </div>
         </>
       )}
     </div>
@@ -928,7 +1033,7 @@ interface TopShareCardProps {
  * between a sortable table and a pie chart of the same data.
  */
 function TopShareCard({ title, labelKey, rows, colorFor }: TopShareCardProps) {
-  const [view, setView] = useState<'table' | 'pie'>('table');
+  const [view, setView] = useState<'table' | 'pie'>('pie');
 
   return (
     <Panel
@@ -937,8 +1042,8 @@ function TopShareCard({ title, labelKey, rows, colorFor }: TopShareCardProps) {
         <div className="flex items-center gap-1 p-0.5 rounded-full bg-[var(--bg-2)] border border-[var(--line)]">
           {(
             [
-              { key: 'table', label: 'Table', icon: TableIcon },
               { key: 'pie', label: 'Pie', icon: PieIcon },
+              { key: 'table', label: 'Table', icon: TableIcon },
             ] as const
           ).map(({ key, icon: Icon }) => {
             const isActive = view === key;
@@ -994,18 +1099,22 @@ function TopShareCard({ title, labelKey, rows, colorFor }: TopShareCardProps) {
           </tbody>
         </table>
       ) : (
-        <ResponsiveContainer width="100%" height={260}>
+        <ResponsiveContainer width="100%" height={300}>
           <PieChart>
             <Pie
               data={rows}
               dataKey="revenue"
               nameKey="label"
-              outerRadius={100}
+              cx="50%"
+              cy="46%"
+              outerRadius={82}
               paddingAngle={1}
-              label={({ name, percent }: { name: string; percent: number }) =>
-                `${name} ${(percent * 100).toFixed(0)}%`
-              }
-              labelLine={false}
+              // Keep channel/category labels visible without clipping long names.
+              label={({ name, percent }: { name: string; percent: number }) => {
+                const shortName = name.length > 12 ? `${name.slice(0, 12)}...` : name;
+                return `${shortName} ${(percent * 100).toFixed(0)}%`;
+              }}
+              labelLine
             >
               {rows.map((row) => (
                 <Cell key={row.label} fill={colorFor(row.label)} />
@@ -1015,7 +1124,11 @@ function TopShareCard({ title, labelKey, rows, colorFor }: TopShareCardProps) {
               contentStyle={TOOLTIP_CONTENT_STYLE}
               formatter={(value: number) => formatINRExact(Number(value))}
             />
-            <Legend wrapperStyle={{ fontSize: 10, color: AXIS_TICK_COLOR }} />
+            <Legend
+              verticalAlign="bottom"
+              align="center"
+              wrapperStyle={{ fontSize: 10, color: AXIS_TICK_COLOR, paddingTop: 8 }}
+            />
           </PieChart>
         </ResponsiveContainer>
       )}

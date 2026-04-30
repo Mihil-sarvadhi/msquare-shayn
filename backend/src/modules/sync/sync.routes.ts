@@ -10,6 +10,7 @@ import {
   syncAllHandler,
   syncUnicommerceHandler,
   syncUnicommerceBackfillHandler,
+  syncUnicommerceInventoryHandler,
 } from './sync.controller';
 
 const router = Router();
@@ -24,5 +25,6 @@ router.post('/ga4', syncGA4Handler);
 router.post('/ga4/token-refresh', refreshGA4TokenHandler);
 router.post('/unicommerce', syncUnicommerceHandler);
 router.post('/unicommerce/backfill', syncUnicommerceBackfillHandler);
+router.post('/unicommerce/inventory', syncUnicommerceInventoryHandler);
 
 export default router;

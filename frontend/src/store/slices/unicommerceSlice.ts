@@ -8,6 +8,8 @@ import type {
   ChannelComparisonRow,
   ChannelReturnsRow,
   ChannelSummaryRow,
+  FastMovingSkuRow,
+  InventorySummary,
   OrderStatusRow,
   ProductByChannelRow,
   RecentOrderRow,
@@ -17,6 +19,7 @@ import type {
   TopProductRow,
   TopProductWithPctRow,
   UnicommerceChannel,
+  ZeroOrderSkuRow,
 } from '@app/types/unicommerce-api';
 
 export type ChannelTab = UnicommerceChannel | 'ALL';
@@ -34,6 +37,9 @@ export interface UnicommerceState {
   topProductsByChannel: ProductByChannelRow[];
   channelReturns: ChannelReturnsRow[];
   todaySnapshot: TodaySnapshot | null;
+  inventorySummary: InventorySummary | null;
+  fastMovingSkus: FastMovingSkuRow[];
+  zeroOrderSkus: ZeroOrderSkuRow[];
   selectedChannel: ChannelTab;
   loading: boolean;
   error: string | null;
@@ -52,6 +58,9 @@ const initialState: UnicommerceState = {
   topProductsByChannel: [],
   channelReturns: [],
   todaySnapshot: null,
+  inventorySummary: null,
+  fastMovingSkus: [],
+  zeroOrderSkus: [],
   selectedChannel: 'ALL',
   loading: false,
   error: null,
@@ -74,6 +83,18 @@ export const fetchUnicommerceOverview = createAsyncThunk(
 export const fetchUnicommerceTodaySnapshot = createAsyncThunk(
   'unicommerce/fetchTodaySnapshot',
   async () => unicommerceApi.getTodaySnapshot(),
+);
+
+export const fetchUnicommerceInventory = createAsyncThunk(
+  'unicommerce/fetchInventory',
+  async () => {
+    const [summary, fastMoving, zeroOrders] = await Promise.all([
+      unicommerceApi.getInventorySummary(),
+      unicommerceApi.getFastMovingSkus(),
+      unicommerceApi.getZeroOrderSkus(),
+    ]);
+    return { summary, fastMoving, zeroOrders };
+  },
 );
 
 const unicommerceSlice = createSlice({
@@ -110,6 +131,11 @@ const unicommerceSlice = createSlice({
       })
       .addCase(fetchUnicommerceTodaySnapshot.fulfilled, (state, action) => {
         state.todaySnapshot = action.payload;
+      })
+      .addCase(fetchUnicommerceInventory.fulfilled, (state, action) => {
+        state.inventorySummary = action.payload.summary;
+        state.fastMovingSkus = action.payload.fastMoving;
+        state.zeroOrderSkus = action.payload.zeroOrders;
       });
   },
 });
