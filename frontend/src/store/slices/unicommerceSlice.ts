@@ -4,13 +4,18 @@ import { unicommerceApi, type UnicommerceParams } from '@services/unicommerce/un
 import { buildRangeParams } from '@utils/common-functions/buildRangeParams';
 import type { RangeState } from './rangeSlice';
 import type {
+  CategoryRow,
   ChannelComparisonRow,
+  ChannelReturnsRow,
   ChannelSummaryRow,
   OrderStatusRow,
+  ProductByChannelRow,
   RecentOrderRow,
   ReturnsRow,
   RevenueTrendRow,
+  TodaySnapshot,
   TopProductRow,
+  TopProductWithPctRow,
   UnicommerceChannel,
 } from '@app/types/unicommerce-api';
 
@@ -24,6 +29,11 @@ export interface UnicommerceState {
   channelComparison: ChannelComparisonRow[];
   returns: ReturnsRow[];
   recentOrders: RecentOrderRow[];
+  topCategories: CategoryRow[];
+  topProductsPct: TopProductWithPctRow[];
+  topProductsByChannel: ProductByChannelRow[];
+  channelReturns: ChannelReturnsRow[];
+  todaySnapshot: TodaySnapshot | null;
   selectedChannel: ChannelTab;
   loading: boolean;
   error: string | null;
@@ -37,6 +47,11 @@ const initialState: UnicommerceState = {
   channelComparison: [],
   returns: [],
   recentOrders: [],
+  topCategories: [],
+  topProductsPct: [],
+  topProductsByChannel: [],
+  channelReturns: [],
+  todaySnapshot: null,
   selectedChannel: 'ALL',
   loading: false,
   error: null,
@@ -54,6 +69,11 @@ export const fetchUnicommerceOverview = createAsyncThunk(
     if (channel !== 'ALL') params.channel = channel;
     return unicommerceApi.fetchOverview(params);
   },
+);
+
+export const fetchUnicommerceTodaySnapshot = createAsyncThunk(
+  'unicommerce/fetchTodaySnapshot',
+  async () => unicommerceApi.getTodaySnapshot(),
 );
 
 const unicommerceSlice = createSlice({
@@ -79,10 +99,17 @@ const unicommerceSlice = createSlice({
         state.channelComparison = action.payload.channelComparison;
         state.returns = action.payload.returns;
         state.recentOrders = action.payload.recentOrders;
+        state.topCategories = action.payload.topCategories;
+        state.topProductsPct = action.payload.topProductsPct;
+        state.topProductsByChannel = action.payload.topProductsByChannel;
+        state.channelReturns = action.payload.channelReturns;
       })
       .addCase(fetchUnicommerceOverview.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message ?? 'Failed to load marketplace data';
+      })
+      .addCase(fetchUnicommerceTodaySnapshot.fulfilled, (state, action) => {
+        state.todaySnapshot = action.payload;
       });
   },
 });

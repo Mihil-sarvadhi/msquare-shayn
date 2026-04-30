@@ -1,13 +1,18 @@
 import baseService from '@services/configs/baseService';
 import { API_ENDPOINTS } from '@utils/constants/api.constant';
 import type {
+  CategoryRow,
   ChannelComparisonRow,
+  ChannelReturnsRow,
   ChannelSummaryRow,
   OrderStatusRow,
+  ProductByChannelRow,
   RecentOrderRow,
   ReturnsRow,
   RevenueTrendRow,
+  TodaySnapshot,
   TopProductRow,
+  TopProductWithPctRow,
 } from '@app/types/unicommerce-api';
 
 interface ApiEnvelope<T> {
@@ -48,17 +53,50 @@ export const unicommerceApi = {
   getRecentOrders: (params: UnicommerceParams) =>
     get<RecentOrderRow[]>(API_ENDPOINTS.unicommerce.recentOrders, params),
 
+  getTopCategories: (params: UnicommerceParams) =>
+    get<CategoryRow[]>(API_ENDPOINTS.unicommerce.topCategories, params),
+
+  getTopProductsPct: (params: UnicommerceParams) =>
+    get<TopProductWithPctRow[]>(API_ENDPOINTS.unicommerce.topProductsPct, params),
+
+  getTopProductsByChannel: (params: UnicommerceParams) =>
+    get<ProductByChannelRow[]>(API_ENDPOINTS.unicommerce.topProductsByChannel, params),
+
+  getChannelReturns: (params: UnicommerceParams) =>
+    get<ChannelReturnsRow[]>(API_ENDPOINTS.unicommerce.channelReturns, params),
+
+  /** Today vs yesterday — independent of the page's range filter. */
+  getTodaySnapshot: () =>
+    baseService
+      .get<{ success: boolean; data: TodaySnapshot }>(API_ENDPOINTS.unicommerce.todaySnapshot)
+      .then((r) => r.data.data),
+
   fetchOverview: async (params: UnicommerceParams) => {
-    const [summary, revenueTrend, topProducts, orderStatus, channelComparison, returns, recentOrders] =
-      await Promise.all([
-        unicommerceApi.getSummary(params),
-        unicommerceApi.getRevenueTrend(params),
-        unicommerceApi.getTopProducts(params),
-        unicommerceApi.getOrderStatus(params),
-        unicommerceApi.getChannelComparison(params),
-        unicommerceApi.getReturns(params),
-        unicommerceApi.getRecentOrders(params),
-      ]);
+    const [
+      summary,
+      revenueTrend,
+      topProducts,
+      orderStatus,
+      channelComparison,
+      returns,
+      recentOrders,
+      topCategories,
+      topProductsPct,
+      topProductsByChannel,
+      channelReturns,
+    ] = await Promise.all([
+      unicommerceApi.getSummary(params),
+      unicommerceApi.getRevenueTrend(params),
+      unicommerceApi.getTopProducts(params),
+      unicommerceApi.getOrderStatus(params),
+      unicommerceApi.getChannelComparison(params),
+      unicommerceApi.getReturns(params),
+      unicommerceApi.getRecentOrders(params),
+      unicommerceApi.getTopCategories(params),
+      unicommerceApi.getTopProductsPct(params),
+      unicommerceApi.getTopProductsByChannel(params),
+      unicommerceApi.getChannelReturns(params),
+    ]);
     return {
       summary,
       revenueTrend,
@@ -67,6 +105,10 @@ export const unicommerceApi = {
       channelComparison,
       returns,
       recentOrders,
+      topCategories,
+      topProductsPct,
+      topProductsByChannel,
+      channelReturns,
     };
   },
 };

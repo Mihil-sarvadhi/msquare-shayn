@@ -20,6 +20,7 @@ export interface RevenueTrendRow {
   channel: string;
   orders: number;
   revenue: number;
+  units_sold: number;
   cancelled_orders: number;
   returned_orders: number;
   cod_orders: number;
@@ -54,6 +55,52 @@ export interface ReturnsRow {
   channel: string | null;
   return_reason: string | null;
   count: number;
+}
+
+export interface CategoryRow {
+  category: string;
+  items: number;
+  orders: number;
+  revenue: number;
+  pct_of_total: number;
+}
+
+export interface TodaySnapshot {
+  today_date: string;
+  yesterday_date: string;
+  today_revenue: number;
+  yesterday_revenue: number;
+  today_order_items: number;
+  yesterday_order_items: number;
+}
+
+export interface ChannelReturnsRow {
+  channel: string;
+  units_sold: number;
+  return_units: number;
+  return_pct: number;
+}
+
+export interface ProductByChannelRow {
+  sku: string;
+  product_name: string | null;
+  total_revenue: number;
+  shopify_revenue: number;
+  amazon_revenue: number;
+  flipkart_revenue: number;
+  myntra_revenue: number;
+  eternz_revenue: number;
+  other_revenue: number;
+}
+
+export interface TopProductWithPctRow {
+  sku: string;
+  product_name: string | null;
+  channel: string | null;
+  units_sold: number;
+  revenue: number;
+  orders: number;
+  pct_of_total: number;
 }
 
 export interface RecentOrderRow {

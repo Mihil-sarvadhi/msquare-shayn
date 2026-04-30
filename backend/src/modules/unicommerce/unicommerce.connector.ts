@@ -100,6 +100,7 @@ export interface UCOrderItem {
   discount?: number | string;
   shippingCharges?: number | string;
   cashOnDeliveryCharges?: number | string;
+  prepaidAmount?: number | string;
   totalPrice?: number | string;
   transferPrice?: number | string;
   statusCode?: string;
@@ -107,6 +108,7 @@ export interface UCOrderItem {
   returnReason?: string | null;
   returnAWBNumber?: string | null;
   facilityCode?: string;
+  [key: string]: unknown;
 }
 
 export interface UCOrderPrice {
@@ -118,11 +120,16 @@ export interface UCOrderPrice {
 }
 
 export interface UCAddress {
+  type?: string | null;
+  name?: string;
+  email?: string;
+  phone?: string;
   addressLine1?: string;
   addressLine2?: string;
   landmark?: string;
   city?: string;
   state?: string;
+  stateName?: string;
   country?: string;
   pincode?: string;
   [key: string]: unknown;
@@ -139,23 +146,40 @@ export interface UCOrderDTO {
   code: string;
   displayOrderCode?: string;
   channel?: string;
+  source?: string;
   status?: string;
-  displayOrderDateTime?: string;
-  updated?: string;
-  fulfillmentTat?: string;
+  displayOrderDateTime?: string | number;
+  created?: string | number;
+  updated?: string | number;
+  fulfillmentTat?: string | number;
   cod?: boolean;
   currencyCode?: string;
+  /** Top-level totals — present on some orders but not order-aggregate. */
+  totalPrice?: number | string;
+  totalShippingCharges?: number | string;
+  totalDiscount?: number | string;
+  totalCashOnDeliveryCharges?: number | string;
+  totalPrepaidAmount?: number | string;
+  /** Legacy nested shape — kept for back-compat, no longer expected. */
   orderPrice?: UCOrderPrice;
-  customerCode?: string;
+  customerCode?: string | null;
   notificationEmail?: string;
   notificationMobile?: string;
+  /** Uniware returns addresses as an array (each tagged with `type`),
+   *  plus a separate `billingAddress` object. We treat addresses[0] as
+   *  shipping when type isn't explicitly tagged. */
+  addresses?: UCAddress[];
   shippingAddress?: UCAddress;
   billingAddress?: UCAddress;
+  /** Singular `paymentDetail` is what Uniware actually returns. */
+  paymentDetail?: unknown;
   paymentDetails?: UCPaymentDetail[];
   facilityCode?: string;
   thirdPartyShipping?: boolean;
   onHold?: boolean;
   saleOrderItems?: UCOrderItem[];
+  returns?: unknown[];
+  shippingPackages?: unknown[];
   [key: string]: unknown;
 }
 

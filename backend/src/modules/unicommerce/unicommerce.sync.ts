@@ -3,7 +3,7 @@ import { QueryTypes } from 'sequelize';
 import { sequelize } from '@db/sequelize';
 import { ConnectorHealth, UnicommerceOrder, UnicommerceOrderItem } from '@db/models';
 import * as connector from './unicommerce.connector';
-import type { UCOrderDTO, UCOrderItem, UCOrderSummary } from './unicommerce.connector';
+import type { UCAddress, UCOrderDTO, UCOrderItem, UCOrderSummary } from './unicommerce.connector';
 import { logger } from '@logger/logger';
 
 export const UNICOMMERCE_CHANNELS = ['FLIPKART', 'AMAZON', 'MYNTRA', 'ETERNZ'] as const;
@@ -12,9 +12,13 @@ export type UnicommerceChannel = (typeof UNICOMMERCE_CHANNELS)[number];
 const PAGE_SIZE = 50;
 const ORDER_DETAIL_DELAY_MS = 100;
 
-function toDate(value: string | undefined): Date | undefined {
-  if (!value) return undefined;
-  const d = new Date(value);
+function toDate(value: string | number | undefined | null): Date | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  // Uniware returns dates as ms-since-epoch numbers; new Date() handles
+  // both numbers and ISO strings, but raw strings of digits parse as
+  // "Invalid Date" so coerce numeric strings to numbers first.
+  const input = typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : value;
+  const d = new Date(input);
   return Number.isNaN(d.getTime()) ? undefined : d;
 }
 
@@ -34,38 +38,98 @@ async function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+/**
+ * Pick the shipping address out of Uniware's response. The API returns
+ * an `addresses[]` array (each tagged with `type` — sometimes null);
+ * we prefer one explicitly tagged SHIPPING, then fall back to the first
+ * entry, then to the legacy `shippingAddress` / `billingAddress` keys.
+ */
+function pickShippingAddress(order: UCOrderDTO): UCAddress | undefined {
+  const list = order.addresses ?? [];
+  const tagged = list.find((a) => a?.type && /shipping/i.test(a.type));
+  return tagged ?? list[0] ?? order.shippingAddress ?? order.billingAddress;
+}
+
+function pickBillingAddress(order: UCOrderDTO): UCAddress | undefined {
+  const list = order.addresses ?? [];
+  const tagged = list.find((a) => a?.type && /billing/i.test(a.type));
+  return tagged ?? order.billingAddress;
+}
+
+/** Sum a numeric field across all line items. Uniware doesn't expose
+ *  order-level totalPrice, so the order total is items[].totalPrice. */
+function sumItems(items: UCOrderItem[] | undefined, field: keyof UCOrderItem): number {
+  if (!items?.length) return 0;
+  return items.reduce((acc, it) => acc + toNumber(it[field] as number | string | undefined), 0);
+}
+
 async function upsertOrder(order: UCOrderDTO): Promise<void> {
-  const ship = order.shippingAddress;
-  const bill = order.billingAddress;
+  const ship = pickShippingAddress(order);
+  const bill = pickBillingAddress(order);
+  const items = order.saleOrderItems ?? [];
+
+  const totalPrice =
+    toNumber(order.totalPrice) ||
+    toNumber(order.orderPrice?.totalPrice) ||
+    sumItems(items, 'totalPrice');
+  const shippingCharges =
+    toNumber(order.totalShippingCharges) ||
+    toNumber(order.orderPrice?.totalShippingCharges) ||
+    sumItems(items, 'shippingCharges');
+  const discount =
+    toNumber(order.totalDiscount) ||
+    toNumber(order.orderPrice?.totalDiscount) ||
+    sumItems(items, 'discount');
+  const codCharges =
+    toNumber(order.totalCashOnDeliveryCharges) ||
+    toNumber(order.orderPrice?.totalCashOnDeliveryCharges) ||
+    sumItems(items, 'cashOnDeliveryCharges');
+  const prepaidAmount =
+    toNumber(order.totalPrepaidAmount) ||
+    toNumber(order.orderPrice?.totalPrepaidAmount) ||
+    sumItems(items, 'prepaidAmount');
+
+  // customerCode is often null on marketplace orders; the human name lives
+  // on the address. notificationEmail / notificationMobile are reliable for
+  // the order's contact details though.
+  const customerName = ship?.name ?? bill?.name ?? order.customerCode ?? undefined;
+
   await UnicommerceOrder.upsert({
     order_code: order.code,
     display_order_code: order.displayOrderCode,
     channel: order.channel,
     status: order.status,
-    order_date: toDate(order.displayOrderDateTime),
+    order_date: toDate(order.displayOrderDateTime ?? order.created),
     updated_date: toDate(order.updated),
     fulfillment_tat: toDate(order.fulfillmentTat),
     cod: order.cod ?? false,
     currency: order.currencyCode ?? 'INR',
-    total_price: toNumber(order.orderPrice?.totalPrice),
-    shipping_charges: toNumber(order.orderPrice?.totalShippingCharges),
-    discount: toNumber(order.orderPrice?.totalDiscount),
-    cod_charges: toNumber(order.orderPrice?.totalCashOnDeliveryCharges),
-    prepaid_amount: toNumber(order.orderPrice?.totalPrepaidAmount),
-    customer_name: order.customerCode,
-    customer_email: order.notificationEmail,
-    customer_mobile: order.notificationMobile,
+    total_price: totalPrice,
+    shipping_charges: shippingCharges,
+    discount,
+    cod_charges: codCharges,
+    prepaid_amount: prepaidAmount,
+    customer_name: customerName ?? undefined,
+    customer_email: order.notificationEmail ?? ship?.email,
+    customer_mobile: order.notificationMobile ?? ship?.phone,
     city: ship?.city,
-    state: ship?.state,
+    // Prefer the human-readable stateName over the 2-char `state` code.
+    state: ship?.stateName ?? ship?.state,
     pincode: ship?.pincode,
     address_line_1: ship?.addressLine1,
     address_line_2: ship?.addressLine2,
     landmark: ship?.landmark,
     country: ship?.country,
     billing_address: bill ? (bill as Record<string, unknown>) : undefined,
-    payment_details: order.paymentDetails
-      ? { items: order.paymentDetails as unknown as Record<string, unknown>[] }
-      : undefined,
+    payment_details:
+      order.paymentDetail !== undefined && order.paymentDetail !== null
+        ? ({ detail: order.paymentDetail } as Record<string, unknown>)
+        : order.paymentDetails
+          ? ({ items: order.paymentDetails as unknown as Record<string, unknown>[] } as Record<
+              string,
+              unknown
+            >)
+          : undefined,
     raw_response: order as unknown as Record<string, unknown>,
     facility_code: order.facilityCode,
     third_party_shipping: order.thirdPartyShipping ?? false,
@@ -225,13 +289,20 @@ export async function aggregateChannelDaily(since: string, until: string): Promi
        cancelled_orders, returned_orders, cod_orders, prepaid_orders, synced_at
      )
      SELECT
-       o.order_date::date AS date,
+       -- Bucket by IST date to match Uniware's reports.
+       (o.order_date AT TIME ZONE 'Asia/Kolkata')::date AS date,
        COALESCE(o.channel, 'UNKNOWN') AS channel,
        COUNT(*)::int AS orders,
-       COALESCE(SUM(o.total_price), 0) AS revenue,
-       COALESCE(SUM(items.qty), 0)::int AS units_sold,
+       -- Match Uniware's report definition: revenue excludes cancelled orders.
+       COALESCE(SUM(CASE WHEN o.status IS DISTINCT FROM 'CANCELLED' THEN o.total_price ELSE 0 END), 0) AS revenue,
+       COALESCE(SUM(CASE WHEN o.status IS DISTINCT FROM 'CANCELLED' THEN items.qty ELSE 0 END), 0)::int AS units_sold,
        SUM(CASE WHEN o.status = 'CANCELLED' THEN 1 ELSE 0 END)::int AS cancelled_orders,
-       SUM(CASE WHEN o.status IN ('RETURN_REQUESTED','RETURNED','RETURN_EXPECTED') THEN 1 ELSE 0 END)::int AS returned_orders,
+       SUM(
+         CASE WHEN o.raw_response IS NOT NULL
+                AND jsonb_typeof(o.raw_response->'returns') = 'array'
+                AND jsonb_array_length(o.raw_response->'returns') > 0
+              THEN 1 ELSE 0 END
+       )::int AS returned_orders,
        SUM(CASE WHEN o.cod = TRUE THEN 1 ELSE 0 END)::int AS cod_orders,
        SUM(CASE WHEN o.cod = FALSE THEN 1 ELSE 0 END)::int AS prepaid_orders,
        NOW()
@@ -241,9 +312,9 @@ export async function aggregateChannelDaily(since: string, until: string): Promi
        FROM unicommerce_order_items
        GROUP BY order_code
      ) items ON items.order_code = o.order_code
-     WHERE o.order_date::date BETWEEN :since AND :until
+     WHERE (o.order_date AT TIME ZONE 'Asia/Kolkata')::date BETWEEN :since AND :until
        AND o.order_date IS NOT NULL
-     GROUP BY o.order_date::date, COALESCE(o.channel, 'UNKNOWN')
+     GROUP BY (o.order_date AT TIME ZONE 'Asia/Kolkata')::date, COALESCE(o.channel, 'UNKNOWN')
      ON CONFLICT (date, channel) DO UPDATE SET
        orders           = EXCLUDED.orders,
        revenue          = EXCLUDED.revenue,

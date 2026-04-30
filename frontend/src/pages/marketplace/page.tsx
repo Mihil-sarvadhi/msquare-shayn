@@ -1,6 +1,7 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ShoppingBag, IndianRupee, TrendingUp, XCircle, Undo2,
+  Table as TableIcon, PieChart as PieIcon,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -12,6 +13,7 @@ import {
 import { useAppDispatch, useAppSelector } from '@store/hooks';
 import {
   fetchUnicommerceOverview,
+  fetchUnicommerceTodaySnapshot,
   setSelectedChannel,
   type ChannelTab,
 } from '@store/slices/unicommerceSlice';
@@ -65,7 +67,30 @@ function statusColor(status: string): string {
 
 function channelColor(channel: string | null | undefined): string {
   if (!channel) return MUTED;
-  return CHANNEL_COLORS[channel] ?? MUTED;
+  if (CHANNEL_COLORS[channel]) return CHANNEL_COLORS[channel];
+  // Match by substring so SHOPIFY_SHAYN, FLIPKART_SHAYN, etc. pick up the
+  // right colour without needing every tenant variant in the table.
+  const upper = channel.toUpperCase();
+  if (upper.includes('SHOPIFY')) return ACCENT;
+  if (upper.includes('FLIPKART')) return INFO;
+  if (upper.includes('AMAZON')) return WARN;
+  if (upper.includes('MYNTRA')) return AI;
+  if (upper.includes('ETERNZ')) return TEAL;
+  return MUTED;
+}
+
+const CATEGORY_COLORS: Record<string, string> = {
+  Earring: INFO,
+  Ring: NEG,
+  Necklace: POS,
+  Bracelet: WARN,
+  Pendant: AI,
+  Other: MUTED,
+};
+
+function categoryColor(category: string | null | undefined): string {
+  if (!category) return MUTED;
+  return CATEGORY_COLORS[category] ?? MUTED;
 }
 
 function statusLabel(status: string): string {
@@ -73,6 +98,11 @@ function statusLabel(status: string): string {
     .replace(/_/g, ' ')
     .toLowerCase()
     .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/** Exact rupees with Indian comma grouping, no decimals — e.g. 5896 → "₹5,896". */
+function formatINRExact(value: number): string {
+  return `₹${Math.round(Number(value || 0)).toLocaleString('en-IN')}`;
 }
 
 /* ── Aggregations ────────────────────────────────────────────────────── */
@@ -110,26 +140,36 @@ function aggregateSummary(rows: ChannelSummaryRow[]): KpiTotals {
   };
 }
 
-/* Pivot trend rows by date with one column per channel for the line chart. */
-function pivotTrendByChannel(rows: RevenueTrendRow[]): {
+type TrendMetric = 'revenue' | 'units_sold';
+
+/** Pivot trend rows by date with one column per channel for the line chart.
+ *  `metric` toggles which numeric column is plotted (revenue ₹ vs units sold). */
+function pivotTrendByChannel(
+  rows: RevenueTrendRow[],
+  metric: TrendMetric,
+): {
   data: Array<Record<string, number | string>>;
   channels: string[];
+  total: number;
 } {
   const byDate = new Map<string, Record<string, number | string>>();
   const channelSet = new Set<string>();
+  let total = 0;
 
   for (const r of rows) {
     if (!r.date) continue;
     channelSet.add(r.channel);
+    const value = Number(r[metric] ?? 0);
+    total += value;
     const existing = byDate.get(r.date) ?? { date: r.date };
-    existing[r.channel] = (Number(existing[r.channel] ?? 0) as number) + Number(r.revenue ?? 0);
+    existing[r.channel] = (Number(existing[r.channel] ?? 0) as number) + value;
     byDate.set(r.date, existing);
   }
 
   const data = Array.from(byDate.values()).sort((a, b) =>
     String(a.date).localeCompare(String(b.date)),
   );
-  return { data, channels: Array.from(channelSet) };
+  return { data, channels: Array.from(channelSet), total };
 }
 
 /* ── Page ────────────────────────────────────────────────────────────── */
@@ -141,18 +181,37 @@ export function MarketplacePage() {
   const loading = useAppSelector((s) => s.unicommerce.loading);
   const summary = useAppSelector((s) => s.unicommerce.summary);
   const revenueTrend = useAppSelector((s) => s.unicommerce.revenueTrend);
-  const topProducts = useAppSelector((s) => s.unicommerce.topProducts);
   const orderStatus = useAppSelector((s) => s.unicommerce.orderStatus);
   const channelComparison = useAppSelector((s) => s.unicommerce.channelComparison);
   const returns = useAppSelector((s) => s.unicommerce.returns);
   const recentOrders = useAppSelector((s) => s.unicommerce.recentOrders);
+  const topCategories = useAppSelector((s) => s.unicommerce.topCategories);
+  const topProductsPct = useAppSelector((s) => s.unicommerce.topProductsPct);
+  const topProductsByChannel = useAppSelector((s) => s.unicommerce.topProductsByChannel);
+  const channelReturns = useAppSelector((s) => s.unicommerce.channelReturns);
+  const todaySnapshot = useAppSelector((s) => s.unicommerce.todaySnapshot);
 
   useEffect(() => {
     dispatch(fetchUnicommerceOverview({ range, channel: selectedChannel }));
   }, [dispatch, range, selectedChannel]);
 
+  // Today/Yesterday cards are independent of the date-range filter and
+  // refresh on a 5-minute timer so they stay live without a manual reload.
+  useEffect(() => {
+    dispatch(fetchUnicommerceTodaySnapshot());
+    const id = setInterval(() => {
+      dispatch(fetchUnicommerceTodaySnapshot());
+    }, 5 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [dispatch]);
+
+  const [trendMetric, setTrendMetric] = useState<TrendMetric>('revenue');
+
   const totals = useMemo(() => aggregateSummary(summary), [summary]);
-  const trendPivot = useMemo(() => pivotTrendByChannel(revenueTrend), [revenueTrend]);
+  const trendPivot = useMemo(
+    () => pivotTrendByChannel(revenueTrend, trendMetric),
+    [revenueTrend, trendMetric],
+  );
 
   const orderStatusData = useMemo(
     () =>
@@ -194,6 +253,33 @@ export function MarketplacePage() {
     [channelComparison],
   );
 
+  /**
+   * Build per-channel and per-category share rows for the
+   * "Top Performing X" table/pie panels. Uses the same data the page
+   * already fetches — no additional API calls.
+   */
+  const topChannelShares = useMemo<ShareRow[]>(() => {
+    const totalRevenue = summary.reduce((s, r) => s + Number(r.revenue ?? 0), 0);
+    return summary
+      .map((row) => ({
+        label: row.channel,
+        revenue: Number(row.revenue ?? 0),
+        pct: totalRevenue > 0 ? (Number(row.revenue ?? 0) / totalRevenue) * 100 : 0,
+      }))
+      .filter((r) => r.revenue > 0)
+      .sort((a, b) => b.revenue - a.revenue);
+  }, [summary]);
+
+  const topCategoryShares = useMemo<ShareRow[]>(
+    () =>
+      topCategories.map((row) => ({
+        label: row.category,
+        revenue: Number(row.revenue ?? 0),
+        pct: Number(row.pct_of_total ?? 0),
+      })),
+    [topCategories],
+  );
+
   const returnsByChannel = useMemo(() => {
     const map = new Map<string, number>();
     for (const r of returns) {
@@ -219,6 +305,28 @@ export function MarketplacePage() {
 
   return (
     <div className="px-5 sm:px-7 py-5 flex flex-col gap-5">
+      {/* Today / Yesterday strip — independent of the range picker */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <SnapshotCard
+          label="Today's Revenue"
+          value={todaySnapshot ? formatINRExact(todaySnapshot.today_revenue) : '—'}
+          comparison={
+            todaySnapshot
+              ? `Yesterday's Revenue: ${formatINRExact(todaySnapshot.yesterday_revenue)}`
+              : ' '
+          }
+        />
+        <SnapshotCard
+          label="Today's Order Items"
+          value={todaySnapshot ? formatNum(todaySnapshot.today_order_items) : '—'}
+          comparison={
+            todaySnapshot
+              ? `Yesterday's Order Items: ${formatNum(todaySnapshot.yesterday_order_items)}`
+              : ' '
+          }
+        />
+      </div>
+
       {/* Channel tabs */}
       <div className="flex items-center gap-1 p-1 rounded-full bg-[var(--bg-2)] border border-[var(--line)] w-fit">
         {TABS.map(({ key, label, color }) => {
@@ -286,16 +394,49 @@ export function MarketplacePage() {
           {/* Row 2 — Revenue trend (2/3) + Channel comparison (1/3) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <Panel
-              title="Revenue Trend"
+              title={trendMetric === 'revenue' ? 'Revenue Trend' : 'Order Item Trend'}
               subtitle={
-                selectedChannel === 'ALL'
-                  ? 'Daily revenue per marketplace'
-                  : `Daily revenue for ${TABS.find((t) => t.key === selectedChannel)?.label}`
+                trendMetric === 'revenue'
+                  ? `${formatINRExact(trendPivot.total)} total · daily ${selectedChannel === 'ALL' ? 'per marketplace' : `for ${TABS.find((t) => t.key === selectedChannel)?.label}`}`
+                  : `${formatNum(trendPivot.total)} order items · daily ${selectedChannel === 'ALL' ? 'per marketplace' : `for ${TABS.find((t) => t.key === selectedChannel)?.label}`}`
+              }
+              action={
+                <div className="flex items-center gap-1 p-0.5 rounded-full bg-[var(--bg-2)] border border-[var(--line)]">
+                  {(
+                    [
+                      { key: 'revenue', label: 'Revenue' },
+                      { key: 'units_sold', label: 'Order Item' },
+                    ] as const
+                  ).map(({ key, label }) => {
+                    const isActive = trendMetric === key;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setTrendMetric(key)}
+                        className={cn(
+                          'px-2.5 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap transition-all',
+                          isActive
+                            ? 'bg-[var(--surface)] text-[var(--ink)] shadow-[var(--shadow-sm)]'
+                            : 'text-[var(--muted)] hover:text-[var(--ink)]',
+                        )}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
               }
               className="lg:col-span-2"
             >
               {trendPivot.data.length === 0 ? (
-                <EmptyState message="No revenue data in this range" />
+                <EmptyState
+                  message={
+                    trendMetric === 'revenue'
+                      ? 'No revenue data in this range'
+                      : 'No order items in this range'
+                  }
+                />
               ) : (
                 <ResponsiveContainer width="100%" height={260}>
                   <LineChart data={trendPivot.data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
@@ -307,11 +448,17 @@ export function MarketplacePage() {
                     />
                     <YAxis
                       tick={{ fill: AXIS_TICK_COLOR, fontSize: AXIS_TICK_SIZE }}
-                      tickFormatter={(v: number) => formatINR(v)}
+                      tickFormatter={(v: number) =>
+                        trendMetric === 'revenue' ? formatINR(v) : formatNum(v)
+                      }
                     />
                     <Tooltip
                       contentStyle={TOOLTIP_CONTENT_STYLE}
-                      formatter={(value: number) => formatINR(value)}
+                      formatter={(value: number) =>
+                        trendMetric === 'revenue'
+                          ? formatINRExact(Number(value))
+                          : formatNum(Number(value))
+                      }
                       labelFormatter={(label: string) => formatDate(label)}
                     />
                     <Legend wrapperStyle={{ fontSize: 11, color: AXIS_TICK_COLOR }} />
@@ -351,7 +498,8 @@ export function MarketplacePage() {
                       type="category"
                       dataKey="channel"
                       tick={{ fill: AXIS_TICK_COLOR, fontSize: AXIS_TICK_SIZE }}
-                      width={70}
+                      width={120}
+                      interval={0}
                     />
                     <Tooltip
                       contentStyle={TOOLTIP_CONTENT_STYLE}
@@ -460,40 +608,50 @@ export function MarketplacePage() {
             </Panel>
           </div>
 
-          {/* Row 4 — Top Products */}
-          <Panel title="Top Products" subtitle="Best-sellers by revenue">
-            {topProducts.length === 0 ? (
+          {/* Row 4 — Top Performing Channels + Top Performing Categories */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <TopShareCard
+              title="Top Performing Channels"
+              labelKey="channel"
+              rows={topChannelShares}
+              colorFor={(label) => channelColor(label)}
+            />
+            <TopShareCard
+              title="Top Performing Categories"
+              labelKey="category"
+              rows={topCategoryShares}
+              colorFor={(label) => categoryColor(label)}
+            />
+          </div>
+
+          {/* Row 5 — Top Performing Products (with % of total) */}
+          <Panel title="Top Performing Products" subtitle="Best-sellers by revenue">
+            {topProductsPct.length === 0 ? (
               <EmptyState message="No product data in this range" />
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-[12px] min-w-[640px]">
                   <thead>
                     <tr className="text-left text-[10px] uppercase tracking-widish text-[var(--muted)]">
-                      <th className="py-2 w-[36px]">#</th>
-                      <th className="py-2">SKU</th>
-                      <th className="py-2">Product</th>
-                      <th className="py-2">Channel</th>
-                      <th className="py-2 text-right">Units</th>
+                      <th className="py-2">SKU Code</th>
+                      <th className="py-2">SKU Name</th>
+                      <th className="py-2 text-right">% of Total</th>
                       <th className="py-2 text-right">Revenue</th>
-                      <th className="py-2 text-right">Orders</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {topProducts.map((row, i) => (
-                      <tr key={`${row.sku}-${i}`} className="border-t border-[var(--line)]">
-                        <td className="py-2 text-[var(--muted)] tabular-nums">{i + 1}</td>
+                    {topProductsPct.map((row) => (
+                      <tr key={row.sku} className="border-t border-[var(--line)]">
                         <td className="py-2 text-[var(--ink)] font-mono">{row.sku}</td>
-                        <td className="py-2 text-[var(--ink-2)] truncate max-w-[260px]">
+                        <td className="py-2 text-[var(--ink-2)] truncate max-w-[420px]">
                           {row.product_name ?? '—'}
                         </td>
-                        <td className="py-2">
-                          <ChannelChip channel={row.channel} />
+                        <td className="py-2 text-right tabular-nums text-[var(--muted)]">
+                          {formatPct(row.pct_of_total, 2)}
                         </td>
-                        <td className="py-2 text-right tabular-nums">{formatNum(row.units_sold)}</td>
                         <td className="py-2 text-right tabular-nums font-medium text-[var(--ink)]">
-                          {formatINR(row.revenue)}
+                          {formatINRExact(row.revenue)}
                         </td>
-                        <td className="py-2 text-right tabular-nums">{formatNum(row.orders)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -502,7 +660,114 @@ export function MarketplacePage() {
             )}
           </Panel>
 
-          {/* Row 5 — Returns */}
+          {/* Row 6 — Channel-wise Top Performing Products */}
+          <Panel
+            title="Channel-wise Top Performing Products"
+            subtitle="Per-channel revenue for the top SKUs"
+          >
+            {topProductsByChannel.length === 0 ? (
+              <EmptyState message="No channel revenue in this range" />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-[12px] min-w-[820px]">
+                  <thead>
+                    <tr className="text-left text-[10px] uppercase tracking-widish text-[var(--muted)]">
+                      <th className="py-2">SKU Code</th>
+                      <th className="py-2">Channel Product Name</th>
+                      <th className="py-2 text-right">Shopify</th>
+                      <th className="py-2 text-right">Amazon</th>
+                      <th className="py-2 text-right">Flipkart</th>
+                      <th className="py-2 text-right">Myntra</th>
+                      <th className="py-2 text-right">Eternz</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {topProductsByChannel.map((row) => (
+                      <tr key={row.sku} className="border-t border-[var(--line)]">
+                        <td className="py-2 text-[var(--ink)] font-mono">{row.sku}</td>
+                        <td className="py-2 text-[var(--ink-2)] truncate max-w-[360px]">
+                          {row.product_name ?? '—'}
+                        </td>
+                        <td className="py-2 text-right tabular-nums">
+                          {row.shopify_revenue > 0 ? formatINRExact(row.shopify_revenue) : '—'}
+                        </td>
+                        <td className="py-2 text-right tabular-nums">
+                          {row.amazon_revenue > 0 ? formatINRExact(row.amazon_revenue) : '—'}
+                        </td>
+                        <td className="py-2 text-right tabular-nums">
+                          {row.flipkart_revenue > 0 ? formatINRExact(row.flipkart_revenue) : '—'}
+                        </td>
+                        <td className="py-2 text-right tabular-nums">
+                          {row.myntra_revenue > 0 ? formatINRExact(row.myntra_revenue) : '—'}
+                        </td>
+                        <td className="py-2 text-right tabular-nums">
+                          {row.eternz_revenue > 0 ? formatINRExact(row.eternz_revenue) : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Panel>
+
+          {/* Row 6.5 — Channel Wise Return Percent (sold vs returned units, stacked) */}
+          <Panel
+            title="Channel Wise Return Percent"
+            subtitle="Stacked: total units sold + returned units per channel"
+          >
+            {channelReturns.length === 0 ? (
+              <EmptyState message="No channel data in this range" />
+            ) : (
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={channelReturns} margin={{ top: 16, right: 16, left: 0, bottom: 24 }}>
+                  <CartesianGrid strokeDasharray={GRID_DASHARRAY} stroke={GRID_STROKE} />
+                  <XAxis
+                    dataKey="channel"
+                    tick={{ fill: AXIS_TICK_COLOR, fontSize: AXIS_TICK_SIZE }}
+                    interval={0}
+                    angle={-25}
+                    textAnchor="end"
+                    height={50}
+                  />
+                  <YAxis
+                    tick={{ fill: AXIS_TICK_COLOR, fontSize: AXIS_TICK_SIZE }}
+                    tickFormatter={(v: number) => formatNum(v)}
+                  />
+                  <Tooltip
+                    contentStyle={TOOLTIP_CONTENT_STYLE}
+                    formatter={(value: number, name: string) => {
+                      const label =
+                        name === 'units_sold'
+                          ? 'Total Units Sold'
+                          : name === 'return_units'
+                            ? 'Returns Unit'
+                            : name;
+                      return [formatNum(Number(value)), label];
+                    }}
+                    labelFormatter={(label: string) => {
+                      const row = channelReturns.find((r) => r.channel === label);
+                      return row ? `${label} — ${row.return_pct.toFixed(2)}% return rate` : label;
+                    }}
+                  />
+                  <Legend
+                    wrapperStyle={{ fontSize: 11, color: AXIS_TICK_COLOR }}
+                    formatter={(value) =>
+                      value === 'units_sold'
+                        ? 'Total Unit Sold'
+                        : value === 'return_units'
+                          ? 'Returns Unit'
+                          : value
+                    }
+                  />
+                  <Bar dataKey="units_sold" stackId="u" fill={INFO} radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="return_units" stackId="u" fill={NEG} radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </Panel>
+
+          {/* Row 7 — Returns */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Panel title="Returns by Channel" subtitle="Total returns initiated">
               {returnsByChannel.length === 0 ? (
@@ -643,6 +908,147 @@ export function MarketplacePage() {
 }
 
 /* ── Helpers ────────────────────────────────────────────────────────── */
+
+interface ShareRow {
+  label: string;
+  revenue: number;
+  pct: number;
+}
+
+interface TopShareCardProps {
+  title: string;
+  labelKey: string;
+  rows: ShareRow[];
+  colorFor: (label: string) => string;
+}
+
+/**
+ * Shared "Top X by share" panel — identical layout to Uniware's
+ * `TOP PERFORMING CHANNELS` / `TOP PERFORMING CATEGORIES` cards. Toggles
+ * between a sortable table and a pie chart of the same data.
+ */
+function TopShareCard({ title, labelKey, rows, colorFor }: TopShareCardProps) {
+  const [view, setView] = useState<'table' | 'pie'>('table');
+
+  return (
+    <Panel
+      title={title}
+      action={
+        <div className="flex items-center gap-1 p-0.5 rounded-full bg-[var(--bg-2)] border border-[var(--line)]">
+          {(
+            [
+              { key: 'table', label: 'Table', icon: TableIcon },
+              { key: 'pie', label: 'Pie', icon: PieIcon },
+            ] as const
+          ).map(({ key, icon: Icon }) => {
+            const isActive = view === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setView(key)}
+                title={key === 'table' ? 'Table view' : 'Pie chart view'}
+                className={cn(
+                  'inline-flex items-center justify-center h-6 w-6 rounded-full transition-all',
+                  isActive
+                    ? 'bg-[var(--surface)] text-[var(--ink)] shadow-[var(--shadow-sm)]'
+                    : 'text-[var(--muted)] hover:text-[var(--ink)]',
+                )}
+              >
+                <Icon size={12} strokeWidth={1.6} />
+              </button>
+            );
+          })}
+        </div>
+      }
+    >
+      {rows.length === 0 ? (
+        <EmptyState message="No data in this range" />
+      ) : view === 'table' ? (
+        <table className="w-full text-[12px]">
+          <thead>
+            <tr className="text-left text-[10px] uppercase tracking-widish text-[var(--muted)]">
+              <th className="py-2">{labelKey}</th>
+              <th className="py-2 text-right">% of Total</th>
+              <th className="py-2 text-right">Revenue</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.label} className="border-t border-[var(--line)]">
+                <td className="py-2 text-[var(--ink)] flex items-center gap-2">
+                  <span
+                    className="inline-block h-2 w-2 rounded-full"
+                    style={{ backgroundColor: colorFor(row.label) }}
+                  />
+                  {row.label}
+                </td>
+                <td className="py-2 text-right tabular-nums text-[var(--muted)]">
+                  {row.pct.toFixed(2)}
+                </td>
+                <td className="py-2 text-right tabular-nums font-medium text-[var(--ink)]">
+                  {formatINRExact(row.revenue)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <ResponsiveContainer width="100%" height={260}>
+          <PieChart>
+            <Pie
+              data={rows}
+              dataKey="revenue"
+              nameKey="label"
+              outerRadius={100}
+              paddingAngle={1}
+              label={({ name, percent }: { name: string; percent: number }) =>
+                `${name} ${(percent * 100).toFixed(0)}%`
+              }
+              labelLine={false}
+            >
+              {rows.map((row) => (
+                <Cell key={row.label} fill={colorFor(row.label)} />
+              ))}
+            </Pie>
+            <Tooltip
+              contentStyle={TOOLTIP_CONTENT_STYLE}
+              formatter={(value: number) => formatINRExact(Number(value))}
+            />
+            <Legend wrapperStyle={{ fontSize: 10, color: AXIS_TICK_COLOR }} />
+          </PieChart>
+        </ResponsiveContainer>
+      )}
+    </Panel>
+  );
+}
+
+interface SnapshotCardProps {
+  label: string;
+  value: string;
+  comparison: string;
+}
+
+/** Today's vs Yesterday's snapshot card (matches Uniware's TENANT WISE
+ *  SALES PERFORMANCE strip). Always renders; `comparison` is shown muted. */
+function SnapshotCard({ label, value, comparison }: SnapshotCardProps) {
+  return (
+    <div
+      className={cn(
+        'bg-[var(--surface)] rounded-[12px] border border-[var(--line)]',
+        'px-4 py-3 flex flex-col gap-1',
+      )}
+    >
+      <span className="text-[10px] font-medium uppercase tracking-widish text-[var(--muted)]">
+        {label}
+      </span>
+      <span className="text-[26px] font-medium leading-none tracking-tightx tabular-nums text-[var(--ink)]">
+        {value}
+      </span>
+      <span className="text-[11.5px] text-[var(--muted)] tabular-nums">{comparison}</span>
+    </div>
+  );
+}
 
 function ChannelChip({ channel }: { channel: string | null | undefined }) {
   const label = channel ?? 'Unknown';
