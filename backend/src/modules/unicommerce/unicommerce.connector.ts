@@ -257,7 +257,7 @@ export async function searchOrders(
  * facility makes legitimately-cross-facility orders 404 unnecessarily.
  */
 export async function getOrderDetails(orderCode: string): Promise<UCOrderDetailResponse> {
-  return post<UCOrderDetailResponse>('/services/rest/v1/oms/saleOrder/get', {
+  return post<UCOrderDetailResponse>('/services/rest/v1/oms/saleorder/get', {
     code: orderCode,
     paymentDetailRequired: true,
   });
