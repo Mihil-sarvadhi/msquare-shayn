@@ -246,7 +246,7 @@ export async function searchOrders(
     searchOptions: { displayLength: length, displayStart: start } satisfies UCSearchOptions,
   };
   if (channel) body.channel = channel;
-  return post<UCOrderSearchResponse>('/services/rest/v1/oms/saleOrder/search', body);
+  return post<UCOrderSearchResponse>('/services/rest/v1/oms/saleorder/search', body);
 }
 
 /**
@@ -277,7 +277,7 @@ export async function searchOrderItems(
     searchOptions: { displayLength: length, displayStart: start } satisfies UCSearchOptions,
   };
   if (channel) body.channel = channel;
-  return post<UCOrderSearchResponse>('/services/rest/v1/oms/saleOrderItem/search', body);
+  return post<UCOrderSearchResponse>('/services/rest/v1/oms/saleorderitem/search', body);
 }
 
 export async function searchShipments(
@@ -286,7 +286,7 @@ export async function searchShipments(
   start = 0,
   length = 50,
 ): Promise<UCShipmentSearchResponse> {
-  return post<UCShipmentSearchResponse>('/services/rest/v1/oms/shippingPackage/search', {
+  return post<UCShipmentSearchResponse>('/services/rest/v1/oms/shippingpackage/search', {
     fromDate,
     toDate,
     searchOptions: { displayLength: length, displayStart: start } satisfies UCSearchOptions,
@@ -294,7 +294,7 @@ export async function searchShipments(
 }
 
 export async function getShipmentDetails(shipmentCode: string): Promise<UCShipmentDetailResponse> {
-  return post<UCShipmentDetailResponse>('/services/rest/v1/oms/shippingPackage/get', {
+  return post<UCShipmentDetailResponse>('/services/rest/v1/oms/shippingpackage/get', {
     code: shipmentCode,
   });
 }
@@ -304,7 +304,7 @@ export async function getReturnDetails(shipmentCode: string): Promise<UCReturnDe
 }
 
 export async function getInventory(skuCodes: string[]): Promise<UCInventorySnapshotResponse> {
-  return post<UCInventorySnapshotResponse>('/services/rest/v1/inventory/inventorySnapshot/get', {
+  return post<UCInventorySnapshotResponse>('/services/rest/v1/inventory/inventorysnapshot/get', {
     skuCodes,
     facilityCode: facilityCode(),
   });
