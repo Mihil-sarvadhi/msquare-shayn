@@ -118,9 +118,21 @@ export interface UCOrderPrice {
 }
 
 export interface UCAddress {
+  addressLine1?: string;
+  addressLine2?: string;
+  landmark?: string;
   city?: string;
   state?: string;
+  country?: string;
   pincode?: string;
+  [key: string]: unknown;
+}
+
+export interface UCPaymentDetail {
+  paymentMethod?: string;
+  amount?: number | string;
+  transactionId?: string;
+  [key: string]: unknown;
 }
 
 export interface UCOrderDTO {
@@ -138,10 +150,13 @@ export interface UCOrderDTO {
   notificationEmail?: string;
   notificationMobile?: string;
   shippingAddress?: UCAddress;
+  billingAddress?: UCAddress;
+  paymentDetails?: UCPaymentDetail[];
   facilityCode?: string;
   thirdPartyShipping?: boolean;
   onHold?: boolean;
   saleOrderItems?: UCOrderItem[];
+  [key: string]: unknown;
 }
 
 export interface UCOrderDetailResponse {

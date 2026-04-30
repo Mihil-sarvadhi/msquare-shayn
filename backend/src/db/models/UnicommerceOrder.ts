@@ -25,6 +25,13 @@ interface Attrs {
   facility_code?: string;
   third_party_shipping?: boolean;
   on_hold?: boolean;
+  address_line_1?: string;
+  address_line_2?: string;
+  landmark?: string;
+  country?: string;
+  billing_address?: Record<string, unknown>;
+  payment_details?: Record<string, unknown>;
+  raw_response?: Record<string, unknown>;
   synced_at?: Date;
 }
 type CA = Optional<
@@ -51,6 +58,13 @@ type CA = Optional<
   | 'facility_code'
   | 'third_party_shipping'
   | 'on_hold'
+  | 'address_line_1'
+  | 'address_line_2'
+  | 'landmark'
+  | 'country'
+  | 'billing_address'
+  | 'payment_details'
+  | 'raw_response'
   | 'synced_at'
 >;
 
@@ -78,6 +92,13 @@ export class UnicommerceOrder extends Model<Attrs, CA> implements Attrs {
   declare facility_code?: string;
   declare third_party_shipping?: boolean;
   declare on_hold?: boolean;
+  declare address_line_1?: string;
+  declare address_line_2?: string;
+  declare landmark?: string;
+  declare country?: string;
+  declare billing_address?: Record<string, unknown>;
+  declare payment_details?: Record<string, unknown>;
+  declare raw_response?: Record<string, unknown>;
   declare synced_at?: Date;
 }
 
@@ -106,6 +127,13 @@ UnicommerceOrder.init(
     facility_code: DataTypes.TEXT,
     third_party_shipping: { type: DataTypes.BOOLEAN, defaultValue: false },
     on_hold: { type: DataTypes.BOOLEAN, defaultValue: false },
+    address_line_1: DataTypes.TEXT,
+    address_line_2: DataTypes.TEXT,
+    landmark: DataTypes.TEXT,
+    country: DataTypes.TEXT,
+    billing_address: DataTypes.JSONB,
+    payment_details: DataTypes.JSONB,
+    raw_response: DataTypes.JSONB,
     synced_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
   },
   { sequelize, modelName: 'UnicommerceOrder', tableName: 'unicommerce_orders', timestamps: false },

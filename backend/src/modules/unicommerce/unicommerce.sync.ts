@@ -35,6 +35,8 @@ async function sleep(ms: number): Promise<void> {
 }
 
 async function upsertOrder(order: UCOrderDTO): Promise<void> {
+  const ship = order.shippingAddress;
+  const bill = order.billingAddress;
   await UnicommerceOrder.upsert({
     order_code: order.code,
     display_order_code: order.displayOrderCode,
@@ -53,9 +55,18 @@ async function upsertOrder(order: UCOrderDTO): Promise<void> {
     customer_name: order.customerCode,
     customer_email: order.notificationEmail,
     customer_mobile: order.notificationMobile,
-    city: order.shippingAddress?.city,
-    state: order.shippingAddress?.state,
-    pincode: order.shippingAddress?.pincode,
+    city: ship?.city,
+    state: ship?.state,
+    pincode: ship?.pincode,
+    address_line_1: ship?.addressLine1,
+    address_line_2: ship?.addressLine2,
+    landmark: ship?.landmark,
+    country: ship?.country,
+    billing_address: bill ? (bill as Record<string, unknown>) : undefined,
+    payment_details: order.paymentDetails
+      ? { items: order.paymentDetails as unknown as Record<string, unknown>[] }
+      : undefined,
+    raw_response: order as unknown as Record<string, unknown>,
     facility_code: order.facilityCode,
     third_party_shipping: order.thirdPartyShipping ?? false,
     on_hold: order.onHold ?? false,
@@ -82,6 +93,7 @@ async function upsertItem(orderCode: string, channel: string, item: UCOrderItem)
     return_reason: item.returnReason ?? undefined,
     return_awb: item.returnAWBNumber ?? undefined,
     facility_code: item.facilityCode,
+    raw_response: item as unknown as Record<string, unknown>,
     synced_at: new Date(),
   });
 }

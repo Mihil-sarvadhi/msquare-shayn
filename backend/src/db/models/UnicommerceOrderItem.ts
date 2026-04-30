@@ -20,6 +20,7 @@ interface Attrs {
   return_date?: string;
   return_awb?: string;
   facility_code?: string;
+  raw_response?: Record<string, unknown>;
   synced_at?: Date;
 }
 type CA = Optional<
@@ -41,6 +42,7 @@ type CA = Optional<
   | 'return_date'
   | 'return_awb'
   | 'facility_code'
+  | 'raw_response'
   | 'synced_at'
 >;
 
@@ -63,6 +65,7 @@ export class UnicommerceOrderItem extends Model<Attrs, CA> implements Attrs {
   declare return_date?: string;
   declare return_awb?: string;
   declare facility_code?: string;
+  declare raw_response?: Record<string, unknown>;
   declare synced_at?: Date;
 }
 
@@ -86,6 +89,7 @@ UnicommerceOrderItem.init(
     return_date: DataTypes.TEXT,
     return_awb: DataTypes.TEXT,
     facility_code: DataTypes.TEXT,
+    raw_response: DataTypes.JSONB,
     synced_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
   },
   {
