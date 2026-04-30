@@ -246,7 +246,7 @@ export async function searchOrders(
     searchOptions: { displayLength: length, displayStart: start } satisfies UCSearchOptions,
   };
   if (channel) body.channel = channel;
-  return post<UCOrderSearchResponse>('/services/rest/v1/oms/saleorder/search', body);
+  return post<UCOrderSearchResponse>('/services/rest/v1/oms/saleOrder/search', body);
 }
 
 /**
