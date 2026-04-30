@@ -47,20 +47,26 @@ export async function unicommerceBackfill(): Promise<void> {
 
   let grandTotal = 0;
 
-  for (const range of ranges) {
-    logger.info(`[Unicommerce Backfill] Processing ${range.label}...`);
+  for (let i = 0; i < ranges.length; i++) {
+    const range = ranges[i];
+    const monthStartedAt = Date.now();
+    logger.info(`[Unicommerce Backfill] ═══ Month ${i + 1}/${ranges.length}: ${range.label} ═══`);
     try {
       const count = await syncOrders(range.fromIso, range.toIso);
       await aggregateChannelDaily(range.fromIso.slice(0, 10), range.toIso.slice(0, 10));
       grandTotal += count;
-      logger.info(`[Unicommerce Backfill] ${range.label}: ${count} orders`);
+      const elapsedS = Math.round((Date.now() - monthStartedAt) / 1000);
+      logger.info(
+        `[Unicommerce Backfill] ═══ ${range.label} done: ${count} orders in ${elapsedS}s ` +
+          `(running total: ${grandTotal}) ═══`,
+      );
     } catch (err) {
       logger.error(`[Unicommerce Backfill] ${range.label} failed: ${(err as Error).message}`);
     }
     await new Promise((r) => setTimeout(r, MONTH_GAP_MS));
   }
 
-  logger.info(`[Unicommerce Backfill] Done. Total: ${grandTotal} orders`);
+  logger.info(`[Unicommerce Backfill] All months processed. Total: ${grandTotal} orders`);
 }
 
 if (require.main === module) {

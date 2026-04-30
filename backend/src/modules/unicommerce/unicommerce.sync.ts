@@ -85,23 +85,49 @@ async function upsertItem(orderCode: string, channel: string, item: UCOrderItem)
   });
 }
 
-async function syncOrderDetail(summary: UCOrderSummary, channel: string): Promise<boolean> {
+interface ProgressContext {
+  channelLabel: string;
+  position: number;
+  expected: number | null;
+}
+
+function progressPrefix(ctx: ProgressContext): string {
+  const total = ctx.expected ? String(ctx.expected) : '?';
+  const width = total.length;
+  const pos = String(ctx.position).padStart(width, ' ');
+  return `[${ctx.channelLabel} ${pos}/${total}]`;
+}
+
+async function syncOrderDetail(
+  summary: UCOrderSummary,
+  channel: string,
+  ctx: ProgressContext,
+): Promise<boolean> {
+  const startedAt = Date.now();
+  const prefix = progressPrefix(ctx);
   try {
     const detail = await connector.getOrderDetails(summary.code);
     if (!detail.successful || !detail.saleOrderDTO) {
       logger.warn(
-        `[Unicommerce] Order ${summary.code} returned successful=false: ${detail.message ?? 'no message'}`,
+        `[Unicommerce] ${prefix} ${summary.code} → skipped (successful=false: ${detail.message ?? 'no message'})`,
       );
       return false;
     }
     const dto = detail.saleOrderDTO;
     await upsertOrder(dto);
-    for (const item of dto.saleOrderItems ?? []) {
+    const items = dto.saleOrderItems ?? [];
+    for (const item of items) {
       await upsertItem(dto.code, dto.channel ?? channel, item);
     }
+    const ms = Date.now() - startedAt;
+    const orderDate = dto.displayOrderDateTime ?? summary.displayOrderDateTime ?? '—';
+    logger.info(
+      `[Unicommerce] ${prefix} ${summary.code} (${dto.channel ?? channel}) ` +
+        `${items.length} items, ${dto.status ?? '?'}, ordered ${orderDate}, ${ms}ms → ok`,
+    );
     return true;
   } catch (err) {
-    logger.error(`[Unicommerce] Failed order ${summary.code}: ${(err as Error).message}`);
+    logger.error(`[Unicommerce] ${prefix} ${summary.code} → error: ${(err as Error).message}`);
     return false;
   }
 }
@@ -117,9 +143,17 @@ export async function syncOrders(fromDate: string, toDate: string): Promise<numb
   const channelsToSweep: Array<UnicommerceChannel | null> = [...UNICOMMERCE_CHANNELS, null];
 
   for (const channel of channelsToSweep) {
-    const channelLabel = channel ?? 'ALL';
+    const channelLabel = channel ?? 'NO_CHANNEL';
     let start = 0;
     let synced = 0;
+    let failed = 0;
+    let position = 0;
+    let expected: number | null = null;
+    const channelStartedAt = Date.now();
+
+    logger.info(
+      `[Unicommerce] ── Channel ${channelLabel} | ${fromDate.slice(0, 10)} → ${toDate.slice(0, 10)} ──`,
+    );
 
     while (true) {
       let response;
@@ -132,13 +166,24 @@ export async function syncOrders(fromDate: string, toDate: string): Promise<numb
         break;
       }
       const orders = response.saleOrderSummaries ?? response.elements ?? [];
+      if (expected === null && typeof response.totalRecords === 'number') {
+        expected = response.totalRecords;
+        logger.info(`[Unicommerce] ${channelLabel}: ${expected} order(s) expected`);
+      }
       if (!orders.length) break;
 
       for (const summary of orders) {
-        const ok = await syncOrderDetail(summary, channel ?? summary.channel ?? channelLabel);
+        position++;
+        const ok = await syncOrderDetail(summary, channel ?? summary.channel ?? channelLabel, {
+          channelLabel,
+          position,
+          expected,
+        });
         if (ok) {
           synced++;
           total++;
+        } else {
+          failed++;
         }
         await sleep(ORDER_DETAIL_DELAY_MS);
       }
@@ -147,7 +192,10 @@ export async function syncOrders(fromDate: string, toDate: string): Promise<numb
       start += PAGE_SIZE;
     }
 
-    logger.info(`[Unicommerce] ${channelLabel}: ${synced} orders synced`);
+    const durationS = Math.round((Date.now() - channelStartedAt) / 1000);
+    logger.info(
+      `[Unicommerce] ── Channel ${channelLabel} done — ${synced} ok, ${failed} failed, ${durationS}s ──`,
+    );
   }
 
   return total;
