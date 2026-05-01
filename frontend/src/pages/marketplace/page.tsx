@@ -228,6 +228,7 @@ export function MarketplacePage() {
   const selectedChannel = useAppSelector((s) => s.unicommerce.selectedChannel);
   const loading = useAppSelector((s) => s.unicommerce.loading);
   const summary = useAppSelector((s) => s.unicommerce.summary);
+  const prevSummary = useAppSelector((s) => s.unicommerce.prevSummary);
   const revenueTrend = useAppSelector((s) => s.unicommerce.revenueTrend);
   const orderStatus = useAppSelector((s) => s.unicommerce.orderStatus);
   const channelComparison = useAppSelector((s) => s.unicommerce.channelComparison);
@@ -269,6 +270,35 @@ export function MarketplacePage() {
   const [trendMetric, setTrendMetric] = useState<TrendMetric>('revenue');
 
   const totals = useMemo(() => aggregateSummary(summary), [summary]);
+  const prevTotals = useMemo(() => aggregateSummary(prevSummary), [prevSummary]);
+
+  // Daily series collapsed across channels — drives the KPI sparklines.
+  const dailySeries = useMemo(() => {
+    const byDate = new Map<string, { orders: number; revenue: number; cancelled: number; returned: number }>();
+    for (const r of revenueTrend) {
+      const cur = byDate.get(r.date) ?? { orders: 0, revenue: 0, cancelled: 0, returned: 0 };
+      cur.orders    += Number(r.orders ?? 0);
+      cur.revenue   += Number(r.revenue ?? 0);
+      cur.cancelled += Number(r.cancelled_orders ?? 0);
+      cur.returned  += Number(r.returned_orders ?? 0);
+      byDate.set(r.date, cur);
+    }
+    const dates = Array.from(byDate.keys()).sort();
+    const orders    = dates.map((d) => byDate.get(d)!.orders);
+    const revenue   = dates.map((d) => byDate.get(d)!.revenue);
+    const aov       = dates.map((d) => {
+      const x = byDate.get(d)!;
+      return x.orders > 0 ? x.revenue / x.orders : 0;
+    });
+    const cancelled = dates.map((d) => byDate.get(d)!.cancelled);
+    const returned  = dates.map((d) => byDate.get(d)!.returned);
+    return { orders, revenue, aov, cancelled, returned };
+  }, [revenueTrend]);
+
+  const pctDelta = (cur: number, prev: number): number | undefined => {
+    if (!prev) return undefined;
+    return ((cur - prev) / prev) * 100;
+  };
   const trendPivot = useMemo(
     () => pivotTrendByChannel(revenueTrend, trendMetric),
     [revenueTrend, trendMetric],
@@ -450,33 +480,46 @@ export function MarketplacePage() {
             <KpiCard
               label="Total Orders"
               value={formatNum(totals.orders)}
+              delta={pctDelta(totals.orders, prevTotals.orders)}
+              sub="vs prev period"
               icon={ShoppingBag}
+              trend={dailySeries.orders}
               loading={loading && summary.length === 0}
             />
             <KpiCard
               label="Total Revenue"
               value={formatINR(totals.revenue)}
+              delta={pctDelta(totals.revenue, prevTotals.revenue)}
+              sub="vs prev period"
               icon={IndianRupee}
+              trend={dailySeries.revenue}
               loading={loading && summary.length === 0}
             />
             <KpiCard
               label="Average Order Value"
               value={formatINR(totals.aov)}
+              delta={pctDelta(totals.aov, prevTotals.aov)}
+              sub="vs prev period"
               icon={TrendingUp}
+              trend={dailySeries.aov}
               loading={loading && summary.length === 0}
             />
             <KpiCard
               label="Cancelled Orders"
               value={formatNum(totals.cancelled)}
+              delta={pctDelta(totals.cancelled, prevTotals.cancelled)}
               sub={`${formatPct(totals.cancelledPct)} of total`}
               icon={XCircle}
+              trend={dailySeries.cancelled}
               loading={loading && summary.length === 0}
             />
             <KpiCard
               label="Returned Orders"
               value={formatNum(totals.returned)}
+              delta={pctDelta(totals.returned, prevTotals.returned)}
               sub={`${formatPct(totals.returnedPct)} of total`}
               icon={Undo2}
+              trend={dailySeries.returned}
               loading={loading && summary.length === 0}
             />
           </div>

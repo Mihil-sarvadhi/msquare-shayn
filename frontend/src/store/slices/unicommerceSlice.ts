@@ -26,6 +26,7 @@ export type ChannelTab = UnicommerceChannel | 'ALL';
 
 export interface UnicommerceState {
   summary: ChannelSummaryRow[];
+  prevSummary: ChannelSummaryRow[];
   revenueTrend: RevenueTrendRow[];
   topProducts: TopProductRow[];
   orderStatus: OrderStatusRow[];
@@ -47,6 +48,7 @@ export interface UnicommerceState {
 
 const initialState: UnicommerceState = {
   summary: [],
+  prevSummary: [],
   revenueTrend: [],
   topProducts: [],
   orderStatus: [],
@@ -114,6 +116,7 @@ const unicommerceSlice = createSlice({
       .addCase(fetchUnicommerceOverview.fulfilled, (state, action) => {
         state.loading = false;
         state.summary = action.payload.summary;
+        state.prevSummary = action.payload.prevSummary;
         state.revenueTrend = action.payload.revenueTrend;
         state.topProducts = action.payload.topProducts;
         state.orderStatus = action.payload.orderStatus;

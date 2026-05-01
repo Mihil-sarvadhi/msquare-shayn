@@ -39,12 +39,24 @@ export interface CustomerOverviewRow {
   repeat_rate: number;
 }
 
+/** Daily slice of customer activity — one row per day in the requested range,
+ *  including zero-activity days from the generate_series spine. Drives the KPI
+ *  sparklines on the Customers page. */
+export interface CustomerOverviewTrendRow {
+  date: string;
+  total_customers: number;
+  new_customers: number;
+  returning_customers: number;
+  repeat_rate: number;
+}
+
 /** customerOverview response shape with prev-period values for delta rendering. */
 export interface CustomerOverviewWithPrev extends CustomerOverviewRow {
   prev_total_customers: number;
   prev_new_customers: number;
   prev_returning_customers: number;
   prev_repeat_rate: number;
+  daily_trend: CustomerOverviewTrendRow[];
 }
 
 export interface CustomerSegmentRow {

@@ -6,6 +6,7 @@ import type {
   GeoRevenueRow,
   CodCashFlowRow,
   CustomerOverviewRow,
+  CustomerOverviewTrendRow,
   CustomerSegmentRow,
   TopCustomerRow,
   DiscountRow,
@@ -87,7 +88,10 @@ export async function getGeoRevenue(since: string, until: string): Promise<GeoRe
   );
 }
 
-export async function getShipmentStatusBreakdown(since: string, until: string): Promise<{ status: string; count: number }[]> {
+export async function getShipmentStatusBreakdown(
+  since: string,
+  until: string,
+): Promise<{ status: string; count: number }[]> {
   return sequelize.query<{ status: string; count: number }>(
     `SELECT COALESCE(current_status, 'Unknown') AS status, COUNT(*) AS count
      FROM ithink_shipments
@@ -172,7 +176,71 @@ export async function getCustomerOverview(
   return row;
 }
 
-export async function getCustomerSegments(since: string, until: string): Promise<CustomerSegmentRow[]> {
+/* Daily customer activity series for the Customers-page KPI sparklines.
+ * Per-day distinct customer counts, with new vs returning split based on each
+ * customer's first-ever order date — same definition as getCustomerOverview,
+ * just bucketed by day. The generate_series spine fills zero-activity days. */
+export async function getCustomerOverviewTrend(
+  since: string,
+  until: string,
+): Promise<CustomerOverviewTrendRow[]> {
+  return sequelize.query<CustomerOverviewTrendRow>(
+    `WITH orders_normalized AS (
+       SELECT
+         COALESCE(NULLIF(customer_id, ''), NULLIF(LOWER(customer_email), '')) AS customer_key,
+         (created_at AT TIME ZONE 'Asia/Kolkata')::date AS order_date
+       FROM shopify_orders
+       WHERE financial_status != 'voided'
+     ),
+     first_orders AS (
+       SELECT customer_key, MIN(order_date) AS first_ever_date
+       FROM orders_normalized
+       WHERE customer_key IS NOT NULL
+       GROUP BY customer_key
+     ),
+     daily_distinct_customers AS (
+       SELECT
+         o.order_date,
+         o.customer_key,
+         fo.first_ever_date
+       FROM orders_normalized o
+       JOIN first_orders fo ON fo.customer_key = o.customer_key
+       WHERE o.order_date BETWEEN :since AND :until
+         AND o.customer_key IS NOT NULL
+       GROUP BY o.order_date, o.customer_key, fo.first_ever_date
+     ),
+     daily_summary AS (
+       SELECT
+         order_date,
+         COUNT(*)::int AS total_customers,
+         COUNT(CASE WHEN first_ever_date = order_date THEN 1 END)::int AS new_customers,
+         COUNT(CASE WHEN first_ever_date < order_date THEN 1 END)::int AS returning_customers,
+         CASE WHEN COUNT(*) > 0
+              THEN ROUND(
+                COUNT(CASE WHEN first_ever_date < order_date THEN 1 END)::numeric
+                / COUNT(*)::numeric * 100, 1
+              )::float
+              ELSE 0 END AS repeat_rate
+       FROM daily_distinct_customers
+       GROUP BY order_date
+     )
+     SELECT
+       d.date::text AS date,
+       COALESCE(ds.total_customers, 0)::int AS total_customers,
+       COALESCE(ds.new_customers, 0)::int AS new_customers,
+       COALESCE(ds.returning_customers, 0)::int AS returning_customers,
+       COALESCE(ds.repeat_rate, 0)::float AS repeat_rate
+     FROM generate_series(:since::date, :until::date, '1 day'::interval) AS d(date)
+     LEFT JOIN daily_summary ds ON ds.order_date = d.date
+     ORDER BY d.date ASC`,
+    { type: QueryTypes.SELECT, replacements: { since, until } },
+  );
+}
+
+export async function getCustomerSegments(
+  since: string,
+  until: string,
+): Promise<CustomerSegmentRow[]> {
   return sequelize.query<CustomerSegmentRow>(
     `WITH customer_order_counts AS (
        SELECT
@@ -335,7 +403,10 @@ export async function getMoneyStuck(since: string, until: string): Promise<Money
   return row;
 }
 
-export async function getCourierScorecard(since: string, until: string): Promise<CourierScorecardRow[]> {
+export async function getCourierScorecard(
+  since: string,
+  until: string,
+): Promise<CourierScorecardRow[]> {
   const total = await sequelize.query<{ total: string }>(
     `SELECT COUNT(*) AS total FROM ithink_shipments WHERE order_date BETWEEN :since AND :until`,
     { type: QueryTypes.SELECT, replacements: { since, until } },
@@ -405,7 +476,10 @@ export async function getChannelRevenue(since: string, until: string): Promise<C
   };
 }
 
-export async function getCreativeFatigue(since: string, until: string): Promise<CreativeFatigueRow[]> {
+export async function getCreativeFatigue(
+  since: string,
+  until: string,
+): Promise<CreativeFatigueRow[]> {
   return sequelize.query<CreativeFatigueRow>(
     `WITH top_campaigns AS (
        SELECT campaign_id

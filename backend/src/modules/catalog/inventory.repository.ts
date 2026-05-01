@@ -215,3 +215,44 @@ export async function totalInventoryValue(): Promise<number> {
   );
   return parseFloat(r[0]?.value ?? '0');
 }
+
+/**
+ * Realised gross margin % per day across the window — qty-weighted from
+ * Shopify order line items joined to current variant cost. Days without
+ * priced+costed line items return 0 (flat); the FE sparkline auto-scales.
+ *
+ * Margin formula per day: SUM((price − cost) × qty) ÷ SUM(price × qty) × 100,
+ * filtered to lines where the inventory item has a cost set. Cost is the
+ * current cost on file — no historical cost snapshots exist, so this is
+ * "today's margin replayed against past sales mix".
+ */
+export async function realizedMarginDailyPct(from: Date, to: Date): Promise<number[]> {
+  const rows = await sequelize.query<{ date: string; pct: string | null }>(
+    `WITH days AS (
+       SELECT generate_series((:from)::date, (:to)::date, '1 day'::interval)::date AS d
+     )
+     SELECT d::text AS date,
+            CASE
+              WHEN SUM((soli.unit_price * soli.quantity)) FILTER (WHERE ii.cost IS NOT NULL AND soli.unit_price > 0) > 0
+              THEN (SUM(((soli.unit_price - ii.cost) * soli.quantity))
+                      FILTER (WHERE ii.cost IS NOT NULL AND soli.unit_price > 0)
+                    / SUM((soli.unit_price * soli.quantity))
+                      FILTER (WHERE ii.cost IS NOT NULL AND soli.unit_price > 0)
+                    * 100)::text
+              ELSE NULL
+            END AS pct
+       FROM days
+       LEFT JOIN shopify_orders so
+              ON so.created_at::date = days.d
+       LEFT JOIN shopify_order_lineitems soli
+              ON soli.order_id = so.order_id
+       LEFT JOIN product_variants pv
+              ON pv.sku = soli.sku AND pv.source = :source
+       LEFT JOIN inventory_items ii
+              ON ii.source_variant_id = pv.source_variant_id
+      GROUP BY d
+      ORDER BY d ASC`,
+    { type: QueryTypes.SELECT, replacements: { from, to, source: SOURCE.SHOPIFY } },
+  );
+  return rows.map((r) => (r.pct === null || r.pct === undefined ? 0 : parseFloat(r.pct)));
+}

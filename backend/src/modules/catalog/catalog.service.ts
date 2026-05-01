@@ -13,6 +13,7 @@ import {
   countStockouts,
   listInventory as listInventoryRepo,
   listPerLocationInventory,
+  realizedMarginDailyPct,
   totalInventoryValue,
   type InventoryRowData,
 } from './inventory.repository';
@@ -29,15 +30,29 @@ export async function getCatalogKpis(
   from: Date | null = null,
   to: Date | null = null,
 ): Promise<CatalogKpis> {
-  const [active_skus, stockouts, avg_margin_pct, total_inventory_value, active_skus_daily] =
-    await Promise.all([
-      countActiveSkus(),
-      countStockouts(0),
-      avgMarginPct(),
-      totalInventoryValue(),
-      from && to ? activeSkusDaily(from, to) : Promise.resolve([] as number[]),
-    ]);
-  return { active_skus, stockouts, avg_margin_pct, total_inventory_value, active_skus_daily };
+  const [
+    active_skus,
+    stockouts,
+    avg_margin_pct,
+    total_inventory_value,
+    active_skus_daily,
+    avg_margin_daily,
+  ] = await Promise.all([
+    countActiveSkus(),
+    countStockouts(0),
+    avgMarginPct(),
+    totalInventoryValue(),
+    from && to ? activeSkusDaily(from, to) : Promise.resolve([] as number[]),
+    from && to ? realizedMarginDailyPct(from, to) : Promise.resolve([] as number[]),
+  ]);
+  return {
+    active_skus,
+    stockouts,
+    avg_margin_pct,
+    total_inventory_value,
+    active_skus_daily,
+    avg_margin_daily,
+  };
 }
 
 /**

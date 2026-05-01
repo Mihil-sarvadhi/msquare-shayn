@@ -27,6 +27,22 @@ function parseLimit(query: UnicommerceQuery, fallback: number, max: number): num
 }
 
 export const getSummary = (q: UnicommerceQuery) => repo.getSummary(buildFilters(q));
+
+/**
+ * Equivalent prior period: same width as the requested window, ending the day
+ * before `since`. e.g. last 30 days → the 30 days before that. Drives the
+ * comparison delta on Marketplace KPI cards.
+ */
+export const getSummaryPrev = (q: UnicommerceQuery) => {
+  const filters = buildFilters(q);
+  const ms = (d: string) => new Date(`${d}T00:00:00.000Z`).getTime();
+  const day = 24 * 60 * 60 * 1000;
+  const widthDays = Math.round((ms(filters.until) - ms(filters.since)) / day) + 1;
+  const ymd = (t: number) => new Date(t).toISOString().slice(0, 10);
+  const prevUntil = ymd(ms(filters.since) - day);
+  const prevSince = ymd(ms(prevUntil) - (widthDays - 1) * day);
+  return repo.getSummary({ ...filters, since: prevSince, until: prevUntil });
+};
 export const getRevenueTrend = (q: UnicommerceQuery) => repo.getRevenueTrend(buildFilters(q));
 export const getTopProducts = (q: UnicommerceQuery) => repo.getTopProducts(buildFilters(q));
 export const getOrderStatus = (q: UnicommerceQuery) => repo.getOrderStatus(buildFilters(q));

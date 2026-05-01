@@ -20,6 +20,14 @@ export async function summaryHandler(req: Request, res: Response): Promise<void>
   }
 }
 
+export async function summaryPrevHandler(req: Request, res: Response): Promise<void> {
+  try {
+    handleApiResponse(res, { data: await service.getSummaryPrev(query(req)) });
+  } catch (err) {
+    handleErrorResponse(res, errOpts(err));
+  }
+}
+
 export async function revenueTrendHandler(req: Request, res: Response): Promise<void> {
   try {
     handleApiResponse(res, { data: await service.getRevenueTrend(query(req)) });

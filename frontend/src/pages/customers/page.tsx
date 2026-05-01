@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@store/hooks';
 import { fetchDashboard } from '@store/slices/dashboardSlice';
 import { fetchCustomersData } from '@store/slices/analyticsSlice';
@@ -13,6 +13,7 @@ import {
   BarChart, Bar, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
+import { Users, UserPlus, UserCheck, Repeat, Star } from 'lucide-react';
 import type { CustomerOverview, CustomerSegmentItem, TopCustomerItem, GeoRevenueItem } from '@app/types/analytics';
 import type { TopRatedProduct } from '@app/types/dashboard';
 
@@ -231,6 +232,13 @@ export function CustomersPage() {
     ? (customerOverview.returning_customers / customerOverview.total_customers) * 100 : 0;
   const storeRating  = Number(reviewsSummary?.store_rating ?? 0);
 
+  /* Sparkline series — fed from customerOverview.daily_trend (one row per day). */
+  const dailyTrend = useMemo(() => customerOverview?.daily_trend ?? [], [customerOverview?.daily_trend]);
+  const totalCustSpark     = useMemo(() => dailyTrend.map((d) => Number(d.total_customers     ?? 0)), [dailyTrend]);
+  const newCustSpark       = useMemo(() => dailyTrend.map((d) => Number(d.new_customers       ?? 0)), [dailyTrend]);
+  const returningCustSpark = useMemo(() => dailyTrend.map((d) => Number(d.returning_customers ?? 0)), [dailyTrend]);
+  const repeatRateSpark    = useMemo(() => dailyTrend.map((d) => Number(d.repeat_rate         ?? 0)), [dailyTrend]);
+
   const showPageLoader = isLoading && !customerOverview;
 
   return (
@@ -251,6 +259,8 @@ export function CustomersPage() {
                   ? (totalCustDelta > 0 ? 'Growing customer base' : 'Fewer customers this period')
                   : 'vs prior period')
                 : 'unique buyers this period'}
+              icon={Users}
+              trend={totalCustSpark}
               loading={isLoading}
             />
             <KpiCard
@@ -262,6 +272,8 @@ export function CustomersPage() {
                 : newPct > 30
                   ? `${newPct.toFixed(0)}% of buyers`
                   : `${newPct.toFixed(0)}% of buyers — retention strong`}
+              icon={UserPlus}
+              trend={newCustSpark}
               loading={isLoading}
             />
             <KpiCard
@@ -271,6 +283,8 @@ export function CustomersPage() {
               sub={returningPct > 40
                 ? `${returningPct.toFixed(0)}% — strong loyalty`
                 : `${returningPct.toFixed(0)}% repeat visitors`}
+              icon={UserCheck}
+              trend={returningCustSpark}
               loading={isLoading}
             />
             <KpiCard
@@ -282,6 +296,8 @@ export function CustomersPage() {
                 : repeatRate >= 15
                   ? 'Average — room to grow'
                   : 'Below benchmark — focus retention'}
+              icon={Repeat}
+              trend={repeatRateSpark}
               loading={isLoading}
             />
             <KpiCard
@@ -292,6 +308,7 @@ export function CustomersPage() {
                 : storeRating >= 4.0
                   ? `${formatNum(reviewsSummary?.total_reviews ?? 0)} reviews · Good`
                   : `${formatNum(reviewsSummary?.total_reviews ?? 0)} reviews · Needs work`}
+              icon={Star}
               loading={isLoading}
             />
           </div>

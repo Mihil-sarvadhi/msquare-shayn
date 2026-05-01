@@ -28,40 +28,48 @@ const STATUS_COLOR_MAP: Record<string, string> = {
 };
 
 function ShipmentStatusBreakdown({ data }: { data: LogisticsItem[] }) {
-  if (!data.length) return <div className="h-40 flex items-center justify-center text-sm text-[var(--text-subtle)]">No data</div>;
+  if (!data.length) return <div className="h-full min-h-[260px] flex items-center justify-center text-sm text-[var(--text-subtle)]">No data</div>;
 
   const sorted = [...data].sort((a, b) => b.count - a.count);
   const total  = sorted.reduce((s, r) => s + r.count, 0);
   const maxCount = sorted[0]?.count ?? 1;
 
+  const deliveredCount = sorted.find((r) => r.current_status_code === 'delivered')?.count ?? 0;
+  const deliveredPct = total > 0 ? (deliveredCount / total) * 100 : 0;
+
   return (
-    <div className="space-y-2.5">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-subtle)] mb-3">
+    <div className="h-full min-h-[260px] flex flex-col">
+      <p className="shrink-0 text-[10px] font-bold uppercase tracking-widest text-[var(--text-subtle)] mb-3">
         Shipment Status Breakdown
       </p>
-      {sorted.map((row) => {
-        const pct   = total > 0 ? (row.count / total) * 100 : 0;
-        const barW  = maxCount > 0 ? (row.count / maxCount) * 100 : 0;
-        const color = STATUS_COLOR_MAP[row.current_status_code] ?? MUTED;
-        return (
-          <div key={row.current_status_code} className="flex items-center gap-3">
-            <span className="text-[11px] text-[var(--text-muted)] w-[120px] shrink-0 truncate"
-                  title={row.current_status}>
-              {row.current_status}
-            </span>
-            <div className="flex-1 h-[10px] bg-[var(--bg-2)] rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-500"
-                style={{ width: `${barW}%`, backgroundColor: color }}
-              />
+      <div className="flex-1 min-h-0 flex flex-col justify-between gap-3">
+        {sorted.map((row) => {
+          const pct   = total > 0 ? (row.count / total) * 100 : 0;
+          const barW  = maxCount > 0 ? (row.count / maxCount) * 100 : 0;
+          const color = STATUS_COLOR_MAP[row.current_status_code] ?? MUTED;
+          return (
+            <div key={row.current_status_code} className="flex items-center gap-3">
+              <span className="text-[11px] text-[var(--text-muted)] w-[120px] shrink-0 truncate"
+                    title={row.current_status}>
+                {row.current_status}
+              </span>
+              <div className="flex-1 h-[10px] bg-[var(--bg-2)] rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{ width: `${barW}%`, backgroundColor: color }}
+                />
+              </div>
+              <span className="text-[11px] text-[var(--text-muted)] w-[64px] shrink-0 text-right font-medium tabular-nums">
+                {row.count} <span className="text-[var(--text-subtle)] font-normal">({pct.toFixed(0)}%)</span>
+              </span>
             </div>
-            <span className="text-[11px] text-[var(--text-muted)] w-[64px] shrink-0 text-right font-medium tabular-nums">
-              {row.count} <span className="text-[var(--text-subtle)] font-normal">({pct.toFixed(0)}%)</span>
-            </span>
-          </div>
-        );
-      })}
-
+          );
+        })}
+      </div>
+      <div className="shrink-0 mt-3 pt-2 border-t border-[var(--border)] flex items-center justify-between text-[11px] text-[var(--muted)]">
+        <span>Total Shipments <span className="ml-1 font-medium text-[var(--ink)] tabular-nums">{formatNum(total)}</span></span>
+        <span>Delivered <span className="ml-1 font-medium tabular-nums" style={{ color: deliveredPct >= 65 ? POS : WARN }}>{deliveredPct.toFixed(1)}%</span></span>
+      </div>
     </div>
   );
 }
@@ -236,9 +244,9 @@ export function OperationsPage() {
   const hasPrevNdr       = (prevKpis?.ndr ?? 0) > 0;
 
   const shipmentsDelta  = opsPctDelta(kpis?.totalShipments, prevKpis?.totalShipments);
-  const rtoRateDelta    = opsPctDelta(kpis?.rtoRate,        prevKpis?.rtoRate);       // lower = better → invert
-  const codMixDelta     = opsPctDelta(codMix,               prevCodMix);              // lower = better → invert
-  const ndrDelta        = opsPctDelta(kpis?.ndr,            prevKpis?.ndr);           // lower = better → invert
+  const rtoRateDelta    = opsPctDelta(kpis?.rtoRate,        prevKpis?.rtoRate);
+  const codMixDelta     = opsPctDelta(codMix,               prevCodMix);
+  const ndrDelta        = opsPctDelta(kpis?.ndr,            prevKpis?.ndr);
 
   /* Contextual insight text */
   const rtoRate = kpis?.rtoRate ?? 0;
@@ -269,23 +277,21 @@ export function OperationsPage() {
             <KpiCard
               label="RTO Rate"
               value={formatPct(rtoRate)}
-              delta={hasPrevShipments && rtoRateDelta !== undefined ? -rtoRateDelta : undefined}
+              delta={hasPrevShipments ? rtoRateDelta : undefined}
               sub={`${formatNum(kpis?.rto ?? 0)} returns · ${rtoRate > 25 ? 'Critical — above 25%' : rtoRate > 15 ? 'High — needs action' : rtoRate > 8 ? 'Moderate' : 'Good'}`}
               trend={rtoRateSpark}
-              invertDelta
               loading={isLoading}
             />
             <KpiCard
               label="COD Mix"
               value={formatPct(codMix)}
-              delta={hasPrevCodMix && codMixDelta !== undefined ? -codMixDelta : undefined}
+              delta={hasPrevCodMix ? codMixDelta : undefined}
               sub={codMix > 60
                 ? 'High COD — elevated RTO risk'
                 : codMix > 40
                   ? 'Moderate COD exposure'
                   : 'Healthy prepaid mix'}
               trend={codMixSpark}
-              invertDelta
               loading={isLoading}
             />
             <KpiCard
@@ -298,10 +304,9 @@ export function OperationsPage() {
             <KpiCard
               label="NDR Count"
               value={formatNum(kpis?.ndr ?? 0)}
-              delta={hasPrevNdr && ndrDelta !== undefined ? -ndrDelta : undefined}
+              delta={hasPrevNdr ? ndrDelta : undefined}
               sub={`pending delivery · ${(kpis?.ndr ?? 0) > 50 ? 'High — escalate' : (kpis?.ndr ?? 0) > 20 ? 'Monitor closely' : 'Under control'}`}
               trend={ndrSpark}
-              invertDelta
               loading={isLoading}
             />
           </div>

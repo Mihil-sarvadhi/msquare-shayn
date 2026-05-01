@@ -288,7 +288,7 @@ function LiveActivityFeed({ orders }: { orders: RecentOrder[] }) {
     // lists every line item so users never lose clarity on what's in the order.
     <div className="h-full flex flex-col">
       <div className="flex-1 min-h-0 overflow-y-auto -mr-1 pr-1">
-        <table className="w-full text-[11.5px]">
+        <table className="w-full h-full text-[11.5px]">
           <thead className="sticky top-0 bg-[var(--surface)] z-10">
             <tr className="border-b border-[var(--line)] text-[10px] uppercase tracking-[0.06em] text-[var(--muted)] font-medium">
               <th className="py-1.5 pr-3 text-left font-medium">Date</th>
@@ -314,8 +314,6 @@ function LiveActivityFeed({ orders }: { orders: RecentOrder[] }) {
               const extraCount = Math.max(0, products.length - 1);
               const orderName = o.order_name ?? '';
               const isExchange = /^EXC\b/i.test(orderName) || (Number(o.revenue) === 0 && products.length > 0);
-              // Open popover above for the bottom rows so it doesn't clip in the scroll container.
-              const openAbove = i >= recent.length - 3;
 
               // Single status vocabulary: tinted background + matching dot + label.
               let payTone = 'bg-[var(--amber-soft)] text-[var(--amber)]';
@@ -358,10 +356,7 @@ function LiveActivityFeed({ orders }: { orders: RecentOrder[] }) {
                               +{extraCount}
                             </span>
                             <span
-                              className={cn(
-                                'invisible opacity-0 group-hover/more:visible group-hover/more:opacity-100 group-focus-within/more:visible group-focus-within/more:opacity-100 transition-opacity duration-150 absolute right-0 z-30 w-[260px] rounded-lg p-2.5 pointer-events-none',
-                                openAbove ? 'bottom-full mb-2' : 'top-full mt-2',
-                              )}
+                              className="invisible opacity-0 group-hover/more:visible group-hover/more:opacity-100 group-focus-within/more:visible group-focus-within/more:opacity-100 transition-opacity duration-150 absolute left-full top-1/2 -translate-y-1/2 ml-2 z-30 w-[260px] rounded-lg p-2.5 pointer-events-none"
                               style={{
                                 backgroundColor: 'var(--surface)',
                                 color: 'var(--text)',
@@ -371,10 +366,7 @@ function LiveActivityFeed({ orders }: { orders: RecentOrder[] }) {
                             >
                               <span
                                 aria-hidden
-                                className={cn(
-                                  'absolute right-4 h-2.5 w-2.5 rotate-45',
-                                  openAbove ? '-bottom-[5px] border-r border-b' : '-top-[5px] border-l border-t',
-                                )}
+                                className="absolute -left-[5px] top-1/2 -translate-y-1/2 h-2.5 w-2.5 rotate-45 border-l border-b"
                                 style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
                               />
                               <p className="text-[9.5px] font-medium uppercase tracking-[0.06em] mb-1.5" style={{ color: 'var(--text-muted)' }}>

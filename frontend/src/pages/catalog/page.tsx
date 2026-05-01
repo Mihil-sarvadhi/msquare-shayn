@@ -12,10 +12,10 @@ import { KpiCard } from '@components/shared/KpiCard';
 import { Panel } from '@components/shared/Panel';
 import { PageLoader } from '@components/shared/PageLoader';
 import { formatINR, formatNum } from '@utils/formatters';
-import { rangeLabel } from '@utils/common-functions/buildRangeParams';
 import { TOOLTIP_CONTENT_STYLE, TOOLTIP_LABEL_STYLE, TOOLTIP_ITEM_STYLE } from '@utils/constants/palette';
 import { cn } from '@/lib/utils';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Package, AlertTriangle, Percent, Wallet } from 'lucide-react';
 
 type Tab = 'products' | 'inventory' | 'performance';
 
@@ -121,8 +121,8 @@ function ProductsTab() {
       {productsPagination && productsPagination.total > productsLimit && (
         <div className="flex items-center justify-between text-sm">
           <span className="text-[var(--text-muted)]">
-            Page {productsPage} of {totalPages} · {formatNum(productsPagination.total)} total ·
-            search "{productsSearch}"
+            Page {productsPage} of {totalPages} · {formatNum(productsPagination.total)} total
+            {productsSearch.trim() ? ` · search "${productsSearch}"` : ''}
           </span>
           <div className="flex gap-2">
             <button
@@ -478,21 +478,13 @@ export function CatalogPage() {
       {showPageLoader && <PageLoader overlay />}
       <div className="bg-[var(--bg)]">
         <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 pt-4 pb-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-[18px] font-semibold tracking-tightish text-[var(--ink)] leading-[1.25]">Catalog &amp; Inventory</h1>
-              <p className="text-[11.5px] text-[var(--muted)] mt-0.5">
-                {rangeLabel(range)} · Products, stock, margin
-              </p>
-            </div>
-          </div>
-
           {/* KPI tiles */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <KpiCard
               label="Active SKUs"
               value={formatNum(k?.active_skus)}
               sub="cumulative · catalog growth"
+              icon={Package}
               trend={k?.active_skus_daily}
               loading={catalog.loading}
             />
@@ -501,15 +493,18 @@ export function CatalogPage() {
               labelTooltip="Variants with available ≤ 0 (current state — no daily history without inventory snapshots)"
               value={formatNum(k?.stockouts)}
               sub="point-in-time"
+              icon={AlertTriangle}
               loading={catalog.loading}
             />
             <KpiCard
               label="Avg Margin %"
-              labelTooltip="Average gross margin across SKUs with COGS set in Shopify"
+              labelTooltip="Average gross margin across SKUs with COGS set in Shopify. Sparkline shows realised daily margin % from orders × variant cost."
               value={k?.avg_margin_pct === null || k?.avg_margin_pct === undefined ? 'N/A' : `${k.avg_margin_pct.toFixed(1)}%`}
               sub={k?.avg_margin_pct === null || k?.avg_margin_pct === undefined
                 ? 'No COGS set in Shopify'
-                : 'point-in-time'}
+                : 'realised · daily'}
+              icon={Percent}
+              trend={k?.avg_margin_daily}
               loading={catalog.loading}
             />
             <KpiCard
@@ -519,6 +514,7 @@ export function CatalogPage() {
               sub={(k?.total_inventory_value ?? 0) === 0
                 ? 'No COGS set in Shopify'
                 : 'point-in-time'}
+              icon={Wallet}
               loading={catalog.loading}
             />
           </div>

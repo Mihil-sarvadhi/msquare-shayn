@@ -5,6 +5,8 @@ export interface CatalogKpisApi {
   total_inventory_value: number;
   /** Cumulative active-products count per day for the window. Drives Active SKUs sparkline. */
   active_skus_daily: number[];
+  /** Realised gross margin % per day for the window. Drives Avg Margin sparkline. */
+  avg_margin_daily: number[];
 }
 
 export interface ProductRowApi {

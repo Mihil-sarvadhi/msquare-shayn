@@ -16,6 +16,14 @@ export interface LogisticsCosts {
   count: number;
 }
 
+export interface CustomerOverviewTrendItem {
+  date: string;
+  total_customers: number;
+  new_customers: number;
+  returning_customers: number;
+  repeat_rate: number;
+}
+
 export interface CustomerOverview {
   total_customers: number;
   new_customers: number;
@@ -26,6 +34,8 @@ export interface CustomerOverview {
   prev_new_customers: number;
   prev_returning_customers: number;
   prev_repeat_rate: number;
+  /** Per-day customer activity for the requested range — drives KPI sparklines. */
+  daily_trend: CustomerOverviewTrendItem[];
 }
 
 export interface CustomerSegmentItem {

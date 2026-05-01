@@ -45,4 +45,7 @@ export interface CatalogKpis {
   /** Cumulative count of active products created on/before each day in the window
    *  (oldest → newest). Drives the Active SKUs sparkline. */
   active_skus_daily: number[];
+  /** Realised gross margin % per day in the window (oldest → newest), qty-weighted
+   *  from order line items × current variant cost. Drives Avg Margin sparkline. */
+  avg_margin_daily: number[];
 }

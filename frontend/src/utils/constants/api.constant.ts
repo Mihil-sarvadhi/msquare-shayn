@@ -68,6 +68,7 @@ marketingTrend: '/analytics/marketing-trend',
   },
   unicommerce: {
     summary: '/unicommerce/summary',
+    summaryPrev: '/unicommerce/summary-prev',
     revenueTrend: '/unicommerce/revenue-trend',
     topProducts: '/unicommerce/top-products',
     topProductsPct: '/unicommerce/top-products-pct',

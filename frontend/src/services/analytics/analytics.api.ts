@@ -41,10 +41,21 @@ export async function fetchCustomers(range: RangeState) {
     get<GeoRevenueItem[]>(e.geoRevenue, params),
   ]);
   const customerOverview: CustomerOverview = {
-    total_customers:     Number(customerOverviewRaw.total_customers ?? 0),
-    new_customers:       Number(customerOverviewRaw.new_customers ?? 0),
-    returning_customers: Number(customerOverviewRaw.returning_customers ?? 0),
-    repeat_rate:         Number(customerOverviewRaw.repeat_rate ?? 0),
+    total_customers:          Number(customerOverviewRaw.total_customers ?? 0),
+    new_customers:            Number(customerOverviewRaw.new_customers ?? 0),
+    returning_customers:      Number(customerOverviewRaw.returning_customers ?? 0),
+    repeat_rate:              Number(customerOverviewRaw.repeat_rate ?? 0),
+    prev_total_customers:     Number(customerOverviewRaw.prev_total_customers ?? 0),
+    prev_new_customers:       Number(customerOverviewRaw.prev_new_customers ?? 0),
+    prev_returning_customers: Number(customerOverviewRaw.prev_returning_customers ?? 0),
+    prev_repeat_rate:         Number(customerOverviewRaw.prev_repeat_rate ?? 0),
+    daily_trend:              (customerOverviewRaw.daily_trend ?? []).map((d) => ({
+      date:                d.date,
+      total_customers:     Number(d.total_customers ?? 0),
+      new_customers:       Number(d.new_customers ?? 0),
+      returning_customers: Number(d.returning_customers ?? 0),
+      repeat_rate:         Number(d.repeat_rate ?? 0),
+    })),
   };
   return { customerOverview, customerSegments, topCustomers, geoRevenue };
 }

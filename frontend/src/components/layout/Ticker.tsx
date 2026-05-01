@@ -21,41 +21,38 @@ interface Delta {
   text: string;
 }
 
-function pct(curr: number | null | undefined, prev: number | null | undefined, opts: { invert?: boolean } = {}): Delta | undefined {
+function pct(curr: number | null | undefined, prev: number | null | undefined): Delta | undefined {
   const c = Number(curr ?? 0);
   const p = Number(prev ?? 0);
   if (!p) return undefined;
   const change = ((c - p) / p) * 100;
-  const positive = opts.invert ? change <= -0.05 : change >= 0.05;
-  const negative = opts.invert ? change >= 0.05 : change <= -0.05;
+  if (Math.abs(change) < 0.05) return { dir: 'flat', text: '— flat' };
   return {
-    dir: positive ? 'up' : negative ? 'down' : 'flat',
-    text: `${change >= 0 ? '↑' : '↓'} ${Math.abs(change).toFixed(1)}%`,
+    dir: change > 0 ? 'up' : 'down',
+    text: `${change > 0 ? '↑' : '↓'} ${Math.abs(change).toFixed(1)}%`,
   };
 }
 
-function countDiff(curr: number | null | undefined, prev: number | null | undefined, opts: { invert?: boolean } = {}): Delta | undefined {
+function countDiff(curr: number | null | undefined, prev: number | null | undefined): Delta | undefined {
   const c = Number(curr ?? 0);
   const p = Number(prev ?? 0);
   if (!p && !c) return undefined;
   const d = c - p;
   if (Math.abs(d) < 1) return { dir: 'flat', text: '— flat' };
-  const positive = opts.invert ? d < 0 : d > 0;
   return {
-    dir: positive ? 'up' : 'down',
+    dir: d > 0 ? 'up' : 'down',
     text: `${d > 0 ? '+' : '−'}${formatNum(Math.abs(d))}`,
   };
 }
 
-function ppDiff(curr: number | null | undefined, prev: number | null | undefined, opts: { invert?: boolean } = {}): Delta | undefined {
+function ppDiff(curr: number | null | undefined, prev: number | null | undefined): Delta | undefined {
   const c = Number(curr ?? 0);
   const p = Number(prev ?? 0);
   if (!p && !c) return undefined;
   const d = c - p;
   if (Math.abs(d) < 0.05) return { dir: 'flat', text: '— flat' };
-  const positive = opts.invert ? d < 0 : d > 0;
   return {
-    dir: positive ? 'up' : 'down',
+    dir: d > 0 ? 'up' : 'down',
     text: `${d > 0 ? '↑' : '↓'} ${Math.abs(d).toFixed(1)}pp`,
   };
 }
@@ -159,16 +156,15 @@ function buildFinance(d: MarqueeFinance): MarqueeItem[] {
     { label: 'Gross Sales', value: compactINR(d.revenue),       delta: pct(d.revenue,       d.prevRevenue) },
     { label: 'Net Rev',     value: compactINR(d.netRevenue),    delta: pct(d.netRevenue,    d.prevNetRevenue) },
     { label: 'AOV',        value: formatINR(d.aov),            delta: pct(d.aov,           d.prevAov) },
-    { label: 'Margin',     value: `${d.netMargin.toFixed(1)}%`, delta: ppDiff(d.netMargin, d.prevNetMargin) },
-    { label: 'Logistics',  value: compactINR(d.logisticsCost), delta: pct(d.logisticsCost, d.prevLogisticsCost, { invert: true }) },
+    { label: 'Logistics',  value: compactINR(d.logisticsCost), delta: pct(d.logisticsCost, d.prevLogisticsCost) },
   ];
 }
 
 function buildSales(d: MarqueeSales): MarqueeItem[] {
   return [
     { label: 'Orders',    value: formatNum(d.orders),          delta: countDiff(d.orders,          d.prevOrders) },
-    { label: 'Cancelled', value: formatNum(d.cancelledOrders), delta: countDiff(d.cancelledOrders, d.prevCancelledOrders, { invert: true }) },
-    { label: 'COD %',     value: `${d.codShare.toFixed(0)}%`,  delta: ppDiff(d.codShare,           d.prevCodShare,        { invert: true }) },
+    { label: 'Cancelled', value: formatNum(d.cancelledOrders), delta: countDiff(d.cancelledOrders, d.prevCancelledOrders) },
+    { label: 'COD %',     value: `${d.codShare.toFixed(0)}%`,  delta: ppDiff(d.codShare,           d.prevCodShare) },
     { label: 'Prepaid',   value: formatNum(d.prepaidOrders),   delta: countDiff(d.prepaidOrders,   d.prevPrepaidOrders) },
   ];
 }
@@ -188,8 +184,7 @@ function buildOperations(d: MarqueeOperations): MarqueeItem[] {
     { label: 'Shipments', value: formatNum(d.totalShipments),   delta: countDiff(d.totalShipments, d.prevTotalShipments) },
     { label: 'Delivered', value: formatNum(d.delivered),         delta: countDiff(d.delivered,      d.prevDelivered) },
     { label: 'Fulfilled', value: `${d.fulfilledPct.toFixed(0)}%`, delta: ppDiff(d.fulfilledPct,    d.prevFulfilledPct) },
-    { label: 'RTO',       value: `${d.rtoRate.toFixed(1)}%`,     delta: ppDiff(d.rtoRate,          d.prevRtoRate, { invert: true }) },
-    { label: 'NDR',       value: formatNum(d.ndr),               delta: countDiff(d.ndr,           d.prevNdr,     { invert: true }) },
+    { label: 'RTO',       value: `${d.rtoRate.toFixed(1)}%`,     delta: ppDiff(d.rtoRate,          d.prevRtoRate) },
   ];
 }
 
@@ -199,7 +194,7 @@ function buildCustomers(d: MarqueeCustomers): MarqueeItem[] {
     { label: 'New',        value: formatNum(d.newCustomers),       delta: countDiff(d.newCustomers,       d.prevNewCustomers) },
     { label: 'Returning',  value: formatNum(d.returningCustomers), delta: countDiff(d.returningCustomers, d.prevReturningCustomers) },
     { label: 'Repeat %',   value: `${d.repeatRate.toFixed(1)}%`,    delta: ppDiff(d.repeatRate,            d.prevRepeatRate) },
-    { label: 'Carts',      value: formatNum(d.abandonedCarts),      delta: countDiff(d.abandonedCarts,    d.prevAbandonedCarts, { invert: true }) },
+    { label: 'Carts',      value: formatNum(d.abandonedCarts),      delta: countDiff(d.abandonedCarts,    d.prevAbandonedCarts) },
   ];
 }
 

@@ -246,33 +246,52 @@ function MetaFunnelChart({
     { label: 'Purchases',           value: purchases, formatted: formatNum(purchases), stepPct: cToP,    barPct: Math.max((purchases / imp) * 100, purchases > 0 ? 0.5 : 0),  color: WARN },
   ];
 
+  const chips: Array<{ label: string; value: number }> = [
+    { label: 'CTR', value: ctr },
+    { label: 'Click → Checkout', value: clickToC },
+    { label: 'Checkout → Purchase', value: cToP },
+  ];
+
   return (
-    <div className="space-y-3 pt-1">
-      {stages.map((s, i) => (
-        <div key={i}>
-          <div className="flex items-baseline justify-between text-xs mb-1">
-            <span className="text-[var(--text-muted)]">{s.label}</span>
-            <div className="flex items-baseline gap-2">
-              {s.stepPct !== null && (
-                <span className="text-[var(--text-subtle)] text-[10px]">{s.stepPct.toFixed(2)}%</span>
-              )}
-              <span className="font-semibold text-[var(--text)]">{s.formatted}</span>
+    <div className="h-full flex flex-col pt-1">
+      <div className="space-y-3">
+        {stages.map((s, i) => (
+          <div key={i} className="rounded-lg border border-[var(--border)] bg-[var(--bg)]/40 px-3 py-2.5">
+            <div className="flex items-baseline justify-between text-xs mb-1.5">
+              <span className="font-medium text-[var(--text-muted)]">{s.label}</span>
+              <div className="flex items-baseline gap-2">
+                {s.stepPct !== null && (
+                  <span className="text-[var(--text-subtle)] text-[10px]">{s.stepPct.toFixed(2)}%</span>
+                )}
+                <span className="font-semibold text-[var(--text)]">{s.formatted}</span>
+              </div>
             </div>
+            <div className="h-2 bg-[var(--surface-2)] rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{ width: `${Math.min(100, s.barPct)}%`, backgroundColor: s.color }}
+              />
+            </div>
+            {s.note && (
+              <p className="text-[10px] text-[var(--text-subtle)] mt-1">{s.note}</p>
+            )}
           </div>
-          <div className="h-2 bg-[var(--surface-2)] rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{ width: `${Math.min(100, s.barPct)}%`, backgroundColor: s.color }}
-            />
-          </div>
-          {s.note && (
-            <p className="text-[10px] text-[var(--text-subtle)] mt-0.5">{s.note}</p>
-          )}
+        ))}
+      </div>
+
+      <div className="mt-auto pt-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
+          {chips.map((chip) => (
+            <div key={chip.label} className="rounded-md border border-[var(--border)] bg-[var(--bg)]/35 px-2.5 py-2">
+              <p className="text-[10px] uppercase tracking-wide text-[var(--text-subtle)]">{chip.label}</p>
+              <p className="text-sm font-semibold tabular-nums text-[var(--text)] mt-0.5">{chip.value.toFixed(2)}%</p>
+            </div>
+          ))}
         </div>
-      ))}
-      <div className="pt-2 border-t border-[var(--border)] text-xs text-[var(--text-muted)]">
-        Overall conversion: <span className="font-semibold text-[var(--text)]">{overall.toFixed(3)}%</span>
-        <span className="ml-1 text-[var(--text-subtle)]">impressions → purchase</span>
+        <div className="pt-2 border-t border-[var(--border)] text-xs text-[var(--text-muted)]">
+          Overall conversion: <span className="font-semibold text-[var(--text)]">{overall.toFixed(3)}%</span>
+          <span className="ml-1 text-[var(--text-subtle)]">impressions → purchase</span>
+        </div>
       </div>
     </div>
   );
@@ -567,7 +586,7 @@ function CampaignTable({ campaigns }: { campaigns: Campaign[] }) {
                     </td>
                     <td className="py-2 pr-3 text-[var(--text-muted)] text-right tabular-nums">{formatINR(c.spend)}</td>
                     <td className={`py-2 pr-3 text-right tabular-nums ${revStyle}`}>
-                      {c.purchase_value > 0 ? formatINR(c.purchase_value) : <span className="text-[10px] italic">No data</span>}
+                      {c.purchase_value > 0 ? formatINR(c.purchase_value) : '-'}
                     </td>
                     <td className={`py-2 pr-3 text-right tabular-nums ${roasStyle}`}>
                       {c.inactive ? '—' : c.noRevenue ? <span className="text-[10px] text-[var(--text-subtle)] italic">No attr.</span> : `${c.roas.toFixed(2)}x`}
@@ -743,19 +762,17 @@ export function MarketingPage() {
             <KpiCard
               label="MER"
               value={`${mer.toFixed(2)}x`}
-              delta={prevMerValid ? (merDelta !== undefined ? -merDelta : undefined) : undefined}
+              delta={prevMerValid ? merDelta : undefined}
               sub={merInsight(mer, prevMerValid ? merDelta : undefined)}
               trend={merSpark}
-              invertDelta
               loading={isLoading}
             />
             <KpiCard
               label="CAC"
               value={formatINR(cac)}
-              delta={hasPrevCustomers ? (cacDelta !== undefined ? -cacDelta : undefined) : undefined}
+              delta={hasPrevCustomers ? cacDelta : undefined}
               sub={cacInsight(cac, hasPrevCustomers ? cacDelta : undefined)}
               trend={cacSpark}
-              invertDelta
               loading={isLoading}
             />
           </div>
@@ -772,6 +789,7 @@ export function MarketingPage() {
               <MarketingTrendChart data={marketingTrend} />
             </Panel>
             <Panel
+              className="h-full"
               title="Meta Funnel"
               subtitle="Meta Ads · Impression → Click → Purchase"
               info={{ what: 'Conversion funnel from Meta ad impressions to purchases.', how: 'CTR = Clicks / Impressions × 100. CVR = Purchases / Clicks × 100.', source: 'Meta Ads API', readIt: 'Healthy CTR is 1–3%. CVR > 2% indicates strong landing page performance.' }}

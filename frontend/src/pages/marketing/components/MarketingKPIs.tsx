@@ -48,7 +48,6 @@ export function MarketingKPIs({ trend, attribution, loading }: Props) {
         value={formatINR(cpp)}
         icon={Target}
         trend={cppSpark}
-        invertDelta
       />
       {/* Attribution Rate is a single point-in-time gap value (no daily series). */}
       <KpiCard label="Attribution Rate" value={formatPct(attrRate)} icon={Link} />

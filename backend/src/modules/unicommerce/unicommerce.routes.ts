@@ -4,6 +4,7 @@ import * as controller from './unicommerce.controller';
 const router = Router();
 
 router.get('/summary', controller.summaryHandler);
+router.get('/summary-prev', controller.summaryPrevHandler);
 router.get('/revenue-trend', controller.revenueTrendHandler);
 router.get('/top-products', controller.topProductsHandler);
 router.get('/top-products-pct', controller.topProductsWithPctHandler);

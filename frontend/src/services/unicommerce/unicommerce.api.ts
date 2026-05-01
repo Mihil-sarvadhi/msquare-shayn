@@ -38,6 +38,9 @@ export const unicommerceApi = {
   getSummary: (params: UnicommerceParams) =>
     get<ChannelSummaryRow[]>(API_ENDPOINTS.unicommerce.summary, params),
 
+  getSummaryPrev: (params: UnicommerceParams) =>
+    get<ChannelSummaryRow[]>(API_ENDPOINTS.unicommerce.summaryPrev, params),
+
   getRevenueTrend: (params: UnicommerceParams) =>
     get<RevenueTrendRow[]>(API_ENDPOINTS.unicommerce.revenueTrend, params),
 
@@ -99,6 +102,7 @@ export const unicommerceApi = {
   fetchOverview: async (params: UnicommerceParams) => {
     const [
       summary,
+      prevSummary,
       revenueTrend,
       topProducts,
       orderStatus,
@@ -111,6 +115,7 @@ export const unicommerceApi = {
       channelReturns,
     ] = await Promise.all([
       unicommerceApi.getSummary(params),
+      unicommerceApi.getSummaryPrev(params),
       unicommerceApi.getRevenueTrend(params),
       unicommerceApi.getTopProducts(params),
       unicommerceApi.getOrderStatus(params),
@@ -124,6 +129,7 @@ export const unicommerceApi = {
     ]);
     return {
       summary,
+      prevSummary,
       revenueTrend,
       topProducts,
       orderStatus,
