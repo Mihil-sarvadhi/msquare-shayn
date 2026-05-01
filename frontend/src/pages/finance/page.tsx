@@ -38,7 +38,7 @@ import {
 } from 'recharts';
 import { cn } from '@/lib/utils';
 
-import { ACCENT, WARN, NEG, MUTED, POS, TEAL, INFO, AI } from '@utils/constants/palette';
+import { ACCENT, WARN, NEG, MUTED, POS, TEAL, INFO, AI, TOOLTIP_CONTENT_STYLE, TOOLTIP_LABEL_STYLE, TOOLTIP_ITEM_STYLE } from '@utils/constants/palette';
 
 const PALETTE = {
   gross:     ACCENT,
@@ -336,12 +336,9 @@ function SalesByChannelDonut() {
             </Pie>
             <Tooltip
               formatter={(v: number, name: string) => [formatINR(v), name]}
-              contentStyle={{
-                borderRadius: 10,
-                border: '1px solid var(--line-2)',
-                backgroundColor: 'var(--surface)',
-                fontSize: 12,
-              }}
+              contentStyle={TOOLTIP_CONTENT_STYLE}
+              labelStyle={TOOLTIP_LABEL_STYLE}
+              itemStyle={TOOLTIP_ITEM_STYLE}
             />
           </PieChart>
         </ResponsiveContainer>
@@ -677,7 +674,12 @@ function PaymentMethodDonut() {
               <Cell key={entry.name} fill={entry.color} />
             ))}
           </Pie>
-          <Tooltip formatter={(v: number) => formatINR(v)} />
+          <Tooltip
+            formatter={(v: number) => formatINR(v)}
+            contentStyle={TOOLTIP_CONTENT_STYLE}
+            labelStyle={TOOLTIP_LABEL_STYLE}
+            itemStyle={TOOLTIP_ITEM_STYLE}
+          />
         </PieChart>
       </ResponsiveContainer>
       <div className="grid grid-cols-2 gap-2 text-xs">
@@ -720,35 +722,44 @@ function PaymentMethodDonut() {
 }
 
 /* ─────────────────── Refund Rate Chart ─────────────────── */
+const REFUND_RATE_CHART_MIN_H = 140;
+
 function RefundRateChart() {
   const summary = useAppSelector((s) => s.finance.refundsSummary);
   if (!summary || summary.refund_rate_over_time.length === 0) {
     return (
-      <div className="h-[220px] flex items-center justify-center text-sm text-[var(--text-muted)]">
+      <div className="flex h-full min-h-[140px] w-full min-w-0 items-center justify-center text-sm text-[var(--text-muted)]">
         No refund data.
       </div>
     );
   }
   return (
-    <ResponsiveContainer width="100%" height={220}>
-      <LineChart data={summary.refund_rate_over_time}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-        <XAxis dataKey="date" tickFormatter={fmtAxisDate} fontSize={11} />
-        <YAxis tickFormatter={(v) => `${v.toFixed(1)}%`} fontSize={11} />
-        <Tooltip
-          formatter={(v: number) => `${v.toFixed(2)}%`}
-          labelFormatter={(l: string) => formatDate(l)}
-        />
-        <Line
-          type="monotone"
-          dataKey="rate"
-          stroke={PALETTE.refunds}
-          strokeWidth={2}
-          dot={false}
-          name="Refund Rate"
-        />
-      </LineChart>
-    </ResponsiveContainer>
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-col">
+      <div className="min-h-0 min-w-0 flex-1" style={{ minHeight: REFUND_RATE_CHART_MIN_H }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={summary.refund_rate_over_time} margin={{ top: 2, right: 2, left: 0, bottom: 2 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+            <XAxis dataKey="date" tickFormatter={fmtAxisDate} fontSize={9} tick={{ fontSize: 9 }} interval="preserveStartEnd" />
+            <YAxis tickFormatter={(v) => `${v.toFixed(0)}%`} fontSize={9} tick={{ fontSize: 9 }} width={32} />
+            <Tooltip
+              formatter={(v: number) => `${v.toFixed(2)}%`}
+              labelFormatter={(l: string) => formatDate(l)}
+              contentStyle={TOOLTIP_CONTENT_STYLE}
+              labelStyle={TOOLTIP_LABEL_STYLE}
+              itemStyle={TOOLTIP_ITEM_STYLE}
+            />
+            <Line
+              type="monotone"
+              dataKey="rate"
+              stroke={PALETTE.refunds}
+              strokeWidth={2}
+              dot={false}
+              name="Refund Rate"
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
   );
 }
 
@@ -758,24 +769,24 @@ function RefundsTable() {
   const { rows, pagination, loading, page, limit } = useAppSelector((s) => s.refunds);
   const totalPages = pagination ? Math.ceil(pagination.total / limit) : 1;
   return (
-    <div className="space-y-3">
-      <div className="border border-[var(--border)] rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-[var(--bg)]">
+    <div className="flex h-full min-h-0 min-w-0 flex-col gap-2">
+      <div className="min-h-0 flex-1 overflow-x-auto overflow-y-auto rounded-lg border border-[var(--border)]">
+        <table className="w-full min-w-[320px] text-[11px] leading-tight">
+          <thead className="sticky top-0 z-10 bg-[var(--bg)]">
             <tr>
-              <th className="text-left p-2.5 text-xs font-semibold uppercase tracking-wide">
+              <th className="whitespace-nowrap p-1.5 text-left text-[10px] font-semibold uppercase tracking-wide text-[var(--ink)]">
                 Date
               </th>
-              <th className="text-left p-2.5 text-xs font-semibold uppercase tracking-wide">
+              <th className="whitespace-nowrap p-1.5 text-left text-[10px] font-semibold uppercase tracking-wide text-[var(--ink)]">
                 Order
               </th>
-              <th className="text-right p-2.5 text-xs font-semibold uppercase tracking-wide">
+              <th className="whitespace-nowrap p-1.5 text-right text-[10px] font-semibold uppercase tracking-wide text-[var(--ink)]">
                 Amount
               </th>
-              <th className="text-left p-2.5 text-xs font-semibold uppercase tracking-wide">
+              <th className="whitespace-nowrap p-1.5 text-left text-[10px] font-semibold uppercase tracking-wide text-[var(--ink)]">
                 Reason
               </th>
-              <th className="text-center p-2.5 text-xs font-semibold uppercase tracking-wide">
+              <th className="whitespace-nowrap p-1.5 text-center text-[10px] font-semibold uppercase tracking-wide text-[var(--ink)]">
                 Restocked
               </th>
             </tr>
@@ -783,30 +794,34 @@ function RefundsTable() {
           <tbody>
             {loading && rows.length === 0 ? (
               <tr>
-                <td colSpan={5} className="p-6 text-center text-[var(--text-muted)]">
+                <td colSpan={5} className="p-4 text-center text-[var(--text-muted)]">
                   Loading...
                 </td>
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={5} className="p-6 text-center text-[var(--text-muted)]">
+                <td colSpan={5} className="p-4 text-center text-[var(--text-muted)]">
                   No refunds in this range.
                 </td>
               </tr>
             ) : (
               rows.map((row) => (
                 <tr key={row.id} className="border-t border-[var(--border)] hover:bg-[var(--bg)]">
-                  <td className="p-2.5 font-medium">{formatDate(row.refunded_at)}</td>
-                  <td className="p-2.5 text-xs text-[var(--text-muted)] truncate max-w-[160px]">
-                    {row.order_id.replace('gid://shopify/Order/', '#')}
+                  <td className="whitespace-nowrap p-1.5 font-medium tabular-nums">{formatDate(row.refunded_at)}</td>
+                  <td className="max-w-[100px] p-1.5 font-mono text-[10px] text-[var(--text-muted)]">
+                    <span className="block truncate" title={row.order_id}>
+                      {row.order_id.replace('gid://shopify/Order/', '#')}
+                    </span>
                   </td>
-                  <td className="p-2.5 text-right tabular-nums font-semibold text-[var(--neg)]">
+                  <td className="whitespace-nowrap p-1.5 text-right tabular-nums font-semibold text-[var(--neg)]">
                     {formatINR(row.refund_amount)}
                   </td>
-                  <td className="p-2.5 text-xs text-[var(--text-muted)]">
-                    {row.reason ?? 'Unspecified'}
+                  <td className="max-w-[120px] p-1.5 text-[10px] text-[var(--text-muted)]">
+                    <span className="line-clamp-2 break-words" title={row.reason ?? 'Unspecified'}>
+                      {row.reason ?? 'Unspecified'}
+                    </span>
                   </td>
-                  <td className="p-2.5 text-center">{row.restocked ? '✓' : '–'}</td>
+                  <td className="whitespace-nowrap p-1.5 text-center text-xs">{row.restocked ? '✓' : '–'}</td>
                 </tr>
               ))
             )}
@@ -814,16 +829,16 @@ function RefundsTable() {
         </table>
       </div>
       {pagination && pagination.total > limit && (
-        <div className="flex items-center justify-between text-sm">
+        <div className="flex shrink-0 flex-col gap-2 text-[11px] sm:flex-row sm:items-center sm:justify-between">
           <span className="text-[var(--text-muted)]">
-            Page {page} of {totalPages} · {formatNum(pagination.total)} total
+            Page {page}/{totalPages} · {formatNum(pagination.total)} total
           </span>
-          <div className="flex gap-2">
+          <div className="flex gap-1.5">
             <button
               type="button"
               onClick={() => dispatch(setRefundsPage(Math.max(1, page - 1)))}
               disabled={page === 1}
-              className="px-3 py-1 border border-[var(--border)] rounded disabled:opacity-50 hover:bg-[var(--bg)]"
+              className="rounded border border-[var(--border)] px-2 py-0.5 text-[11px] disabled:opacity-50 hover:bg-[var(--bg)]"
             >
               Prev
             </button>
@@ -831,7 +846,7 @@ function RefundsTable() {
               type="button"
               onClick={() => dispatch(setRefundsPage(Math.min(totalPages, page + 1)))}
               disabled={page >= totalPages}
-              className="px-3 py-1 border border-[var(--border)] rounded disabled:opacity-50 hover:bg-[var(--bg)]"
+              className="rounded border border-[var(--border)] px-2 py-0.5 text-[11px] disabled:opacity-50 hover:bg-[var(--bg)]"
             >
               Next
             </button>
@@ -847,19 +862,19 @@ function RefundsBreakdown() {
   const summary = useAppSelector((s) => s.finance.refundsSummary);
   if (!summary) return null;
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div>
-        <p className="text-[10px] uppercase tracking-wide text-[var(--text-subtle)] mb-2 font-semibold">
+    <div className="flex h-full min-h-0 min-w-0 flex-col justify-between gap-4">
+      <div className="shrink-0">
+        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-subtle)]">
           Top Refund Reasons
         </p>
         {summary.top_reasons.length === 0 ? (
-          <p className="text-sm text-[var(--text-muted)]">No refunds recorded.</p>
+          <p className="text-xs text-[var(--text-muted)]">No refunds recorded.</p>
         ) : (
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             {summary.top_reasons.slice(0, 5).map((r) => (
-              <div key={r.reason} className="flex justify-between text-sm">
-                <span className="text-[var(--text)] truncate">{r.reason}</span>
-                <span className="text-[var(--text-muted)] tabular-nums">
+              <div key={r.reason} className="flex items-start justify-between gap-2 text-[11px] leading-snug">
+                <span className="min-w-0 flex-1 break-words text-[var(--text)]">{r.reason}</span>
+                <span className="shrink-0 tabular-nums text-[var(--text-muted)]">
                   {formatINR(r.amount)} ({r.count})
                 </span>
               </div>
@@ -867,18 +882,18 @@ function RefundsBreakdown() {
           </div>
         )}
       </div>
-      <div>
-        <p className="text-[10px] uppercase tracking-wide text-[var(--text-subtle)] mb-2 font-semibold">
+      <div className="shrink-0 border-t border-[var(--border)] pt-2">
+        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-subtle)]">
           Top Refunded SKUs
         </p>
         {summary.refunds_by_sku.length === 0 ? (
-          <p className="text-sm text-[var(--text-muted)]">No SKU-level refund data.</p>
+          <p className="text-xs text-[var(--text-muted)]">No SKU-level refund data.</p>
         ) : (
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             {summary.refunds_by_sku.slice(0, 5).map((s) => (
-              <div key={s.sku} className="flex justify-between text-sm">
-                <span className="text-[var(--text)] truncate font-mono text-xs">{s.sku}</span>
-                <span className="text-[var(--text-muted)] tabular-nums">
+              <div key={s.sku} className="flex items-start justify-between gap-2 text-[11px] leading-snug">
+                <span className="min-w-0 flex-1 break-all font-mono text-[10px] text-[var(--text)]">{s.sku}</span>
+                <span className="shrink-0 tabular-nums text-[var(--text-muted)]">
                   {formatINR(s.amount)} ({s.count})
                 </span>
               </div>
@@ -1332,20 +1347,18 @@ export function FinancePage() {
             <SalesByProductBars />
           </Panel>
 
-          {/* Row 3: Refund rate chart + Refunds table */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Panel title="Refund Rate Trend" subtitle="Shopify · Daily refund count / order count">
+          {/* Refunds: detail table + rate trend + breakdowns — one row, equal card height on lg */}
+          <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-3">
+            <Panel className="h-full min-h-0 min-w-0 py-3 gap-2" title="Refunds" subtitle="Shopify · Per-refund detail">
+              <RefundsTable />
+            </Panel>
+            <Panel className="h-full min-h-0 min-w-0 py-3 gap-2" title="Refund Rate Trend" subtitle="Shopify · Daily refund count / order count">
               <RefundRateChart />
             </Panel>
-            <Panel title="Refund Breakdowns" subtitle="Shopify · Top reasons + top SKUs">
+            <Panel className="h-full min-h-0 min-w-0 py-3 gap-2" title="Refund Breakdowns" subtitle="Shopify · Top reasons + top SKUs">
               <RefundsBreakdown />
             </Panel>
           </div>
-
-          {/* Row 4: Refunds detail table */}
-          <Panel title="Refunds" subtitle="Shopify · Per-refund detail">
-            <RefundsTable />
-          </Panel>
         </main>
       </div>
     </>

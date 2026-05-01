@@ -146,6 +146,15 @@ export async function revenueVsSpendHandler(req: Request, res: Response): Promis
   }
 }
 
+export async function conversionFunnelHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const { since, until } = resolve(req);
+    handleApiResponse(res, { data: await service.getConversionFunnel(since, until) });
+  } catch (err) {
+    handleErrorResponse(res, errOpts(err));
+  }
+}
+
 export async function marqueeHandler(req: Request, res: Response): Promise<void> {
   try {
     const { since, until } = resolve(req);

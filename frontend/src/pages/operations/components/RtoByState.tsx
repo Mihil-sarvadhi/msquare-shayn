@@ -1,5 +1,6 @@
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import type { RtoByStateItem } from '@app/types/analytics';
+import { TOOLTIP_CONTENT_STYLE, TOOLTIP_LABEL_STYLE, TOOLTIP_ITEM_STYLE } from '@utils/constants/palette';
 
 interface Props { data: RtoByStateItem[]; loading: boolean; }
 
@@ -27,7 +28,9 @@ export function RtoByState({ data, loading }: Props) {
           <YAxis dataKey="state" type="category" width={90} tick={{ fontSize: 11, fill: '#8C7B64' }} axisLine={false} tickLine={false} />
           <Tooltip
             formatter={(val: number) => [val, 'RTO Orders']}
-            contentStyle={{ borderRadius: 8, border: '1px solid #F0EBE0', fontSize: 12 }}
+            contentStyle={TOOLTIP_CONTENT_STYLE}
+            labelStyle={TOOLTIP_LABEL_STYLE}
+            itemStyle={TOOLTIP_ITEM_STYLE}
           />
           <Bar dataKey="rto_count" radius={[0, 4, 4, 0]} maxBarSize={20}>
             {chartData.map((entry, i) => (

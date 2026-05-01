@@ -6,7 +6,7 @@ import type {
   KPIs, RevenueTrendItem, MetaFunnel, Campaign, Product,
   LogisticsItem, AbandonedCarts, ConnectorHealth,
   ReviewsSummary, TopRatedProduct, RecentReview, RecentOrder, ReviewsTrendItem,
-  RevenueVsSpendItem, NetRevenueSnapshot, ShipmentsTrendItem,
+  RevenueVsSpendItem, NetRevenueSnapshot, ShipmentsTrendItem, ConversionFunnelData,
 } from '@app/types/dashboard';
 
 const get = <T>(url: string, params: Record<string, string>) =>
@@ -68,7 +68,7 @@ export async function fetchAllDashboard(range: RangeState) {
   const [
     kpis, revenueTrend, metaFunnel, campaigns, topProducts, logistics, abandonedCarts,
     health, reviewsSummary, topRatedProducts, recentReviews, recentOrders, reviewsTrend,
-    prevKpis, revenueVsSpendRaw, netRevenue, shipmentsTrendRaw,
+    prevKpis, revenueVsSpendRaw, netRevenue, shipmentsTrendRaw, conversionFunnel,
   ] = await Promise.all([
     get<KPIs>(API_ENDPOINTS.dashboard.kpis, params),
     get<RevenueTrendItem[]>(API_ENDPOINTS.dashboard.revenueTrend, params),
@@ -89,6 +89,7 @@ export async function fetchAllDashboard(range: RangeState) {
     safe(get<{ date: string; revenue: string; ad_spend: string }[]>(API_ENDPOINTS.dashboard.revenueVsSpend, params), []),
     safe(get<NetRevenueSnapshot>(API_ENDPOINTS.analytics.netRevenue, params), null),
     safe(get<ShipmentsTrendItem[]>(API_ENDPOINTS.dashboard.shipmentsTrend, params), []),
+    safe(get<ConversionFunnelData>(API_ENDPOINTS.dashboard.conversionFunnel, params), null),
   ]);
 
   const revenueVsSpend: RevenueVsSpendItem[] = (revenueVsSpendRaw ?? []).map((r) => ({
@@ -142,6 +143,6 @@ export async function fetchAllDashboard(range: RangeState) {
     topRatedProducts: topRatedProductsNorm,
     recentReviews,
     recentOrders, reviewsTrend: reviewsTrendNorm, prevKpis, revenueVsSpend, netRevenue,
-    shipmentsTrend,
+    shipmentsTrend, conversionFunnel,
   };
 }

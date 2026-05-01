@@ -4,6 +4,7 @@ import {
 } from 'recharts';
 import type { MarketingTrendItem } from '@app/types/analytics';
 import { formatDate, formatPct } from '@utils/formatters';
+import { TOOLTIP_CONTENT_STYLE, TOOLTIP_LABEL_STYLE, TOOLTIP_ITEM_STYLE } from '@utils/constants/palette';
 
 interface Props { data: MarketingTrendItem[]; loading: boolean; }
 
@@ -35,7 +36,9 @@ export function CtrTrend({ data, loading }: Props) {
         <Tooltip
           formatter={(v: number) => [formatPct(v), 'CTR']}
           labelFormatter={(ts: number) => formatDate(new Date(ts).toISOString().split('T')[0])}
-          contentStyle={{ borderRadius: 8, border: '1px solid #F0EBE0', fontSize: 12 }}
+          contentStyle={TOOLTIP_CONTENT_STYLE}
+          labelStyle={TOOLTIP_LABEL_STYLE}
+          itemStyle={TOOLTIP_ITEM_STYLE}
         />
         <ReferenceLine y={1} stroke="#8C7B64" strokeDasharray="4 4"
           label={{ value: '1% benchmark', position: 'right', fontSize: 10, fill: '#8C7B64' }} />

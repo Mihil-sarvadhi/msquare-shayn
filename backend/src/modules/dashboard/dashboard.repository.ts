@@ -14,7 +14,6 @@ import type {
   RecentReviewRow,
   AllReviewsResult,
   RecentOrderRow,
-  RevenueVsSpendRow,
 } from './dashboard.types';
 
 export async function getKpis(since: string, until: string): Promise<KpiResult> {
@@ -439,32 +438,31 @@ export async function getRecentOrders(): Promise<RecentOrderRow[]> {
        o.customer_city,
        o.created_at
      ORDER BY o.created_at DESC
-     LIMIT 5`,
+     LIMIT 10`,
     { type: QueryTypes.SELECT },
   );
 }
 
-export async function getRevenueVsSpend(
+/** Per-day Meta ad spend, gap-filled with zeros across the IST window. The
+ *  paired daily Shopify gross-sales series is derived from `buildBreakdown`
+ *  in dashboard.service so the chart matches the canonical breakdown
+ *  totals. */
+export async function getMetaSpendDaily(
   since: string,
   until: string,
-): Promise<RevenueVsSpendRow[]> {
-  return sequelize.query<RevenueVsSpendRow>(
-    `SELECT d.date::text,
-            COALESCE(o.revenue, '0') AS revenue,
+): Promise<{ date: string; ad_spend: string }[]> {
+  // generate_series + INTERVAL returns TIMESTAMPTZ, so d.date::text would
+  // serialize as "YYYY-MM-DD HH:MM:SS+TZ" and break the JS-side date join
+  // against buildBreakdown's pure YYYY-MM-DD keys. Cast to ::date::text first.
+  return sequelize.query<{ date: string; ad_spend: string }>(
+    `SELECT d.date::date::text AS date,
             COALESCE(m.ad_spend, '0') AS ad_spend
      FROM generate_series(:since::date, :until::date, '1 day'::interval) AS d(date)
-     LEFT JOIN (
-       SELECT (created_at AT TIME ZONE 'Asia/Kolkata')::date AS date,
-              SUM(revenue)::text AS revenue
-       FROM shopify_orders
-       WHERE financial_status != 'voided'
-       GROUP BY (created_at AT TIME ZONE 'Asia/Kolkata')::date
-     ) o ON o.date = d.date
      LEFT JOIN (
        SELECT date, SUM(spend)::text AS ad_spend
        FROM meta_daily_insights
        GROUP BY date
-     ) m ON m.date = d.date
+     ) m ON m.date = d.date::date
      ORDER BY d.date ASC`,
     { type: QueryTypes.SELECT, replacements: { since, until } },
   );

@@ -1,6 +1,7 @@
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import type { ChannelRevenue as ChannelRevenueType } from '@app/types/analytics';
 import { formatINR } from '@utils/formatters';
+import { TOOLTIP_CONTENT_STYLE, TOOLTIP_LABEL_STYLE, TOOLTIP_ITEM_STYLE } from '@utils/constants/palette';
 
 interface ChannelRevenueProps {
   data: ChannelRevenueType | null;
@@ -52,7 +53,12 @@ export function ChannelRevenue({ data, loading }: ChannelRevenueProps) {
                 <Cell key={i} fill={COLORS[i % COLORS.length]} />
               ))}
             </Pie>
-            <Tooltip formatter={(v: number) => formatINR(v)} />
+            <Tooltip
+              formatter={(v: number) => formatINR(v)}
+              contentStyle={TOOLTIP_CONTENT_STYLE}
+              labelStyle={TOOLTIP_LABEL_STYLE}
+              itemStyle={TOOLTIP_ITEM_STYLE}
+            />
           </PieChart>
         </ResponsiveContainer>
 

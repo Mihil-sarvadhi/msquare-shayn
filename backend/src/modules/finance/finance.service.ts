@@ -278,11 +278,16 @@ async function storefrontMetrics(from: Date, to: Date): Promise<StorefrontMetric
       distinct_customers: string;
       returning_customers: string;
     }>(
+      // Voided orders are excluded so the Storefront strip's "Orders" tile
+      // pairs semantically with "Gross sales" (which already drops voided).
+      // Aligns with dashboard.repository.getKpis so the same period reads
+      // the same order count on both pages.
       `WITH base AS (
          SELECT order_id, customer_id, created_at
            FROM shopify_orders
            WHERE created_at BETWEEN :from AND :to
              AND COALESCE(test, FALSE) = FALSE
+             AND financial_status != 'voided'
        )
        SELECT COUNT(*)::text AS orders,
               COUNT(DISTINCT customer_id)::text AS distinct_customers,
@@ -291,6 +296,7 @@ async function storefrontMetrics(from: Date, to: Date): Promise<StorefrontMetric
                              WHERE prior.customer_id = base.customer_id
                                AND prior.created_at < base.created_at
                                AND COALESCE(prior.test, FALSE) = FALSE
+                               AND prior.financial_status != 'voided'
                           ) THEN customer_id END)::text AS returning_customers
          FROM base`,
       { type: QueryTypes.SELECT, replacements: { from, to } },
@@ -1147,7 +1153,7 @@ function computeTotals(
   return t;
 }
 
-async function buildBreakdown(
+export async function buildBreakdown(
   from: Date,
   to: Date,
 ): Promise<{ totals: SalesBreakdownTotals; daily: SalesBreakdownDailyPoint[] }> {

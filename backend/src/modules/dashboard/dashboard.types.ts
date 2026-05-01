@@ -149,6 +149,17 @@ export interface RevenueVsSpendRow {
   ad_spend: string;
 }
 
+/** GA4-sourced 4-stage conversion funnel: Sessions (`ga4_traffic_daily`),
+ *  Add to Cart (`ga4_top_products.items_added_to_cart`), Checkouts and
+ *  Purchases (`ga4_ecommerce_daily`). All four numbers come from already-
+ *  synced GA4 tables — no live GA4 API call. */
+export interface ConversionFunnelResult {
+  sessions: number;
+  added_to_cart: number;
+  checkouts: number;
+  purchases: number;
+}
+
 /* ── Marquee (grouped top-of-page ticker) ────────────────────────────────
  * Aggregates current-period + previous-period values for every metric the
  * top-of-dashboard ticker needs in a single round-trip. The frontend Ticker

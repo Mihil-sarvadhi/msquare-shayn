@@ -1,6 +1,7 @@
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import type { GeoRevenueItem } from '@app/types/analytics';
 import { formatINR } from '@utils/formatters';
+import { TOOLTIP_CONTENT_STYLE, TOOLTIP_LABEL_STYLE, TOOLTIP_ITEM_STYLE } from '@utils/constants/palette';
 
 interface Props { data: GeoRevenueItem[]; loading: boolean; }
 
@@ -28,7 +29,9 @@ export function GeoRevenue({ data, loading }: Props) {
         />
         <Tooltip
           formatter={(val: number) => [formatINR(val), 'Revenue']}
-          contentStyle={{ borderRadius: 8, border: '1px solid #F0EBE0', fontSize: 12 }}
+          contentStyle={TOOLTIP_CONTENT_STYLE}
+          labelStyle={TOOLTIP_LABEL_STYLE}
+          itemStyle={TOOLTIP_ITEM_STYLE}
         />
         <Bar dataKey="revenue" fill="#B8860B" radius={[4, 4, 0, 0]} maxBarSize={36} />
       </BarChart>

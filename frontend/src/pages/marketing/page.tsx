@@ -16,7 +16,7 @@ import {
 import type { MarketingTrendItem, CreativeFatigueItem } from '@app/types/analytics';
 import type { Campaign } from '@app/types/dashboard';
 
-import { ACCENT, POS, NEG, WARN, AI, MUTED, TEAL } from '@utils/constants/palette';
+import { ACCENT, POS, NEG, WARN, AI, MUTED, TEAL, TOOLTIP_CONTENT_STYLE, TOOLTIP_LABEL_STYLE, TOOLTIP_ITEM_STYLE } from '@utils/constants/palette';
 
 const OBJ_COLORS: Record<string, string> = {
   OUTCOME_SALES: ACCENT, OUTCOME_TRAFFIC: POS, OUTCOME_AWARENESS: AI,
@@ -120,21 +120,21 @@ function MarketingTrendChart({ data }: { data: MarketingTrendItem[] }) {
               if (!active || !payload?.length) return null;
               const pt = enriched.find((d) => d.date === label);
               return (
-                <div className="bg-[var(--ink)] text-[var(--surface)] rounded-lg px-3 py-2 text-xs shadow-lg border border-[var(--line-3)] min-w-[160px]">
-                  <p className="text-[#a39f92] mb-1.5 font-medium">{fmtTrendDate(label as string)}</p>
+                <div className="bg-[var(--surface)] text-[var(--text)] rounded-lg px-3 py-2 text-xs shadow-lg border border-[var(--border)] min-w-[160px]">
+                  <p className="text-[var(--text-muted)] mb-1.5 font-medium">{fmtTrendDate(label as string)}</p>
                   {pt?.noData ? (
-                    <p className="text-amber-400">No Meta data for this date</p>
+                    <p className="text-[var(--warn,#C8780B)]">No Meta data for this date</p>
                   ) : (
                     <>
                       {pt?.anomaly && (
-                        <p className="text-amber-400 mb-1">⚠ Spend with no attributed revenue</p>
+                        <p className="text-[var(--warn,#C8780B)] mb-1">⚠ Spend with no attributed revenue</p>
                       )}
                       {pt?.partial && (
-                        <p className="text-[#a39f92] mb-1 italic">Partial day (still syncing)</p>
+                        <p className="text-[var(--text-muted)] mb-1 italic">Partial day (still syncing)</p>
                       )}
                       {payload.map((entry, i) => (
                         <p key={i} style={{ color: entry.color as string }} className="leading-snug">
-                          <span className="text-[var(--surface)]/60">{entry.name}: </span>
+                          <span className="text-[var(--text-muted)]">{entry.name}: </span>
                           {entry.name === 'ROAS'
                             ? `${Number(entry.value ?? 0).toFixed(2)}x`
                             : fmtShortINR(Number(entry.value ?? 0))}
@@ -317,7 +317,12 @@ function SpendByObjectiveDonut({ campaigns }: { campaigns: Campaign[] }) {
             <Pie data={data} cx="50%" cy="50%" innerRadius={52} outerRadius={72} dataKey="value" paddingAngle={2}>
               {data.map((d, i) => <Cell key={i} fill={OBJ_COLORS[d.name] ?? FALLBACK_COLORS[i % FALLBACK_COLORS.length]} />)}
             </Pie>
-            <Tooltip formatter={(v: number) => formatINR(v)} />
+            <Tooltip
+              formatter={(v: number) => formatINR(v)}
+              contentStyle={TOOLTIP_CONTENT_STYLE}
+              labelStyle={TOOLTIP_LABEL_STYLE}
+              itemStyle={TOOLTIP_ITEM_STYLE}
+            />
           </PieChart>
         </ResponsiveContainer>
       </div>
@@ -384,11 +389,11 @@ function CreativeFatigueChart({ data }: { data: CreativeFatigueItem[] }) {
             content={({ active, payload, label }) => {
               if (!active || !payload?.length) return null;
               return (
-                <div className="bg-[var(--ink)] text-[var(--surface)] rounded-lg px-3 py-2 text-xs shadow-lg border border-[var(--line-3)] min-w-[140px]">
-                  <p className="text-[#a39f92] mb-1.5 font-medium">{label as string}</p>
+                <div className="bg-[var(--surface)] text-[var(--text)] rounded-lg px-3 py-2 text-xs shadow-lg border border-[var(--border)] min-w-[140px]">
+                  <p className="text-[var(--text-muted)] mb-1.5 font-medium">{label as string}</p>
                   {payload.map((entry, i) => (
                     <p key={i} style={{ color: entry.color as string }} className="leading-snug">
-                      <span className="text-[var(--surface)]/60">{entry.name}: </span>
+                      <span className="text-[var(--text-muted)]">{entry.name}: </span>
                       {entry.name === 'Frequency'
                         ? Number(entry.value ?? 0).toFixed(2)
                         : `${Number(entry.value ?? 0).toFixed(2)}%`}

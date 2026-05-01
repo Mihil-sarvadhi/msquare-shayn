@@ -1,13 +1,40 @@
-import type { AllReviewsQuery, MarqueeResult } from './dashboard.types';
+import type { AllReviewsQuery, ConversionFunnelResult, MarqueeResult } from './dashboard.types';
 import { resolveDateRange } from '@utils/resolveDateRange';
 import type { DateRange } from '@utils/resolveDateRange';
 import * as repo from './dashboard.repository';
 import * as analyticsRepo from '@modules/analytics/analytics.repository';
+import * as ga4Repo from '@modules/ga4/ga4.repository';
+import { buildBreakdown } from '@modules/finance/finance.service';
+import { parseFromYMD, parseToYMD } from '@utils/dateBounds';
 
 export { resolveDateRange };
 export type { DateRange };
 
-export const getKpis = (since: string, until: string) => repo.getKpis(since, until);
+/**
+ * Dashboard KPIs with `revenue` (and `aov`) re-sourced through the canonical
+ * `buildBreakdown` chain so the headline number on the dashboard matches the
+ * Finance Sales Breakdown to the rupee. Fixes the long-standing discrepancy
+ * where `dashboard.repository.getKpis` rolled its own gross-sales formula
+ * and produced a different total. Other fields (orders, payment-mode split,
+ * Meta funnel, iThink shipments, lifetime customers) remain from the
+ * existing query — only the Shopify revenue figure is overridden, per the
+ * project memory rule that all Shopify-derived sales metrics must factor
+ * through `buildBreakdown` / `computeTotals`.
+ *
+ * IST boundaries via parseFromYMD/parseToYMD — Shopify orders are stored as
+ * TIMESTAMPTZ and the rest of the finance reporting bucket by IST day, so
+ * using UTC midnight here would chop ~5h30m off each end of the window and
+ * miss orders that finance does include.
+ */
+export const getKpis = async (since: string, until: string) => {
+  const [raw, breakdown] = await Promise.all([
+    repo.getKpis(since, until),
+    buildBreakdown(parseFromYMD(since), parseToYMD(until)),
+  ]);
+  const revenue = breakdown.totals.gross_sales;
+  const aov = raw.orders > 0 ? revenue / raw.orders : 0;
+  return { ...raw, revenue, aov };
+};
 export const getRevenueTrend = (since: string, until: string) => repo.getRevenueTrend(since, until);
 export const getShipmentsTrend = (since: string, until: string) =>
   repo.getShipmentsTrend(since, until);
@@ -26,8 +53,57 @@ export const getRecentReviews = (since: string, until: string) =>
   repo.getRecentReviews(since, until);
 
 export const getRecentOrders = () => repo.getRecentOrders();
-export const getRevenueVsSpend = (since: string, until: string) =>
-  repo.getRevenueVsSpend(since, until);
+
+/** GA4-driven 4-stage conversion funnel: Sessions → Add to Cart → Checkouts
+ *  → Purchases. Sessions come from `ga4_traffic_daily` (sum), add-to-cart
+ *  from `ga4_top_products` (sum across ALL products in window — not just the
+ *  top 10 the dashboard product table renders), checkouts and purchases from
+ *  `ga4_ecommerce_daily`. All four queries run in parallel against tables
+ *  already kept fresh by the GA4 sync. */
+export async function getConversionFunnel(
+  since: string,
+  until: string,
+): Promise<ConversionFunnelResult> {
+  const [summary, addedToCart, ecomTotals] = await Promise.all([
+    ga4Repo.getSummary(since, until),
+    ga4Repo.getAddToCartsTotal(since, until),
+    ga4Repo.getEcommerceTotals(since, until),
+  ]);
+  return {
+    sessions: Number(summary?.total_sessions ?? 0),
+    added_to_cart: addedToCart,
+    checkouts: ecomTotals.checkouts,
+    purchases: ecomTotals.purchases,
+  };
+}
+
+/**
+ * Daily Shopify gross sales overlaid with Meta ad spend. The "revenue" line
+ * is the canonical buildBreakdown daily gross_sales (matches Finance Sales
+ * Breakdown) instead of a SUM of the raw stored revenue column. Meta spend
+ * comes from a gap-filled daily series so days with no spend still appear
+ * on the chart.
+ */
+export async function getRevenueVsSpend(
+  since: string,
+  until: string,
+): Promise<{ date: string; revenue: string; ad_spend: string }[]> {
+  const [breakdown, metaDaily] = await Promise.all([
+    buildBreakdown(parseFromYMD(since), parseToYMD(until)),
+    repo.getMetaSpendDaily(since, until),
+  ]);
+
+  const grossByDate = new Map<string, number>();
+  for (const point of breakdown.daily) {
+    grossByDate.set(point.date, point.gross_sales);
+  }
+
+  return metaDaily.map((row) => ({
+    date: row.date,
+    revenue: String(grossByDate.get(row.date) ?? 0),
+    ad_spend: row.ad_spend,
+  }));
+}
 
 export function getAllReviews(query: AllReviewsQuery) {
   const page = Math.max(1, parseInt(query.page || '1', 10));
@@ -65,6 +141,9 @@ function pct(numerator: number, denominator: number): number {
 export async function getMarquee(since: string, until: string): Promise<MarqueeResult> {
   const prev = previousRange(since, until);
 
+  // Use the service-level wrapper so revenue/aov flow through buildBreakdown
+  // (matches the Finance Sales Breakdown). Using repo.getKpis directly here
+  // would re-introduce the bespoke gross-sales SQL we just routed around.
   const [
     kpis,
     prevKpis,
@@ -77,8 +156,8 @@ export async function getMarquee(since: string, until: string): Promise<MarqueeR
     reviewsSummary,
     prevReviewsSummary,
   ] = await Promise.all([
-    repo.getKpis(since, until),
-    repo.getKpis(prev.since, prev.until),
+    getKpis(since, until),
+    getKpis(prev.since, prev.until),
     analyticsRepo.getNetRevenue(since, until),
     analyticsRepo.getNetRevenue(prev.since, prev.until),
     analyticsRepo.getCustomerOverview(since, until, false),

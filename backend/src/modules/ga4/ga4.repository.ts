@@ -77,6 +77,39 @@ export function getEcommerceDaily(since: string, until: string): Promise<Ecommer
   );
 }
 
+/** Window-totals from `ga4_ecommerce_daily` for the GA4-driven conversion
+ *  funnel: sum(checkouts) and sum(ecommerce_purchases) over the date window. */
+export async function getEcommerceTotals(
+  since: string,
+  until: string,
+): Promise<{ checkouts: number; purchases: number }> {
+  const [row] = await sequelize.query<{ checkouts: string; purchases: string }>(
+    `SELECT COALESCE(SUM(checkouts), 0)::text AS checkouts,
+            COALESCE(SUM(ecommerce_purchases), 0)::text AS purchases
+     FROM ga4_ecommerce_daily
+     WHERE date BETWEEN :since AND :until`,
+    { type: QueryTypes.SELECT, replacements: { since, until } },
+  );
+  return {
+    checkouts: Number(row?.checkouts ?? 0),
+    purchases: Number(row?.purchases ?? 0),
+  };
+}
+
+/** Total items added to cart across ALL products in the window — sums the
+ *  full `ga4_top_products` table (no LIMIT, unlike `getProducts`) so the
+ *  funnel reflects the actual aggregate, not just the top 10's contribution.
+ *  Item-scoped (a single add-to-cart event with N items contributes N). */
+export async function getAddToCartsTotal(since: string, until: string): Promise<number> {
+  const [row] = await sequelize.query<{ total: string }>(
+    `SELECT COALESCE(SUM(items_added_to_cart), 0)::text AS total
+     FROM ga4_top_products
+     WHERE date BETWEEN :since AND :until`,
+    { type: QueryTypes.SELECT, replacements: { since, until } },
+  );
+  return Number(row?.total ?? 0);
+}
+
 export function getProducts(since: string, until: string): Promise<ProductRow[]> {
   return sequelize.query<ProductRow>(
     `SELECT item_name,

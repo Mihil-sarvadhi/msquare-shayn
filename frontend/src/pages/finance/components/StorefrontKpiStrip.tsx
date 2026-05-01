@@ -59,7 +59,7 @@ export function StorefrontKpiStrip() {
 
   const tiles: Tile[] = [
     {
-      label: 'Sessions',
+      label: 'Sessions (Shopify)',
       pair: kpis.sessions,
       format: (n) => formatNum(n),
       icon: Activity,

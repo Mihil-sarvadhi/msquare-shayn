@@ -90,6 +90,13 @@ export interface NetRevenueSnapshot {
   rto_waste: number;
 }
 
+export interface ConversionFunnelData {
+  sessions: number;
+  added_to_cart: number;
+  checkouts: number;
+  purchases: number;
+}
+
 export interface DashboardState {
   kpis: KPIs | null;
   prevKpis: KPIs | null;
@@ -107,6 +114,7 @@ export interface DashboardState {
   reviewsTrend: ReviewsTrendItem[];
   shipmentsTrend: ShipmentsTrendItem[];
   revenueVsSpend: RevenueVsSpendItem[];
+  conversionFunnel: ConversionFunnelData | null;
   netRevenue: NetRevenueSnapshot | null;
   loading: boolean;
   error: string | null;

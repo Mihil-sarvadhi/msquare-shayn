@@ -156,8 +156,8 @@ function TickerTrack({ groups, ariaHidden }: TickerTrackProps) {
 
 function buildFinance(d: MarqueeFinance): MarqueeItem[] {
   return [
-    { label: 'Revenue',    value: compactINR(d.revenue),       delta: pct(d.revenue,       d.prevRevenue) },
-    { label: 'Net Rev',    value: compactINR(d.netRevenue),    delta: pct(d.netRevenue,    d.prevNetRevenue) },
+    { label: 'Gross Sales', value: compactINR(d.revenue),       delta: pct(d.revenue,       d.prevRevenue) },
+    { label: 'Net Rev',     value: compactINR(d.netRevenue),    delta: pct(d.netRevenue,    d.prevNetRevenue) },
     { label: 'AOV',        value: formatINR(d.aov),            delta: pct(d.aov,           d.prevAov) },
     { label: 'Margin',     value: `${d.netMargin.toFixed(1)}%`, delta: ppDiff(d.netMargin, d.prevNetMargin) },
     { label: 'Logistics',  value: compactINR(d.logisticsCost), delta: pct(d.logisticsCost, d.prevLogisticsCost, { invert: true }) },

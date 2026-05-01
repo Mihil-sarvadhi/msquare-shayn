@@ -13,6 +13,7 @@ import { Panel } from '@components/shared/Panel';
 import { PageLoader } from '@components/shared/PageLoader';
 import { formatINR, formatNum } from '@utils/formatters';
 import { rangeLabel } from '@utils/common-functions/buildRangeParams';
+import { TOOLTIP_CONTENT_STYLE, TOOLTIP_LABEL_STYLE, TOOLTIP_ITEM_STYLE } from '@utils/constants/palette';
 import { cn } from '@/lib/utils';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
@@ -322,7 +323,12 @@ function PerformanceTab() {
                 width={100}
                 tickFormatter={(v) => v ?? '-'}
               />
-              <Tooltip formatter={(v: number) => formatNum(v)} />
+              <Tooltip
+                formatter={(v: number) => formatNum(v)}
+                contentStyle={TOOLTIP_CONTENT_STYLE}
+                labelStyle={TOOLTIP_LABEL_STYLE}
+                itemStyle={TOOLTIP_ITEM_STYLE}
+              />
               <Bar dataKey="units_sold" fill="var(--accent)" name="Units Sold" />
             </BarChart>
           </ResponsiveContainer>

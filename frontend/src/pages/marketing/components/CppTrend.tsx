@@ -4,6 +4,7 @@ import {
 } from 'recharts';
 import type { MarketingTrendItem } from '@app/types/analytics';
 import { formatINR, formatDate } from '@utils/formatters';
+import { TOOLTIP_CONTENT_STYLE, TOOLTIP_LABEL_STYLE, TOOLTIP_ITEM_STYLE } from '@utils/constants/palette';
 
 interface Props { data: MarketingTrendItem[]; loading: boolean; }
 
@@ -37,7 +38,9 @@ export function CppTrend({ data, loading }: Props) {
         <Tooltip
           formatter={(v: number) => [formatINR(v), 'Cost Per Purchase']}
           labelFormatter={(ts: number) => formatDate(new Date(ts).toISOString().split('T')[0])}
-          contentStyle={{ borderRadius: 8, border: '1px solid #F0EBE0', fontSize: 12 }}
+          contentStyle={TOOLTIP_CONTENT_STYLE}
+          labelStyle={TOOLTIP_LABEL_STYLE}
+          itemStyle={TOOLTIP_ITEM_STYLE}
         />
         <Line type="monotone" dataKey="cpp" stroke="#9B2235" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
       </LineChart>

@@ -101,7 +101,7 @@ function RtoByStateChart({ rto, geo }: { rto: RtoByStateItem[]; geo: GeoRevenueI
   const CustomTooltipRto = ({ active, payload, label }: { active?: boolean; payload?: { name: string; value: number; color: string }[]; label?: string }) => {
     if (!active || !payload?.length) return null;
     return (
-      <div className="bg-[var(--ink)] text-[var(--surface)] rounded-lg px-3 py-2 text-xs shadow-xl border border-[var(--line-3)]">
+      <div className="bg-[var(--surface)] text-[var(--text)] rounded-lg px-3 py-2 text-xs shadow-xl border border-[var(--border)]">
         <p className="font-semibold mb-1 uppercase tracking-wide">{label}</p>
         {payload.map((p) => (
           <p key={p.name} style={{ color: p.color }} className="flex justify-between gap-4">

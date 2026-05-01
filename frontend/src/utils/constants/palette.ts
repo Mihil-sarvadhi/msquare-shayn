@@ -27,11 +27,26 @@ export const AXIS_TICK_COLOR   = 'var(--muted-2)';
 export const AXIS_TICK_SIZE    = 10;
 export const TOOLTIP_CURSOR    = { fill: 'rgba(184,137,62,0.08)' };
 
-/* Recharts tooltip wrapper styling — use as contentStyle */
+/* Recharts tooltip wrapper styling — use as contentStyle.
+ * Theme-aware via CSS variables: light theme renders on the light surface,
+ * dark theme renders on the dark surface. Pair with TOOLTIP_LABEL_STYLE and
+ * TOOLTIP_ITEM_STYLE on the same Tooltip element to keep label/value colors
+ * consistent in both themes. */
 export const TOOLTIP_CONTENT_STYLE: React.CSSProperties = {
   borderRadius: 10,
-  border: '1px solid var(--line)',
+  border: '1px solid var(--border)',
   backgroundColor: 'var(--surface)',
   fontSize: 12,
-  color: 'var(--ink)',
+  color: 'var(--text)',
+  boxShadow: '0 6px 16px rgba(0,0,0,0.12)',
+};
+
+export const TOOLTIP_LABEL_STYLE: React.CSSProperties = {
+  color: 'var(--text-muted)',
+  fontWeight: 500,
+  marginBottom: 4,
+};
+
+export const TOOLTIP_ITEM_STYLE: React.CSSProperties = {
+  color: 'var(--text)',
 };

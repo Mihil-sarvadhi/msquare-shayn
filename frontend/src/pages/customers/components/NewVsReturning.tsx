@@ -1,6 +1,7 @@
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import type { CustomerOverview } from '@app/types/analytics';
 import { formatNum } from '@utils/formatters';
+import { TOOLTIP_CONTENT_STYLE, TOOLTIP_LABEL_STYLE, TOOLTIP_ITEM_STYLE } from '@utils/constants/palette';
 
 interface Props { data: CustomerOverview | null; loading: boolean; }
 
@@ -29,7 +30,9 @@ export function NewVsReturning({ data, loading }: Props) {
           </Pie>
           <Tooltip
             formatter={(v: number, name: string) => [`${formatNum(v)} (${Math.round((v / total) * 100)}%)`, name]}
-            contentStyle={{ borderRadius: 8, border: '1px solid #F0EBE0', fontSize: 12 }}
+            contentStyle={TOOLTIP_CONTENT_STYLE}
+            labelStyle={TOOLTIP_LABEL_STYLE}
+            itemStyle={TOOLTIP_ITEM_STYLE}
             position={{ y: -40 }}
           />
         </PieChart>

@@ -15,6 +15,7 @@ export const API_ENDPOINTS = {
     recentOrders: '/dashboard/recent-orders',
     reviewsTrend: '/dashboard/reviews-trend',
     revenueVsSpend: '/dashboard/revenue-vs-spend',
+    conversionFunnel: '/dashboard/conversion-funnel',
     marquee: '/dashboard/marquee',
   },
   analytics: {

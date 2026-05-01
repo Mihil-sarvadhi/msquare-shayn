@@ -27,10 +27,10 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import type { RangeState } from '@store/slices/rangeSlice';
-import type { KPIs, RecentOrder, RevenueVsSpendItem } from '@app/types/dashboard';
+import type { KPIs, RecentOrder, RevenueVsSpendItem, ConversionFunnelData } from '@app/types/dashboard';
 import type { RevenueTrendRow } from '@app/types/unicommerce-api';
 import type {
-  GA4Summary, GA4TrafficDaily, GA4Channel, GA4EcommerceDaily,
+  GA4TrafficDaily, GA4Channel, GA4EcommerceDaily,
   GA4Product, GA4RealtimeWidget, GA4PageScreen, GA4CountryActiveUsers,
 } from '@app/types/ga4';
 
@@ -217,16 +217,19 @@ function RealtimeActiveUsers({
         </select>
       </div>
       {breakdown.length > 0 && (
-        <div className="flex-1 overflow-y-auto">
+        // Cap at ~5 rows then scroll — keeps panel height stable when location
+        // toggles from Country (few rows) to City (many rows). Sticky header
+        // stays visible while scrolling.
+        <div className="max-h-[180px] overflow-y-auto">
           <table className="w-full text-xs">
-            <thead>
+            <thead className="sticky top-0 bg-[var(--surface)] z-10">
               <tr className="border-b border-[var(--line)]">
                 <th className="py-1.5 pr-3 text-left  text-[10.5px] font-medium uppercase tracking-widish text-[var(--muted)]">{locationLabel}</th>
                 <th className="py-1.5      text-right text-[10.5px] font-medium uppercase tracking-widish text-[var(--muted)]">{metricLabel}</th>
               </tr>
             </thead>
             <tbody>
-              {breakdown.slice(0, 5).map((r) => (
+              {breakdown.map((r) => (
                 <tr key={r.location} className="border-b border-[var(--line)] last:border-0">
                   <td className="py-1.5 pr-3 text-[12.5px] text-[var(--ink-2)]">{r.location}</td>
                   <td className="py-1.5      text-right font-mono text-[12.5px] tabular-nums font-medium text-[var(--ink)]">{formatNum(r.value)}</td>
@@ -243,94 +246,189 @@ function RealtimeActiveUsers({
 /* ═══════════════════════════════════════════════════════════════
  * LIVE PULSE — Recent Orders
  * ═══════════════════════════════════════════════════════════════ */
-function LiveActivityFeed({ orders, kpis, prevKpis }: { orders: RecentOrder[]; kpis: KPIs | null; prevKpis: KPIs | null }) {
+/** Big-number stat rendered at the top of the Recent Orders body — mirrors
+ *  the Live Active Users widget so both panels open with a hero count. */
+function RecentOrdersHeaderStat({ kpis, prevKpis }: { kpis: KPIs | null; prevKpis: KPIs | null }) {
   const ordersToday = kpis?.orders ?? 0;
   const prevOrders  = prevKpis?.orders ?? 0;
   const ordersDelta = prevOrders > 0 ? ((ordersToday - prevOrders) / prevOrders) * 100 : undefined;
+
   return (
-    <div>
-      <p className="text-[11px] font-medium uppercase tracking-widish text-[var(--muted)] mb-1.5">Orders this period</p>
-      <div className="flex items-baseline gap-2 mb-1">
-        <p className="text-[30px] font-medium tracking-tightx tabular-nums leading-none text-[var(--ink)]">{formatNum(ordersToday)}</p>
-        {ordersDelta !== undefined && (
-          <span className={cn(
-            'inline-flex items-center gap-0.5 text-[11.5px] font-medium tabular-nums',
-            'px-2 py-[3px] rounded-full',
-            ordersDelta >= 0 ? 'bg-[var(--green-soft)] text-[var(--green)]' : 'bg-[var(--red-soft)] text-[var(--red)]',
-          )}>
-            {ordersDelta >= 0 ? '↑' : '↓'} {Math.abs(ordersDelta).toFixed(1)}%
-          </span>
-        )}
-      </div>
-      {prevOrders > 0 && (
-        <p className="text-[11.5px] text-[var(--muted-2)] mb-3">vs {formatNum(prevOrders)} previous period</p>
+    <div className="flex items-baseline gap-2.5">
+      <p className="text-[42px] font-medium tracking-tightx leading-none tabular-nums text-[var(--ink)]">{formatNum(ordersToday)}</p>
+      {ordersDelta !== undefined && (
+        <span className={cn(
+          'inline-flex items-center gap-0.5 text-[11px] font-medium tabular-nums px-1.5 py-[2px] rounded-full',
+          ordersDelta >= 0 ? 'bg-[var(--green-soft)] text-[var(--green)]' : 'bg-[var(--red-soft)] text-[var(--red)]',
+        )}>
+          {ordersDelta >= 0 ? '↑' : '↓'} {Math.abs(ordersDelta).toFixed(1)}%
+        </span>
       )}
-      {/* Drawer-on-hover list. Hovered row expands inline to reveal products
-          and timestamp; sibling rows dim + blur via :has() so focus is
-          unambiguous. */}
-      <div className="space-y-0 [&:has(.order-row:hover)>.order-row:not(:hover)]:opacity-40 [&:has(.order-row:hover)>.order-row:not(:hover)]:blur-[1px] [&_.order-row]:transition-all [&_.order-row]:duration-300">
-        {orders.slice(0, 5).map((o, i) => (
-          <div
-            key={o.order_id || i}
-            className={cn(
-              'order-row group/row relative px-2 -mx-2 py-3 rounded-md',
-              'border-b border-[var(--line)] last:border-0',
-              'hover:bg-[var(--surface-2)] hover:border-transparent',
-            )}
-          >
-            <div className="grid grid-cols-[1fr_auto] items-start gap-3">
-              <div className="min-w-0">
-                <p className="font-mono text-[12px] font-medium text-[var(--ink)] truncate">{o.order_name}</p>
-                <p className="text-[11px] uppercase tracking-widish text-[var(--muted)] truncate mt-[2px]">{o.customer_city || '—'}</p>
-                <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
-                  <span className={cn(
-                    'inline-flex px-2 py-[3px] rounded-md text-[10.5px] font-medium tracking-[0.04em] capitalize',
-                    prettyStatus(o.financial_status).includes('paid')
-                      ? 'bg-[var(--green-soft)] text-[var(--green)]'
-                      : 'bg-[var(--amber-soft)] text-[var(--amber)]',
-                  )}>
-                    {prettyStatus(o.financial_status)}
-                  </span>
-                  <span className={cn(
-                    'inline-flex px-2 py-[3px] rounded-md text-[10.5px] font-medium tracking-[0.04em] capitalize',
-                    prettyStatus(o.fulfillment_status).includes('fulfill') && !prettyStatus(o.fulfillment_status).includes('un')
-                      ? 'bg-[var(--blue-soft)] text-[var(--blue)]'
-                      : 'bg-[var(--bg-2)] text-[var(--muted)]',
-                  )}>
-                    {prettyStatus(o.fulfillment_status)}
-                  </span>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="font-mono text-[13px] font-medium text-[var(--ink)] tabular-nums">{formatINRFull(o.revenue)}</p>
-                <p className="text-[10.5px] uppercase tracking-[0.04em] text-[var(--muted-2)] mt-[2px]">{formatDate(o.created_at)}</p>
-              </div>
-            </div>
-            {/* Drawer — animates open via grid-rows 0fr → 1fr (height-auto trick). */}
-            <div className="grid grid-rows-[0fr] group-hover/row:grid-rows-[1fr] transition-[grid-template-rows] duration-300 ease-out">
-              <div className="overflow-hidden">
-                <div className="mt-2 pt-2 border-t border-[var(--line)]">
-                  <p className="text-[10px] uppercase tracking-widish text-[var(--muted)] mb-1.5">
-                    Products · {new Date(o.created_at).toLocaleString('en-IN', {
-                      day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
-                    })}
-                  </p>
-                  <ul className="space-y-0.5">
-                    {(o.products ?? []).slice(0, 4).map((product) => (
-                      <li key={product} className="text-[11.5px] text-[var(--ink-2)] truncate">• {product}</li>
-                    ))}
-                    {(o.products ?? []).length === 0 && (
-                      <li className="text-[11px] text-[var(--muted)] italic">No product data</li>
+      {prevOrders > 0 && (
+        <span className="text-[11px] text-[var(--muted-2)]">vs {formatNum(prevOrders)}</span>
+      )}
+    </div>
+  );
+}
+
+function LiveActivityFeed({ orders }: { orders: RecentOrder[] }) {
+  const recent = orders.slice(0, 10);
+
+  if (recent.length === 0) {
+    return <p className="text-xs text-[var(--text-subtle)] text-center py-4">No recent orders</p>;
+  }
+
+  // Title-case city names so "BALRAMPUR" / "Mumbai" / "KHEDA" all render consistently.
+  const titleCase = (s: string): string =>
+    s ? s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase()) : '';
+
+  return (
+    // 7-column compact table with a single status visual system (dot + soft tint).
+    // Products column shows the first SKU plus a position-aware "+N" popover that
+    // lists every line item so users never lose clarity on what's in the order.
+    <div className="h-full flex flex-col">
+      <div className="flex-1 min-h-0 overflow-y-auto -mr-1 pr-1">
+        <table className="w-full text-[11.5px]">
+          <thead className="sticky top-0 bg-[var(--surface)] z-10">
+            <tr className="border-b border-[var(--line)] text-[10px] uppercase tracking-[0.06em] text-[var(--muted)] font-medium">
+              <th className="py-1.5 pr-3 text-left font-medium">Date</th>
+              <th className="py-1.5 pr-3 text-left font-medium">Order</th>
+              <th className="py-1.5 pr-3 text-left font-medium">City</th>
+              <th className="py-1.5 pr-3 text-left font-medium">Products</th>
+              <th className="py-1.5 pr-3 text-left font-medium">Payment</th>
+              <th className="py-1.5 pr-3 text-left font-medium">Fulfillment</th>
+              <th className="py-1.5 text-right font-medium">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {recent.map((o, i) => {
+              const finStatus = prettyStatus(o.financial_status);
+              const fulfilStatus = prettyStatus(o.fulfillment_status);
+              const isPartial = finStatus.includes('partial');
+              const isPaid = finStatus.includes('paid') && !isPartial;
+              const isVoided = finStatus.includes('void') || finStatus.includes('refund');
+              const isPending = finStatus.includes('pending') || finStatus.includes('authorized');
+              const isFulfilled = fulfilStatus.includes('fulfill') && !fulfilStatus.includes('un');
+              const products = o.products ?? [];
+              const firstProduct = products[0];
+              const extraCount = Math.max(0, products.length - 1);
+              const orderName = o.order_name ?? '';
+              const isExchange = /^EXC\b/i.test(orderName) || (Number(o.revenue) === 0 && products.length > 0);
+              // Open popover above for the bottom rows so it doesn't clip in the scroll container.
+              const openAbove = i >= recent.length - 3;
+
+              // Single status vocabulary: tinted background + matching dot + label.
+              let payTone = 'bg-[var(--amber-soft)] text-[var(--amber)]';
+              let payDot  = 'bg-[var(--amber)]';
+              if (isPaid)         { payTone = 'bg-[var(--green-soft)] text-[var(--green)]'; payDot = 'bg-[var(--green)]'; }
+              else if (isPartial) { payTone = 'bg-[var(--blue-soft)] text-[var(--blue)]';   payDot = 'bg-[var(--blue)]'; }
+              else if (isVoided)  { payTone = 'bg-[var(--bg-2)] text-[var(--muted)]';       payDot = 'bg-[var(--muted-2)]'; }
+              else if (isPending) { payTone = 'bg-[var(--amber-soft)] text-[var(--amber)]'; payDot = 'bg-[var(--amber)]'; }
+
+              const fulfilTone = isFulfilled
+                ? 'bg-[var(--green-soft)] text-[var(--green)]'
+                : 'bg-[var(--bg-2)] text-[var(--muted)]';
+              const fulfilDot = isFulfilled ? 'bg-[var(--green)]' : 'bg-[var(--muted-2)]';
+
+              return (
+                <tr
+                  key={o.order_id || i}
+                  className="border-b border-[var(--line)] last:border-0 align-middle transition-colors hover:bg-[var(--accent-soft)]/30"
+                >
+                  <td className="py-1.5 pr-3 text-[10.5px] uppercase tracking-[0.04em] text-[var(--muted-2)] whitespace-nowrap">
+                    {formatDate(o.created_at)}
+                  </td>
+                  <td className="py-1.5 pr-3 whitespace-nowrap font-mono text-[12px] font-medium text-[var(--ink)] tracking-tight">
+                    {orderName}
+                  </td>
+                  <td className="py-1.5 pr-3 text-[11.5px] text-[var(--ink-2)] truncate max-w-[110px]">
+                    {titleCase(o.customer_city) || '—'}
+                  </td>
+                  <td className="py-1.5 pr-3 text-[11.5px] text-[var(--ink-2)]">
+                    {firstProduct ? (
+                      <span className="flex items-center gap-1.5 min-w-0">
+                        <span className="truncate max-w-[180px]">{firstProduct}</span>
+                        {extraCount > 0 && (
+                          // `group/more` keeps hover/focus local to this badge.
+                          <span className="relative group/more shrink-0">
+                            <span
+                              tabIndex={0}
+                              className="inline-flex items-center px-1.5 py-[1px] rounded-full text-[10px] font-medium bg-[var(--bg-2)] text-[var(--ink-2)] cursor-help select-none outline-none transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--accent)] focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+                            >
+                              +{extraCount}
+                            </span>
+                            <span
+                              className={cn(
+                                'invisible opacity-0 group-hover/more:visible group-hover/more:opacity-100 group-focus-within/more:visible group-focus-within/more:opacity-100 transition-opacity duration-150 absolute right-0 z-30 w-[260px] rounded-lg p-2.5 pointer-events-none',
+                                openAbove ? 'bottom-full mb-2' : 'top-full mt-2',
+                              )}
+                              style={{
+                                backgroundColor: 'var(--surface)',
+                                color: 'var(--text)',
+                                border: '1px solid var(--border)',
+                                boxShadow: '0 8px 24px rgba(0,0,0,0.14)',
+                              }}
+                            >
+                              <span
+                                aria-hidden
+                                className={cn(
+                                  'absolute right-4 h-2.5 w-2.5 rotate-45',
+                                  openAbove ? '-bottom-[5px] border-r border-b' : '-top-[5px] border-l border-t',
+                                )}
+                                style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}
+                              />
+                              <p className="text-[9.5px] font-medium uppercase tracking-[0.06em] mb-1.5" style={{ color: 'var(--text-muted)' }}>
+                                Line items · {products.length}
+                              </p>
+                              <ul className="space-y-1">
+                                {products.map((p, idx) => (
+                                  <li key={`${p}-${idx}`} className="flex items-start gap-2 leading-snug text-[11px]">
+                                    <span className="font-mono text-[9.5px] text-[var(--muted-2)] mt-[2px] shrink-0 w-4 tabular-nums">{String(idx + 1).padStart(2, '0')}</span>
+                                    <span className="text-[var(--ink)]">{p}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </span>
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-[var(--muted-2)] italic">—</span>
                     )}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-        {orders.length === 0 && (
-          <p className="text-xs text-[var(--text-subtle)] text-center py-4">No recent orders</p>
-        )}
+                  </td>
+                  <td className="py-1.5 pr-3">
+                    <span className={cn(
+                      'inline-flex items-center gap-1 px-1.5 py-[1px] rounded-full text-[10px] font-medium capitalize',
+                      payTone,
+                    )}>
+                      <span className={cn('h-1.5 w-1.5 rounded-full', payDot)} />
+                      {finStatus}
+                    </span>
+                  </td>
+                  <td className="py-1.5 pr-3">
+                    <span className={cn(
+                      'inline-flex items-center gap-1 px-1.5 py-[1px] rounded-full text-[10px] font-medium capitalize',
+                      fulfilTone,
+                    )}>
+                      <span className={cn('h-1.5 w-1.5 rounded-full', fulfilDot)} />
+                      {fulfilStatus}
+                    </span>
+                  </td>
+                  <td className="py-1.5 font-mono text-[12px] font-medium tabular-nums text-right whitespace-nowrap">
+                    {isExchange ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="px-1 py-[1px] rounded text-[9px] font-medium uppercase tracking-[0.05em] bg-[var(--bg-2)] text-[var(--muted)]">Exchange</span>
+                        <span className="text-[var(--muted-2)]">—</span>
+                      </span>
+                    ) : (
+                      <span className="text-[var(--ink)]">{formatINRFull(o.revenue)}</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -342,27 +440,20 @@ function LiveActivityFeed({ orders, kpis, prevKpis }: { orders: RecentOrder[]; k
 function AbandonedCartsWidget({ carts }: { carts: { count: number; total_value: number; avg_value: number } | null }) {
   return (
     <div className="h-full flex flex-col">
-      <div>
-        <p className="text-[42px] font-medium tracking-tightx leading-none text-[var(--red)] tabular-nums">{formatNum(carts?.count ?? 0)}</p>
-        <p className="text-[11px] font-medium uppercase tracking-widish text-[var(--muted)] mt-1.5">abandoned carts</p>
-      </div>
-      <div className="h-px bg-[var(--line)] my-4" />
-      <div className="grid grid-cols-2 gap-4">
-        <div>
+      {/* Top row — three KPI cells, each value centered above its label.
+          justify-between keeps the cells spread across the panel width. */}
+      <div className="flex items-end justify-between gap-4">
+        <div className="text-center">
+          <p className="font-mono text-[18px] font-medium text-[var(--red)] tabular-nums">{formatNum(carts?.count ?? 0)}</p>
+          <p className="text-[10.5px] font-medium uppercase tracking-[0.04em] text-[var(--muted)] mt-0.5">Abandoned Carts</p>
+        </div>
+        <div className="text-center">
           <p className="font-mono text-[18px] font-medium text-[var(--ink)] tabular-nums">{formatINR(carts?.total_value ?? 0)}</p>
           <p className="text-[10.5px] font-medium uppercase tracking-[0.04em] text-[var(--muted)] mt-0.5">Cart Value Lost</p>
         </div>
-        <div>
+        <div className="text-center">
           <p className="font-mono text-[18px] font-medium text-[var(--ink)] tabular-nums">{formatINR(carts?.avg_value ?? 0)}</p>
           <p className="text-[10.5px] font-medium uppercase tracking-[0.04em] text-[var(--muted)] mt-0.5">Avg Cart Value</p>
-        </div>
-      </div>
-      <div className="mt-auto pt-4">
-        <div className="flex items-start gap-2 rounded-[10px] bg-[var(--accent-soft)] px-3 py-2">
-          <span aria-hidden className="text-[var(--accent)] text-sm leading-none mt-[1px]">↺</span>
-          <p className="text-[11.5px] leading-snug text-[var(--ink-2)]">
-            <span className="font-medium text-[var(--accent)]">Recoverable revenue</span> · trigger recovery emails within 2 hours for best conversion.
-          </p>
         </div>
       </div>
     </div>
@@ -400,27 +491,30 @@ function RevenueByChannelPanel({ data, range, className }: { data: RevenueTrendR
       info={{ what: 'Daily revenue stacked by sales channel — Shopify, Amazon, Flipkart, Myntra and Eternz combined. Click a channel chip below to solo it.', source: 'Shopify Orders + Unicommerce', readIt: 'Each bar = one day, segments show contribution from each marketplace. Hover for the per-channel breakdown.' }}
       ai={{ observation: 'Channel mix exposes marketplace dependence vs. D2C strength.', insight: 'A healthy mix has D2C (Shopify) carrying baseline revenue and marketplaces driving incremental volume. Heavy single-channel reliance is a margin and discoverability risk.', actions: ['Identify channels under 10% share and either grow or sunset', 'Match top SKUs to under-indexed channels to lift incremental revenue', 'Track channel mix weekly to spot drift early'] }}
     >
-      <ResponsiveContainer width="100%" height={240}>
-        <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barCategoryGap="30%">
-          <CartesianGrid strokeDasharray="2 3" stroke="var(--line)" vertical={false} />
-          <XAxis dataKey="date" tickFormatter={fmtAxisDate} tick={{ fontSize: 10, fill: MUTED }} tickLine={false} interval={xInterval} />
-          <YAxis tickFormatter={fmtAxisINR} tick={{ fontSize: 10, fill: MUTED }} axisLine={false} tickLine={false} domain={[0, yMax]} tickCount={5} />
-          <Tooltip content={<CustomTooltip formatter={(v: number) => (v === 0 ? '—' : formatINR(v))} />} cursor={{ fill: 'rgba(184,137,62,0.08)' }} />
-          {visibleChannels.map((ch, i) => (
-            <Bar
-              key={ch.key}
-              dataKey={ch.key}
-              name={ch.label}
-              stackId="ch"
-              fill={ch.color}
-              maxBarSize={24}
-              radius={i === visibleChannels.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]}
-            />
-          ))}
-        </BarChart>
-      </ResponsiveContainer>
+      <div className="flex flex-col h-full">
+        <div className="flex-1 min-h-[240px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barCategoryGap="30%">
+              <CartesianGrid strokeDasharray="2 3" stroke="var(--line)" vertical={false} />
+              <XAxis dataKey="date" tickFormatter={fmtAxisDate} tick={{ fontSize: 10, fill: MUTED }} tickLine={false} interval={xInterval} />
+              <YAxis tickFormatter={fmtAxisINR} tick={{ fontSize: 10, fill: MUTED }} axisLine={false} tickLine={false} domain={[0, yMax]} tickCount={5} />
+              <Tooltip content={<CustomTooltip formatter={(v: number) => (v === 0 ? '—' : formatINR(v))} />} cursor={{ fill: 'rgba(184,137,62,0.08)' }} />
+              {visibleChannels.map((ch, i) => (
+                <Bar
+                  key={ch.key}
+                  dataKey={ch.key}
+                  name={ch.label}
+                  stackId="ch"
+                  fill={ch.color}
+                  maxBarSize={24}
+                  radius={i === visibleChannels.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]}
+                />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
 
-      <div className="flex items-center flex-wrap gap-x-2 gap-y-1.5 mt-3 pt-3 border-t border-[var(--border)]">
+      <div className="flex items-center flex-wrap gap-x-2 gap-y-1.5 mt-3 pt-3 border-t border-[var(--border)] shrink-0">
         <button
           type="button"
           onClick={() => setSolo(null)}
@@ -452,6 +546,7 @@ function RevenueByChannelPanel({ data, range, className }: { data: RevenueTrendR
             </button>
           );
         })}
+        </div>
       </div>
     </Panel>
   );
@@ -493,10 +588,10 @@ function RevenueVsSpendPanel({ data, range, className }: { data: RevenueVsSpendI
   return (
     <Panel
       className={className}
-      title="Revenue vs Spend Trend"
+      title="Gross Sales vs Ad Spend"
       subtitle={`Shopify + Meta · Daily · ${rangeLabel(range)}`}
-      info={{ what: 'Daily Shopify revenue overlaid with daily Meta ad spend on a dual Y-axis.', source: 'Shopify Orders + Meta Ads', readIt: 'When revenue spikes lead spend spikes by 1–2 days, it signals organic demand. When spend spikes first, it confirms paid acquisition is driving sales.' }}
-      ai={{ observation: 'Revenue and ad spend correlation reveals how efficiently paid campaigns drive orders.', insight: 'A high correlation (spend up → revenue up same day) indicates paid dependency. Low correlation suggests organic pull or attribution lag. Healthy brands show revenue continuing to grow after spend pauses.', actions: ['Pause spend for 48h occasionally to measure organic baseline', 'Compare day-of-week patterns: is weekend revenue paid or organic?', 'Track revenue/spend ratio weekly as a quick efficiency gauge'] }}
+      info={{ what: 'Daily Shopify gross sales (matches Finance Sales Breakdown) overlaid with daily Meta ad spend on a dual Y-axis.', source: 'Shopify Orders + Meta Ads', readIt: 'When gross sales spikes lead spend spikes by 1–2 days, it signals organic demand. When spend spikes first, it confirms paid acquisition is driving sales.' }}
+      ai={{ observation: 'Gross sales and ad spend correlation reveals how efficiently paid campaigns drive orders.', insight: 'A high correlation (spend up → gross sales up same day) indicates paid dependency. Low correlation suggests organic pull or attribution lag. Healthy brands show gross sales continuing to grow after spend pauses.', actions: ['Pause spend for 48h occasionally to measure organic baseline', 'Compare day-of-week patterns: are weekend gross sales paid or organic?', 'Track gross sales / spend ratio weekly as a quick efficiency gauge'] }}
     >
       <ResponsiveContainer width="100%" height={220}>
         <LineChart data={data} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
@@ -505,12 +600,12 @@ function RevenueVsSpendPanel({ data, range, className }: { data: RevenueVsSpendI
           <YAxis yAxisId="rev" orientation="left" tickFormatter={(v: number) => `₹${(v / 100000).toFixed(1)}L`} tick={{ fontSize: 10, fill: MUTED }} axisLine={false} tickLine={false} domain={[0, maxRevenue * 1.15]} />
           <YAxis yAxisId="spend" orientation="right" tickFormatter={(v: number) => `₹${(v / 100000).toFixed(1)}L`} tick={{ fontSize: 10, fill: MUTED }} axisLine={false} tickLine={false} domain={[0, maxSpend * 1.15]} />
           <Tooltip content={<CustomTooltip formatter={(v) => `₹${Number(v).toLocaleString('en-IN')}`} />} />
-          <Line yAxisId="rev" type="monotone" dataKey="revenue" name="Revenue" stroke={ACCENT} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+          <Line yAxisId="rev" type="monotone" dataKey="revenue" name="Gross Sales" stroke={ACCENT} strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
           <Line yAxisId="spend" type="monotone" dataKey="ad_spend" name="Ad spend" stroke={INFO} strokeWidth={1.5} strokeDasharray="4 3" dot={false} activeDot={{ r: 4 }} />
         </LineChart>
       </ResponsiveContainer>
       <div className="flex justify-center gap-6 mt-2 text-xs text-[var(--text-muted)]">
-        <span className="flex items-center gap-1.5"><span className="w-6 h-0.5 inline-block rounded" style={{ backgroundColor: ACCENT }} />Revenue</span>
+        <span className="flex items-center gap-1.5"><span className="w-6 h-0.5 inline-block rounded" style={{ backgroundColor: ACCENT }} />Gross Sales</span>
         <span className="flex items-center gap-1.5"><span className="w-6 h-0.5 inline-block rounded border-dashed border-t-2" style={{ borderColor: INFO }} />Ad spend</span>
       </div>
     </Panel>
@@ -540,21 +635,34 @@ function TrafficTrendChart({ data }: { data: GA4TrafficDaily[] }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
- * GA4 · Ecommerce Trend
+ * Ecommerce Trend — Shopify gross sales (Sales Breakdown) + GA4 transactions
  * ═══════════════════════════════════════════════════════════════ */
-function EcommerceTrend({ data }: { data: GA4EcommerceDaily[] }) {
-  if (!data.length) return <div className="h-full min-h-[220px] flex items-center justify-center text-sm text-[var(--text-subtle)]">No ecommerce data</div>;
+function EcommerceTrend({ ecommerce, revenueVsSpend }: { ecommerce: GA4EcommerceDaily[]; revenueVsSpend: RevenueVsSpendItem[] }) {
+  const merged = useMemo(() => {
+    const grossByDate = new Map<string, number>();
+    for (const r of revenueVsSpend) grossByDate.set(r.date, Number(r.revenue) || 0);
+    const txnByDate = new Map<string, number>();
+    for (const r of ecommerce) txnByDate.set(r.date, Number(r.transactions) || 0);
+    const dates = Array.from(new Set<string>([...grossByDate.keys(), ...txnByDate.keys()])).sort();
+    return dates.map((date) => ({
+      date,
+      gross_sales: grossByDate.get(date) ?? 0,
+      transactions: txnByDate.get(date) ?? 0,
+    }));
+  }, [ecommerce, revenueVsSpend]);
+
+  if (!merged.length) return <div className="h-full min-h-[220px] flex items-center justify-center text-sm text-[var(--text-subtle)]">No ecommerce data</div>;
   return (
     <div className="h-full min-h-[220px]">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+        <LineChart data={merged} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="2 3" stroke="var(--line)" vertical={false} />
-          <XAxis dataKey="date" tickFormatter={fmtAxisDate} tick={{ fontSize: 10, fill: MUTED }} tickLine={false} interval={Math.max(0, Math.floor(data.length / 5) - 1)} />
+          <XAxis dataKey="date" tickFormatter={fmtAxisDate} tick={{ fontSize: 10, fill: MUTED }} tickLine={false} interval={Math.max(0, Math.floor(merged.length / 5) - 1)} />
           <YAxis yAxisId="rev" tickFormatter={(v: number) => v >= 100000 ? `₹${(v / 100000).toFixed(1)}L` : `₹${(v / 1000).toFixed(0)}K`} tick={{ fontSize: 10, fill: MUTED }} axisLine={false} tickLine={false} width={42} />
           <YAxis yAxisId="txn" orientation="right" tickFormatter={formatNum} tick={{ fontSize: 10, fill: MUTED }} axisLine={false} tickLine={false} width={30} />
-          <Tooltip content={<CustomTooltip formatter={(v, name) => name === 'Revenue' ? formatINR(Number(v)) : formatNum(Number(v))} />} />
-          <Line yAxisId="rev" type="monotone" dataKey="purchase_revenue" name="Revenue"      stroke={ACCENT} strokeWidth={2}   dot={false} activeDot={{ r: 4 }} />
-          <Line yAxisId="txn" type="monotone" dataKey="transactions"     name="Transactions" stroke={POS}    strokeWidth={1.5} dot={false} activeDot={{ r: 4 }} strokeDasharray="5 3" />
+          <Tooltip content={<CustomTooltip formatter={(v, name) => name === 'Gross Sales' ? formatINR(Number(v)) : formatNum(Number(v))} />} />
+          <Line yAxisId="rev" type="monotone" dataKey="gross_sales"  name="Gross Sales"  stroke={ACCENT} strokeWidth={2}   dot={false} activeDot={{ r: 4 }} />
+          <Line yAxisId="txn" type="monotone" dataKey="transactions" name="Transactions" stroke={POS}    strokeWidth={1.5} dot={false} activeDot={{ r: 4 }} strokeDasharray="5 3" />
         </LineChart>
       </ResponsiveContainer>
     </div>
@@ -562,46 +670,234 @@ function EcommerceTrend({ data }: { data: GA4EcommerceDaily[] }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
- * GA4 · Conversion Funnel
+ * GA4 · Conversion Funnel — wireframe SVG funnel
+ *
+ * Each stage is rendered as the bottom edge of a frustum: an open ellipse
+ * sized by `widthPct = count / sessions` (floored at MIN_RX so the smallest
+ * stage is still visible), with two side-lines connecting it to the
+ * previous stage's ellipse. The top "mouth" is drawn first as a full-width
+ * open ellipse. Percentages sit on the left with dashed leader lines;
+ * pill-shaped labels sit on the right.
  * ═══════════════════════════════════════════════════════════════ */
-function ConversionFunnel({ summary, ecommerce }: { summary: GA4Summary | null; ecommerce: GA4EcommerceDaily[] }) {
-  const sessions    = summary?.total_sessions ?? 0;
-  const checkouts   = ecommerce.reduce((a, r) => a + Number(r.checkouts), 0);
-  const purchases   = ecommerce.reduce((a, r) => a + Number(r.ecommerce_purchases), 0);
+function ConversionFunnel({ data }: { data: ConversionFunnelData | null }) {
+  const sessions = data?.sessions ?? 0;
+  const cart     = data?.added_to_cart ?? 0;
+  const checkout = data?.checkouts ?? 0;
+  const purchase = data?.purchases ?? 0;
 
-  const maxCount = Math.max(sessions, 1);
-  const steps = [
-    { label: 'Sessions',  count: sessions,  color: ACCENT, pct: 100 },
-    { label: 'Checkouts', count: checkouts, color: INFO,   pct: sessions ? (checkouts / sessions) * 100 : 0 },
-    { label: 'Purchases', count: purchases, color: POS,    pct: sessions ? (purchases / sessions) * 100 : 0 },
+  if (sessions === 0) {
+    return (
+      <div className="h-full min-h-[300px] flex items-center justify-center text-sm text-[var(--text-subtle)]">
+        No GA4 funnel data
+      </div>
+    );
+  }
+
+  // Geometry
+  const VB_W = 600;
+  const STAGE_H = 70;
+  const TOP_Y = 26;
+  const CX = 300;
+  const MAX_RX = 110;
+  const MIN_RX = 14;
+  const RY = 8;
+  const stageData = [
+    { key: 'sessions', label: 'Sessions',     count: sessions, color: '#2456C2' },
+    { key: 'cart',     label: 'Add to Cart',  count: cart,     color: '#7A3FD0' },
+    { key: 'checkout', label: 'Checkouts',    count: checkout, color: '#D1396B' },
+    { key: 'purchase', label: 'Purchases',    count: purchase, color: '#E08A1F' },
   ];
 
-  const s2c = sessions   ? (checkouts / sessions)   * 100 : 0;
-  const c2p = checkouts  ? (purchases / checkouts)  * 100 : 0;
-  const overall = sessions ? (purchases / sessions) * 100 : 0;
+  const widthOf = (n: number) => Math.max(MIN_RX, Math.min(MAX_RX, (n / sessions) * MAX_RX));
+  const stages = stageData.map((s, i, arr) => {
+    const topRx = i === 0 ? MAX_RX : widthOf(arr[i - 1].count);
+    const bottomRx = i === 0 ? MAX_RX : widthOf(s.count);
+    const topY = TOP_Y + i * STAGE_H;
+    const bottomY = topY + STAGE_H;
+    const pct = (s.count / sessions) * 100;
+    return { ...s, topRx, bottomRx, topY, bottomY, pct };
+  });
+  const VB_H = TOP_Y + stages.length * STAGE_H + 40;
+
+  // Position labels at the BOTTOM edge of each stage's frustum (matches the reference)
+  const LABEL_LEFT_X = 78;
+  const LABEL_RIGHT_X = VB_W - 150;
+  const PILL_W = 140;
+  const PILL_H = 26;
+
+  const s2cart  = sessions ? (cart / sessions) * 100 : 0;
+  const cart2chk = cart ? (checkout / cart) * 100 : 0;
+  const chk2buy = checkout ? (purchase / checkout) * 100 : 0;
+  const overall = sessions ? (purchase / sessions) * 100 : 0;
 
   return (
-    <div>
-      <div className="space-y-3">
-        {steps.map((step) => (
-          <div key={step.label}>
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-xs font-medium text-[var(--text)]">{step.label}</span>
-              <span className="text-xs text-[var(--text-muted)]">
-                <span className="font-semibold text-[var(--text)]">{formatNum(step.count)}</span>
-                {step.label !== 'Sessions' && <span className="ml-2">({step.pct.toFixed(2)}%)</span>}
-              </span>
-            </div>
-            <div className="h-6 rounded-md bg-[var(--surface-2)] overflow-hidden">
-              <div className="h-full rounded-md transition-all duration-500" style={{ width: `${Math.max((step.count / maxCount) * 100, 2)}%`, backgroundColor: step.color }} />
-            </div>
-          </div>
+    <div className="flex flex-col">
+      <svg viewBox={`0 0 ${VB_W} ${VB_H}`} className="w-full h-auto" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          {/* Per-stage vertical gradient: stronger tint at top, fading toward bottom.
+              Keeps the colored "panel" feel while staying soft enough that the
+              count number on each band remains readable. */}
+          {stageData.map((s) => (
+            <linearGradient key={s.key} id={`funnel-grad-${s.key}`} x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor={s.color} stopOpacity={0.45} />
+              <stop offset="100%" stopColor={s.color} stopOpacity={0.18} />
+            </linearGradient>
+          ))}
+          {/* Soft drop-shadow for the funnel body to lift it off the panel */}
+          <filter id="funnel-shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="2" />
+            <feOffset dx="0" dy="2" result="offsetblur" />
+            <feComponentTransfer>
+              <feFuncA type="linear" slope="0.18" />
+            </feComponentTransfer>
+            <feMerge>
+              <feMergeNode />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        {/* Top "mouth" of the funnel — filled to read as the open top of the cone */}
+        <ellipse
+          cx={CX}
+          cy={TOP_Y}
+          rx={MAX_RX}
+          ry={RY}
+          stroke={stages[0].color}
+          strokeWidth={2}
+          fill={stages[0].color}
+          fillOpacity={0.18}
+        />
+        {/* Top-stage left percentage label (100% at the mouth) */}
+        <line
+          x1={CX - MAX_RX} y1={TOP_Y}
+          x2={LABEL_LEFT_X + 10} y2={TOP_Y}
+          stroke={stages[0].color}
+          strokeWidth={1}
+          strokeDasharray="2 3"
+          opacity={0.5}
+        />
+        <text
+          x={LABEL_LEFT_X} y={TOP_Y + 4}
+          textAnchor="end"
+          fontSize={13}
+          fontWeight={700}
+          fill={stages[0].color}
+        >100%</text>
+
+        {stages.map((stage) => (
+          <g key={stage.key}>
+            {/* Filled trapezoid body of the frustum (sides + interior).
+                Drawn first so the ellipse + side strokes overlay it cleanly. */}
+            <path
+              d={`M ${CX - stage.topRx},${stage.topY} L ${CX + stage.topRx},${stage.topY} L ${CX + stage.bottomRx},${stage.bottomY} L ${CX - stage.bottomRx},${stage.bottomY} Z`}
+              fill={`url(#funnel-grad-${stage.key})`}
+              filter="url(#funnel-shadow)"
+            />
+            {/* Side outline lines */}
+            <line
+              x1={CX - stage.topRx} y1={stage.topY}
+              x2={CX - stage.bottomRx} y2={stage.bottomY}
+              stroke={stage.color}
+              strokeWidth={2}
+            />
+            <line
+              x1={CX + stage.topRx} y1={stage.topY}
+              x2={CX + stage.bottomRx} y2={stage.bottomY}
+              stroke={stage.color}
+              strokeWidth={2}
+            />
+            {/* Bottom ellipse — narrower means flatter, lightly tinted */}
+            <ellipse
+              cx={CX}
+              cy={stage.bottomY}
+              rx={stage.bottomRx}
+              ry={Math.max(2, RY * (stage.bottomRx / MAX_RX))}
+              stroke={stage.color}
+              strokeWidth={2}
+              fill={stage.color}
+              fillOpacity={0.28}
+            />
+            {/* Count label centered inside the frustum (darker for contrast on tint) */}
+            <text
+              x={CX}
+              y={stage.topY + STAGE_H / 2 + 5}
+              textAnchor="middle"
+              fontSize={13}
+              fontWeight={700}
+              fill="var(--text)"
+            >
+              {formatNum(stage.count)}
+            </text>
+
+            {/* Leader: bottom of stage's left edge → left percentage label */}
+            <line
+              x1={CX - stage.bottomRx} y1={stage.bottomY}
+              x2={LABEL_LEFT_X + 10} y2={stage.bottomY}
+              stroke={stage.color}
+              strokeWidth={1}
+              strokeDasharray="2 3"
+              opacity={0.5}
+            />
+            <text
+              x={LABEL_LEFT_X} y={stage.bottomY + 4}
+              textAnchor="end"
+              fontSize={13}
+              fontWeight={700}
+              fill={stage.color}
+            >
+              {stage.pct.toFixed(1)}%
+            </text>
+
+            {/* Leader: bottom of stage's right edge → right pill label */}
+            <line
+              x1={CX + stage.bottomRx} y1={stage.bottomY}
+              x2={LABEL_RIGHT_X} y2={stage.bottomY}
+              stroke={stage.color}
+              strokeWidth={1}
+              strokeDasharray="2 3"
+              opacity={0.5}
+            />
+            <rect
+              x={LABEL_RIGHT_X} y={stage.bottomY - PILL_H / 2}
+              width={PILL_W} height={PILL_H}
+              rx={PILL_H / 2}
+              stroke={stage.color}
+              strokeWidth={1.5}
+              fill={stage.color}
+              fillOpacity={0.12}
+            />
+            <text
+              x={LABEL_RIGHT_X + PILL_W / 2}
+              y={stage.bottomY + 4}
+              textAnchor="middle"
+              fontSize={11.5}
+              fontWeight={600}
+              fill={stage.color}
+            >
+              {stage.label}
+            </text>
+          </g>
         ))}
-      </div>
-      <div className="mt-4 pt-3 border-t border-[var(--border)] grid grid-cols-3 gap-3 text-center">
-        <div><p className="text-[10px] uppercase text-[var(--text-subtle)]">Sess → Checkout</p><p className="text-sm font-semibold" style={{ color: INFO }}>{s2c.toFixed(2)}%</p></div>
-        <div><p className="text-[10px] uppercase text-[var(--text-subtle)]">Check → Purchase</p><p className="text-sm font-semibold" style={{ color: ACCENT }}>{c2p.toFixed(2)}%</p></div>
-        <div><p className="text-[10px] uppercase text-[var(--text-subtle)]">Overall Conv</p><p className="text-sm font-semibold" style={{ color: POS }}>{overall.toFixed(2)}%</p></div>
+      </svg>
+
+      <div className="mt-2 pt-3 border-t border-[var(--border)] grid grid-cols-4 gap-2 text-center">
+        <div>
+          <p className="text-[10px] uppercase text-[var(--text-subtle)]">Sess → Cart</p>
+          <p className="text-sm font-semibold" style={{ color: '#7A3FD0' }}>{s2cart.toFixed(2)}%</p>
+        </div>
+        <div>
+          <p className="text-[10px] uppercase text-[var(--text-subtle)]">Cart → Checkout</p>
+          <p className="text-sm font-semibold" style={{ color: '#D1396B' }}>{cart2chk.toFixed(2)}%</p>
+        </div>
+        <div>
+          <p className="text-[10px] uppercase text-[var(--text-subtle)]">Check → Purchase</p>
+          <p className="text-sm font-semibold" style={{ color: '#E08A1F' }}>{chk2buy.toFixed(2)}%</p>
+        </div>
+        <div>
+          <p className="text-[10px] uppercase text-[var(--text-subtle)]">Overall Conv</p>
+          <p className="text-sm font-semibold" style={{ color: ACCENT }}>{overall.toFixed(2)}%</p>
+        </div>
       </div>
     </div>
   );
@@ -893,7 +1189,7 @@ function ActiveUsersCountryMapCard({ data, loading, subtitle }: { data: GA4Count
           />
           {hover ? (
             <div
-              className="pointer-events-none absolute z-10 flex items-center gap-1.5 rounded-md bg-[var(--ink)] px-2.5 py-1.5 text-[11.5px] font-medium text-[var(--surface)] shadow-lg whitespace-nowrap"
+              className="pointer-events-none absolute z-10 flex items-center gap-1.5 rounded-md bg-[var(--surface)] px-2.5 py-1.5 text-[11.5px] font-medium text-[var(--text)] shadow-lg border border-[var(--border)] whitespace-nowrap"
               style={{ left: hover.x + 12, top: hover.y + 12 }}
             >
               <span aria-hidden className="text-sm leading-none">{hoverFlag}</span>
@@ -952,7 +1248,7 @@ export function DashboardPage() {
   const dispatch = useAppDispatch();
   const {
     kpis, prevKpis, revenueTrend, campaigns, abandonedCarts, recentOrders,
-    revenueVsSpend, loading, error,
+    revenueVsSpend, conversionFunnel, loading, error,
     topProducts, logistics, reviewsSummary, topRatedProducts,
   } = useAppSelector((s) => s.dashboard);
   const { topSkus } = useAppSelector((s) => s.analytics);
@@ -1039,7 +1335,7 @@ export function DashboardPage() {
           {/* ═══ ROW 1 · KPI STRIP (5 cards) ═══ */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
             <KpiCard
-              label="Revenue"
+              label="Gross Sales"
               value={formatINR(kpis?.revenue)}
               delta={delta(kpis?.revenue, prevKpis?.revenue)}
               sub={`${formatNum(kpis?.orders)} orders`}
@@ -1058,7 +1354,7 @@ export function DashboardPage() {
               loading={loading}
             />
             <KpiCard
-              label="Sessions"
+              label="Sessions (GA4)"
               value={formatNum(ga4Summary?.total_sessions)}
               delta={ga4Insights?.sessions_delta_pct}
               sub="traffic · vs prev period"
@@ -1086,8 +1382,9 @@ export function DashboardPage() {
             />
           </div>
 
-          {/* ═══ ROW 2 · LIVE PULSE (3-col) ═══ */}
+          {/* ═══ ROW 2 · REVENUE OVERVIEW + LIVE (2 + 1) ═══ */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <RevenueByChannelPanel data={unicommerceRevenueTrend} range={range} className="lg:col-span-2" />
             <Panel
               title="Live Active Users"
               subtitle="Last 30 minutes · GA4"
@@ -1101,16 +1398,31 @@ export function DashboardPage() {
                 onMetricChange={setRealtimeMetric}
               />
             </Panel>
+          </div>
 
+          {/* ═══ ROW 3 · OPS PULSE — Recent Orders (2/3) + stacked right (1/3) ═══
+              Right column stacks Abandoned Carts (top) and COD vs Prepaid
+              (bottom) so we get three panels in two visual columns. Recent
+              Orders gets the wider 2/3 to render a proper order table. */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <Panel
+              className="lg:col-span-2"
               title="Recent Orders"
-              subtitle="Shopify · Last 5 orders this period"
-              info={{ what: 'Total orders for the selected period and the 5 most recent orders.', source: 'Shopify Orders' }}
+              subtitle="Shopify · Last 10 orders this period"
+              info={{ what: 'Total orders for the selected period and the 10 most recent orders.', source: 'Shopify Orders' }}
               ai={{ observation: 'Order velocity is the fastest real-time signal for campaign performance.', insight: 'Spikes in recent orders often correlate with email/SMS sends or social posts going viral. Use this to confirm paid campaign impact within minutes of launch.', actions: ['Monitor feed after every campaign launch', 'Alert on zero orders for > 2 hours during peak hours', 'Cross-reference high-value orders with campaign UTMs'] }}
             >
-              <LiveActivityFeed orders={recentOrders} kpis={kpis} prevKpis={prevKpis} />
+              <div className="flex flex-col h-full">
+                <div className="mb-3 shrink-0">
+                  <RecentOrdersHeaderStat kpis={kpis} prevKpis={prevKpis} />
+                </div>
+                <div className="flex-1 min-h-0">
+                  <LiveActivityFeed orders={recentOrders} />
+                </div>
+              </div>
             </Panel>
 
+            <div className="flex flex-col gap-4">
             <Panel
               title="Abandoned Carts"
               subtitle="Shopify · Recoverable revenue"
@@ -1148,9 +1460,8 @@ export function DashboardPage() {
                                 <p className="font-mono text-[18px] font-medium leading-none tabular-nums" style={{ color }}>
                                   {item ? formatNum(Number(item.count)) : 0}
                                 </p>
-                                <p className="mt-1.5 text-[10.5px] font-medium uppercase tracking-[0.04em] text-[var(--muted)] flex items-center justify-center gap-1">
-                                  <span aria-hidden className="w-1.5 h-1.5 rounded-full inline-block shrink-0" style={{ backgroundColor: color }} />
-                                  <span className="truncate">{label}</span>
+                                <p className="mt-1.5 text-[10.5px] font-medium uppercase tracking-[0.04em] text-[var(--muted)] truncate">
+                                  {label}
                                 </p>
                               </div>
                             );
@@ -1167,25 +1478,32 @@ export function DashboardPage() {
                 </div>
               </div>
             </Panel>
-          </div>
 
-          {/* ═══ ROW 3 · REVENUE OVERVIEW (2 + 1) ═══ */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <RevenueByChannelPanel data={unicommerceRevenueTrend} range={range} className="lg:col-span-2" />
             <Panel
               title="COD vs Prepaid"
               subtitle="Shopify · Payment mix"
               info={{ what: 'Split between Cash on Delivery and Prepaid orders for the period.', source: 'Shopify Orders' }}
               ai={{ observation: `${codPct.toFixed(0)}% COD orders carry ~3× the RTO risk of prepaid.${prevCodPct !== undefined ? ` Previously ${prevCodPct.toFixed(0)}%.` : ''}`, insight: 'A 5% shift to prepaid meaningfully improves cash flow and RTO rate. Prepaid customers are also more intentional buyers.', actions: ['Offer ₹50–100 prepaid discount at checkout', 'Show trust signals (reviews, delivery guarantee) at checkout', 'Run prepaid-only flash sales monthly'] }}
             >
-              <div className="flex flex-col h-full">
-                <CodPrepaidDonut codPct={codPct} />
-                <div className="flex justify-center gap-6 mt-2 shrink-0 text-xs text-[var(--text-muted)]">
-                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: WARN }} />COD {codPct.toFixed(1)}%</span>
-                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: POS }} />Prepaid {(100 - codPct).toFixed(1)}%</span>
+              <div className="flex h-full gap-4 items-stretch">
+                <div className="flex-1 min-w-0 flex flex-col">
+                  <CodPrepaidDonut codPct={codPct} />
+                </div>
+                <div className="flex flex-col justify-center gap-2.5 shrink-0 text-xs text-[var(--text-muted)] min-w-[110px]">
+                  <span className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full inline-block shrink-0" style={{ backgroundColor: WARN }} />
+                    <span>COD</span>
+                    <span className="ml-auto font-mono font-medium tabular-nums text-[var(--ink)]">{codPct.toFixed(1)}%</span>
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full inline-block shrink-0" style={{ backgroundColor: POS }} />
+                    <span>Prepaid</span>
+                    <span className="ml-auto font-mono font-medium tabular-nums text-[var(--ink)]">{(100 - codPct).toFixed(1)}%</span>
+                  </span>
                 </div>
               </div>
             </Panel>
+            </div>
           </div>
 
           {/* ═══ ROW 4 · SPEND & OPS (full) ═══ */}
@@ -1196,11 +1514,11 @@ export function DashboardPage() {
             <Panel title="Traffic Trend" subtitle={`GA4 · Sessions · Users · New · ${rangeLabel(range)}`}>
               <TrafficTrendChart data={ga4Overview} />
             </Panel>
-            <Panel title="Ecommerce Trend" subtitle="GA4 · Revenue & transactions">
-              <EcommerceTrend data={ga4Ecommerce} />
+            <Panel title="Ecommerce Trend" subtitle="Shopify Gross Sales · GA4 Transactions">
+              <EcommerceTrend ecommerce={ga4Ecommerce} revenueVsSpend={revenueVsSpend} />
             </Panel>
-            <Panel title="Conversion Funnel" subtitle="GA4 · Sessions → Checkouts → Purchases">
-              <ConversionFunnel summary={ga4Summary} ecommerce={ga4Ecommerce} />
+            <Panel title="Conversion Funnel" subtitle="GA4 · Sessions → Cart → Checkouts → Purchases">
+              <ConversionFunnel data={conversionFunnel} />
             </Panel>
           </div>
 
@@ -1268,10 +1586,10 @@ export function DashboardPage() {
             {/* Top 5 Products (Shopify) */}
             <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-5 flex flex-col">
               <h3 className="font-semibold text-sm text-[var(--text)]">Top 5 Products</h3>
-              <p className="mt-[3px] mb-4 text-[11.5px] leading-[1.3] text-[var(--muted)]">Shopify · top 5 by revenue</p>
+              <p className="mt-[3px] mb-4 text-[11.5px] leading-[1.3] text-[var(--muted)]">Shopify · top 5 by gross sales</p>
               <div className="space-y-0">
                 <div className="grid grid-cols-[1.5rem_1fr_3rem_3.5rem] text-[10px] font-medium text-[var(--text-muted)] uppercase pb-1.5 border-b border-[var(--border)]">
-                  <span>#</span><span>Product</span><span className="text-right">Units</span><span className="text-right">Revenue</span>
+                  <span>#</span><span>Product</span><span className="text-right">Units</span><span className="text-right">Gross Sales</span>
                 </div>
                 {topProducts.slice(0, 5).map((p, i) => (
                   <div key={p.product_id} className="grid grid-cols-[1.5rem_1fr_3rem_3.5rem] items-center py-1.5 border-b border-[var(--border)] last:border-0">
@@ -1298,7 +1616,7 @@ export function DashboardPage() {
                         <p className="text-sm font-semibold text-[var(--text)]">{formatNum(totalUnits)}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">Top 5 revenue</p>
+                        <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)]">Top 5 gross sales</p>
                         <p className="text-sm font-semibold" style={{ color: ACCENT }}>{formatINR(totalRevenue)}</p>
                       </div>
                     </div>
@@ -1406,12 +1724,12 @@ export function DashboardPage() {
             <Panel title="Top Viewed Products" subtitle="GA4 · views → added → purchased">
               <TopProductsGA4 data={ga4Products} />
             </Panel>
-            <Panel title="Top SKUs by Revenue" subtitle="Shopify · top 10 by revenue">
+            <Panel title="Top SKUs by Gross Sales" subtitle="Shopify · top 10 by gross sales">
               <div className="overflow-auto max-h-[360px] pr-1">
                 <table className="w-full text-xs min-w-[480px]">
                   <thead className="sticky top-0 bg-[var(--surface)] z-10">
                     <tr className="border-b border-[var(--border)]">
-                      {['#', 'SKU', 'Product', 'Units', 'Orders', 'Revenue'].map((h, i) => (
+                      {['#', 'SKU', 'Product', 'Units', 'Orders', 'Gross Sales'].map((h, i) => (
                         <th key={h} className={cn('py-2 pr-3 text-[var(--text-muted)] font-medium text-xs', i < 3 ? 'text-left' : 'text-right')}>{h}</th>
                       ))}
                     </tr>

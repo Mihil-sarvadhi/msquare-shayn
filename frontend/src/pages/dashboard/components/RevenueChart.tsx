@@ -4,6 +4,7 @@ import {
 } from 'recharts';
 import { RevenueTrendItem } from '@app/types/dashboard';
 import { formatINR, formatDate } from '@utils/formatters';
+import { TOOLTIP_CONTENT_STYLE, TOOLTIP_LABEL_STYLE, TOOLTIP_ITEM_STYLE } from '@utils/constants/palette';
 
 interface RevenueChartProps {
   data: RevenueTrendItem[];
@@ -48,7 +49,9 @@ export default function RevenueChart({ data, loading }: RevenueChartProps) {
         <Tooltip
           formatter={(val: number) => [formatINR(val), 'Revenue']}
           labelFormatter={(ts: number) => formatDate(new Date(ts).toISOString().split('T')[0])}
-          contentStyle={{ borderRadius: 10, border: '1px solid var(--line)', backgroundColor: 'var(--surface)', fontSize: 12, color: 'var(--ink)' }}
+          contentStyle={TOOLTIP_CONTENT_STYLE}
+          labelStyle={TOOLTIP_LABEL_STYLE}
+          itemStyle={TOOLTIP_ITEM_STYLE}
         />
         <Line
           type="monotone"

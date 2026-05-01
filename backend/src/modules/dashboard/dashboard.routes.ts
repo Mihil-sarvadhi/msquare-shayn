@@ -18,6 +18,7 @@ router.get('/recent-reviews', controller.recentReviewsHandler);
 router.get('/all-reviews', controller.allReviewsHandler);
 router.get('/recent-orders', controller.recentOrdersHandler);
 router.get('/revenue-vs-spend', controller.revenueVsSpendHandler);
+router.get('/conversion-funnel', controller.conversionFunnelHandler);
 router.get('/marquee', controller.marqueeHandler);
 
 export default router;
