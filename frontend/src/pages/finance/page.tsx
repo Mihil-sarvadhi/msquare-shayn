@@ -1,23 +1,29 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
+// useMemo was used by the commented-out SalesBreakdownTiles component.
+// Restore the import alongside that block if reinstating the tile strip.
 import { useAppDispatch, useAppSelector } from '@store/hooks';
 import { fetchFinanceOverview } from '@store/slices/financeSlice';
 import { fetchRefunds, setRefundsPage } from '@store/slices/refundsSlice';
 import { Panel } from '@components/shared/Panel';
 import { PageLoader } from '@components/shared/PageLoader';
-import { KpiCard } from '@components/shared/KpiCard';
-import {
-  IndianRupee,
-  BadgePercent,
-  Undo2,
-  Coins,
-  Truck,
-  Receipt,
-  Landmark,
-  Wallet,
-} from 'lucide-react';
+// COMMENTED OUT — Total Sales Breakdown tile imports. The 8-tile strip was
+// removed from the layout (per design). Restore alongside the JSX block at
+// the bottom of this file if reinstated.
+// import { KpiCard } from '@components/shared/KpiCard';
+// import {
+//   IndianRupee,
+//   BadgePercent,
+//   Undo2,
+//   Coins,
+//   Truck,
+//   Receipt,
+//   Landmark,
+//   Wallet,
+// } from 'lucide-react';
 import { formatINR, formatINRFull, formatNum, formatDate } from '@utils/formatters';
 import { StorefrontKpiStrip } from './components/StorefrontKpiStrip';
-import type { SalesBreakdownDailyPointApi, SalesBreakdownTotalsApi } from '@app/types/finance-api';
+// import type { SalesBreakdownDailyPointApi, SalesBreakdownTotalsApi } from '@app/types/finance-api';
 import {
   CartesianGrid,
   Cell,
@@ -144,7 +150,7 @@ function RevenueBreakdownChart() {
   const breakdown = useAppSelector((s) => s.finance.breakdown);
   if (!breakdown || breakdown.current.points.length === 0) {
     return (
-      <div className="h-[280px] flex items-center justify-center text-sm text-[var(--text-muted)]">
+      <div className="flex h-full min-h-[240px] flex-1 items-center justify-center text-sm text-[var(--text-muted)]">
         No revenue data for this range.
       </div>
     );
@@ -172,17 +178,17 @@ function RevenueBreakdownChart() {
     : ((totalSales - prevTotalSales) / Math.abs(prevTotalSales)) * 100;
 
   return (
-    <div className="space-y-2">
+    <div className="flex h-full min-h-0 flex-col">
       {/* Header — matches Shopify "Total sales over time" big number + delta.
           The total below equals the Sales Breakdown's Total sales row exactly:
           per-day total uses the period's effective tax rate (computed in
           backend) so the daily series sums to totals.total_sales. */}
-      <div className="flex flex-col gap-0.5">
-        <span className="text-[10.5px] uppercase tracking-widish text-[var(--muted)]">
+      <div className="shrink-0 flex flex-col gap-0">
+        <span className="text-[10px] uppercase tracking-widish text-[var(--muted)]">
           Total sales
         </span>
         <div className="flex items-baseline gap-2">
-          <span className="text-[22px] font-semibold tabular-nums text-[var(--ink)]">
+          <span className="text-[20px] font-semibold tabular-nums leading-tight text-[var(--ink)]">
             {formatINRFull(totalSales)}
           </span>
           {totalDelta !== null && (
@@ -198,73 +204,75 @@ function RevenueBreakdownChart() {
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={260}>
-        <LineChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
-          <defs>
-            <linearGradient id={TOTAL_AREA_GRAD} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={TOTAL_LINE} stopOpacity={0.18} />
-              <stop offset="100%" stopColor={TOTAL_LINE} stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid stroke="var(--line)" strokeDasharray="2 3" vertical={false} />
-          <XAxis
-            dataKey="date"
-            tickFormatter={fmtAxisDate}
-            fontSize={11}
-            tick={{ fill: 'var(--muted)' }}
-            tickLine={false}
-            axisLine={{ stroke: 'var(--line)' }}
-          />
-          <YAxis
-            tickFormatter={fmtAxisINR}
-            fontSize={11}
-            tick={{ fill: 'var(--muted)' }}
-            tickLine={false}
-            axisLine={false}
-            width={56}
-          />
-          <Tooltip
-            content={<RevenueBreakdownTooltip />}
-            cursor={{ stroke: 'var(--line-2)', strokeWidth: 1 }}
-          />
-          {/* Comparison line first so the current line sits on top */}
-          <Line
-            type="monotone"
-            dataKey="prevTotal"
-            stroke={TOTAL_LINE_PREV}
-            strokeWidth={1.5}
-            strokeDasharray="5 4"
-            dot={false}
-            activeDot={{ r: 3, fill: TOTAL_LINE_PREV, stroke: 'var(--surface)', strokeWidth: 1 }}
-            name="Total (prev)"
-            connectNulls
-            isAnimationActive={false}
-          />
-          <Line
-            type="monotone"
-            dataKey="total"
-            stroke={TOTAL_LINE}
-            strokeWidth={2}
-            dot={false}
-            activeDot={{ r: 4, fill: TOTAL_LINE, stroke: 'var(--surface)', strokeWidth: 2 }}
-            name="Total"
-            isAnimationActive={false}
-            fill={`url(#${TOTAL_AREA_GRAD})`}
-          />
-        </LineChart>
-      </ResponsiveContainer>
+      <div className="mt-1.5 min-h-[140px] w-full min-w-0 flex-1">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={chartData} margin={{ top: 4, right: 10, left: 0, bottom: 2 }}>
+            <defs>
+              <linearGradient id={TOTAL_AREA_GRAD} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={TOTAL_LINE} stopOpacity={0.18} />
+                <stop offset="100%" stopColor={TOTAL_LINE} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid stroke="var(--line)" strokeDasharray="2 3" vertical={false} />
+            <XAxis
+              dataKey="date"
+              tickFormatter={fmtAxisDate}
+              fontSize={11}
+              tick={{ fill: 'var(--muted)' }}
+              tickLine={false}
+              axisLine={{ stroke: 'var(--line)' }}
+            />
+            <YAxis
+              tickFormatter={fmtAxisINR}
+              fontSize={11}
+              tick={{ fill: 'var(--muted)' }}
+              tickLine={false}
+              axisLine={false}
+              width={56}
+            />
+            <Tooltip
+              content={<RevenueBreakdownTooltip />}
+              cursor={{ stroke: 'var(--line-2)', strokeWidth: 1 }}
+            />
+            {/* Comparison line first so the current line sits on top */}
+            <Line
+              type="monotone"
+              dataKey="prevTotal"
+              stroke={TOTAL_LINE_PREV}
+              strokeWidth={1.5}
+              strokeDasharray="5 4"
+              dot={false}
+              activeDot={{ r: 3, fill: TOTAL_LINE_PREV, stroke: 'var(--surface)', strokeWidth: 1 }}
+              name="Total (prev)"
+              connectNulls
+              isAnimationActive={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="total"
+              stroke={TOTAL_LINE}
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4, fill: TOTAL_LINE, stroke: 'var(--surface)', strokeWidth: 2 }}
+              name="Total"
+              isAnimationActive={false}
+              fill={`url(#${TOTAL_AREA_GRAD})`}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
 
-      <div className="flex flex-wrap items-center justify-center gap-5 text-[11px] text-[var(--muted)] pt-1">
+      <div className="mt-1.5 flex shrink-0 flex-wrap items-center justify-center gap-4 border-t border-[var(--border)] pt-1.5 text-[10.5px] text-[var(--muted)]">
         <span className="inline-flex items-center gap-1.5">
           <span
-            className="inline-block w-2.5 h-2.5 rounded-full"
+            className="inline-block h-2.5 w-2.5 rounded-full"
             style={{ backgroundColor: TOTAL_LINE }}
           />
           {fmtRangeLabel(breakdown.current.from, breakdown.current.to)}
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span
-            className="inline-block w-2.5 h-2.5 rounded-full"
+            className="inline-block h-2.5 w-2.5 rounded-full"
             style={{ backgroundColor: TOTAL_LINE_PREV }}
           />
           {fmtRangeLabel(breakdown.previous.from, breakdown.previous.to)}
@@ -306,16 +314,17 @@ function SalesByChannelDonut() {
   const totalDelta = pctDelta(data.current.total, data.previous.total);
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-4 items-center">
-      <div className="relative">
-        <ResponsiveContainer width="100%" height={180}>
+    <div className="flex h-full min-h-0 flex-col">
+      {/* Grow chart into all space above the legend so the card fills top-to-bottom. */}
+      <div className="relative mx-auto min-h-[160px] w-full min-w-0 max-w-[280px] flex-1">
+        <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={pieData}
               cx="50%"
               cy="50%"
-              innerRadius={56}
-              outerRadius={80}
+              innerRadius="42%"
+              outerRadius="72%"
               paddingAngle={1}
               dataKey="value"
               stroke="var(--surface)"
@@ -337,13 +346,13 @@ function SalesByChannelDonut() {
           </PieChart>
         </ResponsiveContainer>
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="text-[18px] font-semibold tabular-nums text-[var(--ink)]">
+          <span className="text-[clamp(15px,3.2vmin,22px)] font-semibold tabular-nums text-[var(--ink)]">
             {formatINR(data.current.total)}
           </span>
           {totalDelta !== null && (
             <span
               className={cn(
-                'text-[10.5px] mt-0.5 tabular-nums',
+                'mt-0.5 text-[clamp(9px,1.8vmin,12px)] tabular-nums',
                 totalDelta >= 0 ? 'text-[var(--pos)]' : 'text-[var(--neg)]',
               )}
             >
@@ -352,7 +361,7 @@ function SalesByChannelDonut() {
           )}
         </div>
       </div>
-      <div className="space-y-1.5 min-w-0">
+      <div className="shrink-0 space-y-2 border-t border-[var(--border)] pt-3 max-h-[min(240px,48%)] overflow-y-auto pr-0.5 [scrollbar-gutter:stable]">
         {data.current.channels.map((c, i) => {
           const prev = prevByName.get(c.name) ?? 0;
           const d = pctDelta(c.amount, prev);
@@ -360,25 +369,34 @@ function SalesByChannelDonut() {
             ? CHANNEL_PALETTE[pieData.findIndex((p) => p.name === c.name) % CHANNEL_PALETTE.length]
             : 'var(--line-2)';
           return (
-            <div key={`${c.name}-${i}`} className="grid grid-cols-[10px_1fr_auto_auto] gap-2 items-center text-xs">
+            <div key={`${c.name}-${i}`} className="flex items-start gap-2 text-xs">
               <span
-                className="w-2.5 h-2.5 rounded-sm shrink-0"
+                className="mt-0.5 w-2.5 h-2.5 shrink-0 rounded-sm"
                 style={{ backgroundColor: swatchColor }}
               />
-              <span className="text-[var(--ink-2)] truncate" title={c.name}>{c.name}</span>
-              <span className="font-mono tabular-nums text-[var(--ink)]">{formatINR(c.amount)}</span>
               <span
-                className={cn(
-                  'text-[10.5px] tabular-nums w-12 text-right shrink-0',
-                  d === null
-                    ? 'text-[var(--muted-2)]'
-                    : d >= 0
-                      ? 'text-[var(--pos)]'
-                      : 'text-[var(--neg)]',
-                )}
+                className="min-w-0 flex-1 break-words leading-snug text-[var(--ink-2)]"
+                title={c.name}
               >
-                {d === null ? '—' : `${d >= 0 ? '↑' : '↓'} ${Math.abs(d).toFixed(0)}%`}
+                {c.name}
               </span>
+              <div className="flex shrink-0 flex-col items-end gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
+                <span className="font-mono tabular-nums text-[var(--ink)] whitespace-nowrap">
+                  {formatINR(c.amount)}
+                </span>
+                <span
+                  className={cn(
+                    'text-[10.5px] tabular-nums whitespace-nowrap text-right',
+                    d === null
+                      ? 'text-[var(--muted-2)]'
+                      : d >= 0
+                        ? 'text-[var(--pos)]'
+                        : 'text-[var(--neg)]',
+                  )}
+                >
+                  {d === null ? '—' : `${d >= 0 ? '↑' : '↓'} ${Math.abs(d).toFixed(0)}%`}
+                </span>
+              </div>
             </div>
           );
         })}
@@ -440,7 +458,7 @@ function AvgOrderValueChart() {
   const breakdown = useAppSelector((s) => s.finance.breakdown);
   if (!breakdown || breakdown.current.points.length === 0) {
     return (
-      <div className="h-[260px] flex items-center justify-center text-sm text-[var(--text-muted)]">
+      <div className="flex h-full min-h-[200px] flex-1 items-center justify-center text-sm text-[var(--text-muted)]">
         No data for this range.
       </div>
     );
@@ -472,8 +490,8 @@ function AvgOrderValueChart() {
   const aovDelta = prevAov === 0 ? null : ((periodAov - prevAov) / prevAov) * 100;
 
   return (
-    <div className="space-y-2">
-      <div className="flex flex-col gap-0.5">
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="shrink-0 flex flex-col gap-0.5">
         <span className="text-[10.5px] uppercase tracking-widish text-[var(--muted)]">
           Average order value
         </span>
@@ -494,62 +512,64 @@ function AvgOrderValueChart() {
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={210}>
-        <LineChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
-          <CartesianGrid stroke="var(--line)" strokeDasharray="2 3" vertical={false} />
-          <XAxis
-            dataKey="date"
-            tickFormatter={fmtAxisDate}
-            fontSize={11}
-            tick={{ fill: 'var(--muted)' }}
-            tickLine={false}
-            axisLine={{ stroke: 'var(--line)' }}
-          />
-          <YAxis
-            tickFormatter={fmtAxisINR}
-            fontSize={11}
-            tick={{ fill: 'var(--muted)' }}
-            tickLine={false}
-            axisLine={false}
-            width={56}
-          />
-          <Tooltip
-            content={<AovTooltip />}
-            cursor={{ stroke: 'var(--line-2)', strokeWidth: 1 }}
-          />
-          <Line
-            type="monotone"
-            dataKey="prevAov"
-            stroke={TOTAL_LINE_PREV}
-            strokeWidth={1.5}
-            strokeDasharray="5 4"
-            dot={false}
-            activeDot={{ r: 3, fill: TOTAL_LINE_PREV, stroke: 'var(--surface)', strokeWidth: 1 }}
-            name="AOV (prev)"
-            connectNulls
-            isAnimationActive={false}
-          />
-          <Line
-            type="monotone"
-            dataKey="aov"
-            stroke={TOTAL_LINE}
-            strokeWidth={2}
-            dot={false}
-            activeDot={{ r: 4, fill: TOTAL_LINE, stroke: 'var(--surface)', strokeWidth: 2 }}
-            name="AOV"
-            connectNulls
-            isAnimationActive={false}
-          />
-        </LineChart>
-      </ResponsiveContainer>
+      <div className="mt-2 min-h-[160px] w-full min-w-0 flex-1">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
+            <CartesianGrid stroke="var(--line)" strokeDasharray="2 3" vertical={false} />
+            <XAxis
+              dataKey="date"
+              tickFormatter={fmtAxisDate}
+              fontSize={11}
+              tick={{ fill: 'var(--muted)' }}
+              tickLine={false}
+              axisLine={{ stroke: 'var(--line)' }}
+            />
+            <YAxis
+              tickFormatter={fmtAxisINR}
+              fontSize={11}
+              tick={{ fill: 'var(--muted)' }}
+              tickLine={false}
+              axisLine={false}
+              width={56}
+            />
+            <Tooltip
+              content={<AovTooltip />}
+              cursor={{ stroke: 'var(--line-2)', strokeWidth: 1 }}
+            />
+            <Line
+              type="monotone"
+              dataKey="prevAov"
+              stroke={TOTAL_LINE_PREV}
+              strokeWidth={1.5}
+              strokeDasharray="5 4"
+              dot={false}
+              activeDot={{ r: 3, fill: TOTAL_LINE_PREV, stroke: 'var(--surface)', strokeWidth: 1 }}
+              name="AOV (prev)"
+              connectNulls
+              isAnimationActive={false}
+            />
+            <Line
+              type="monotone"
+              dataKey="aov"
+              stroke={TOTAL_LINE}
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4, fill: TOTAL_LINE, stroke: 'var(--surface)', strokeWidth: 2 }}
+              name="AOV"
+              connectNulls
+              isAnimationActive={false}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
 
-      <div className="flex flex-wrap items-center justify-center gap-4 text-[10.5px] text-[var(--muted)] pt-1">
+      <div className="mt-2 flex shrink-0 flex-wrap items-center justify-center gap-4 border-t border-[var(--border)] pt-2 text-[10.5px] text-[var(--muted)]">
         <span className="inline-flex items-center gap-1.5">
-          <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: TOTAL_LINE }} />
+          <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: TOTAL_LINE }} />
           {fmtRangeLabel(breakdown.current.from, breakdown.current.to)}
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: TOTAL_LINE_PREV }} />
+          <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: TOTAL_LINE_PREV }} />
           {fmtRangeLabel(breakdown.previous.from, breakdown.previous.to)}
         </span>
       </div>
@@ -871,8 +891,162 @@ function RefundsBreakdown() {
 }
 
 /* ─────────────────── Sales Breakdown (computed from synced data) ─────────────────── */
+
+type BreakdownColKey =
+  | 'gross_sales' | 'discounts' | 'returns' | 'net_sales'
+  | 'shipping_charges' | 'return_fees' | 'taxes' | 'total_sales';
+
+interface BreakdownCol {
+  key: BreakdownColKey;
+  label: string;
+  sign: 1 | -1;
+}
+
+const BREAKDOWN_COLS: BreakdownCol[] = [
+  { key: 'gross_sales',      label: 'Gross sales', sign: 1  },
+  { key: 'discounts',        label: 'Discounts',   sign: -1 },
+  { key: 'returns',          label: 'Returns',     sign: -1 },
+  { key: 'net_sales',        label: 'Net sales',   sign: 1  },
+  { key: 'shipping_charges', label: 'Shipping',    sign: 1  },
+  { key: 'return_fees',      label: 'Return fees', sign: -1 },
+  { key: 'taxes',            label: 'Taxes',       sign: 1  },
+  { key: 'total_sales',      label: 'Total sales', sign: 1  },
+];
+
+function fmtBreakdownAmount(n: number, sign: 1 | -1): string {
+  const v = Math.abs(n);
+  return `${sign === -1 && n > 0 ? '−' : ''}${formatINRFull(v)}`;
+}
+
+/** Right-side drawer rendering the per-day table that previously lived
+ *  inside the Sales Breakdown panel as a `<details>` accordion. The panel
+ *  itself now sits in a 1/3 column, so deep-dive data is moved off-card. */
+function DailyBreakdownDrawer({
+  isOpen,
+  onClose,
+  daily,
+  rangeFrom,
+  rangeTo,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  daily: Array<Record<string, unknown> & { date: string }>;
+  rangeFrom: string;
+  rangeTo: string;
+}) {
+  // ESC closes the drawer; cleanup avoids global key handlers leaking across
+  // pages.
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [isOpen, onClose]);
+
+  return (
+    <>
+      <div
+        aria-hidden
+        onClick={onClose}
+        className={cn(
+          'fixed inset-0 z-40 bg-black/30 backdrop-blur-[1px]',
+          'transition-opacity duration-200',
+          isOpen ? 'opacity-100' : 'pointer-events-none opacity-0',
+        )}
+      />
+      <aside
+        role="dialog"
+        aria-label="Daily sales breakdown"
+        aria-hidden={!isOpen}
+        className={cn(
+          'fixed top-0 right-0 z-50 h-full w-full max-w-[920px]',
+          'bg-[var(--surface)] border-l border-[var(--line)] shadow-2xl',
+          'flex flex-col',
+          'transition-transform duration-300 ease-out',
+          isOpen ? 'translate-x-0' : 'translate-x-full',
+        )}
+      >
+        <header className="flex items-start justify-between gap-3 px-5 py-4 border-b border-[var(--line)] shrink-0">
+          <div className="min-w-0">
+            <h3 className="text-[14px] font-semibold tracking-tightish text-[var(--ink)]">
+              Daily Breakdown
+            </h3>
+            <p className="text-[11.5px] text-[var(--muted)] mt-0.5">
+              {daily.length} days · {rangeFrom} → {rangeTo}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close drawer"
+            className="rounded-md p-1.5 text-[var(--muted)] hover:bg-[var(--bg-2)] hover:text-[var(--ink)] transition-colors"
+          >
+            <X className="h-4 w-4" strokeWidth={1.5} />
+          </button>
+        </header>
+        <div className="flex-1 overflow-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-[var(--bg)] sticky top-0 z-10">
+              <tr>
+                <th className="text-left p-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
+                  Date
+                </th>
+                {BREAKDOWN_COLS.map((c) => (
+                  <th
+                    key={c.key}
+                    className="text-right p-2.5 text-xs font-semibold uppercase tracking-wide text-[var(--muted)]"
+                  >
+                    {c.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {daily.map((row) => (
+                <tr key={row.date} className="border-t border-[var(--line)] hover:bg-[var(--bg-2)]">
+                  <td className="p-2.5 font-medium whitespace-nowrap text-[var(--ink)]">
+                    {row.date}
+                  </td>
+                  {BREAKDOWN_COLS.map((c) => {
+                    const v = (row as unknown as Record<string, number>)[c.key] ?? 0;
+                    return (
+                      <td
+                        key={c.key}
+                        className={cn(
+                          'p-2.5 text-right tabular-nums',
+                          c.sign === -1 && v > 0 && 'text-[var(--neg)]',
+                          c.key === 'total_sales' && 'font-semibold text-[var(--ink)]',
+                        )}
+                      >
+                        {fmtBreakdownAmount(v, c.sign)}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+              {daily.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={BREAKDOWN_COLS.length + 1}
+                    className="p-6 text-center text-[var(--muted)]"
+                  >
+                    No sales in this range.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </aside>
+    </>
+  );
+}
+
 function SalesBreakdownPanel() {
   const sb = useAppSelector((s) => s.finance.salesBreakdown);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   if (!sb) {
     return (
@@ -895,43 +1069,29 @@ function SalesBreakdownPanel() {
     return positive ? 'text-[var(--pos)]' : 'text-[var(--neg)]';
   };
 
-  // Prepare daily rows aligned with prior-period rows (by index for now since spec just shows
-  // current daily; prior totals are summary-only).
   const daily = sb.current.daily;
-
-  const COLS: { key: keyof typeof cur; label: string; sign: 1 | -1 }[] = [
-    { key: 'gross_sales',      label: 'Gross sales',     sign: 1  },
-    { key: 'discounts',        label: 'Discounts',       sign: -1 },
-    { key: 'returns',          label: 'Returns',         sign: -1 },
-    { key: 'net_sales',        label: 'Net sales',       sign: 1  },
-    { key: 'shipping_charges', label: 'Shipping',        sign: 1  },
-    { key: 'return_fees',      label: 'Return fees',     sign: -1 },
-    { key: 'taxes',            label: 'Taxes',           sign: 1  },
-    { key: 'total_sales',      label: 'Total sales',     sign: 1  },
-  ];
-
-  const fmt = (n: number, sign: 1 | -1) => {
-    const v = Math.abs(n);
-    return `${sign === -1 && n > 0 ? '−' : ''}${formatINRFull(v)}`;
-  };
+  const COLS = BREAKDOWN_COLS;
+  const fmt = fmtBreakdownAmount;
 
   return (
-    <div className="space-y-3">
-      <div className="text-xs text-[var(--text-muted)]">
-        <strong className="text-[var(--text)]">Current:</strong> {sb.current.from} → {sb.current.to}
-        {' · '}
-        <strong className="text-[var(--text)]">Previous:</strong> {sb.previous.from} → {sb.previous.to}
-      </div>
-
+    <div className="flex h-full min-h-0 flex-col gap-2">
       {/* Summary row */}
-      <div className="border border-[var(--border)] rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="shrink-0 overflow-hidden rounded-lg border border-[var(--border)]">
+        <table className="w-full text-[13px] leading-tight">
           <thead className="bg-[var(--bg)]">
             <tr>
-              <th className="text-left p-2.5 text-xs font-semibold uppercase tracking-wide w-32">Metric</th>
-              <th className="text-right p-2.5 text-xs font-semibold uppercase tracking-wide">Current</th>
-              <th className="text-right p-2.5 text-xs font-semibold uppercase tracking-wide">Previous</th>
-              <th className="text-right p-2.5 text-xs font-semibold uppercase tracking-wide">% Change</th>
+              <th className="w-[34%] whitespace-nowrap p-2 text-left text-[10.5px] font-semibold uppercase tracking-wide text-[var(--ink)]">
+                Metric
+              </th>
+              <th className="whitespace-nowrap p-2 text-right text-[10.5px] font-semibold uppercase tracking-wide text-[var(--ink)]">
+                Current
+              </th>
+              <th className="whitespace-nowrap p-2 text-right text-[10.5px] font-semibold uppercase tracking-wide text-[var(--ink)]">
+                Previous
+              </th>
+              <th className="whitespace-nowrap p-2 text-right text-[10.5px] font-semibold uppercase tracking-wide text-[var(--ink)]">
+                % Change
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -942,14 +1102,14 @@ function SalesBreakdownPanel() {
                   key={c.key}
                   className={cn('border-t border-[var(--border)]', isTotal && 'bg-[var(--bg)] font-semibold')}
                 >
-                  <td className="p-2.5">{c.label}</td>
-                  <td className={cn('p-2.5 text-right tabular-nums', c.sign === -1 && cur[c.key] > 0 && 'text-[var(--neg)]')}>
+                  <td className="p-2">{c.label}</td>
+                  <td className={cn('p-2 text-right tabular-nums', c.sign === -1 && cur[c.key] > 0 && 'text-[var(--neg)]')}>
                     {fmt(cur[c.key], c.sign)}
                   </td>
-                  <td className={cn('p-2.5 text-right tabular-nums text-[var(--text-muted)]', c.sign === -1 && prev[c.key] > 0 && 'text-[var(--neg)]')}>
+                  <td className={cn('p-2 text-right tabular-nums text-[var(--text-muted)]', c.sign === -1 && prev[c.key] > 0 && 'text-[var(--neg)]')}>
                     {fmt(prev[c.key], c.sign)}
                   </td>
-                  <td className={cn('p-2.5 text-right tabular-nums text-xs', deltaClass(cur[c.key], prev[c.key], c.sign === -1))}>
+                  <td className={cn('whitespace-nowrap p-2 text-right tabular-nums text-[12px]', deltaClass(cur[c.key], prev[c.key], c.sign === -1))}>
                     {deltaPct(cur[c.key], prev[c.key])}
                   </td>
                 </tr>
@@ -959,123 +1119,113 @@ function SalesBreakdownPanel() {
         </table>
       </div>
 
-      {/* Daily rows */}
-      <details className="border border-[var(--border)] rounded-lg overflow-hidden" open>
-        <summary className="bg-[var(--bg)] p-2.5 text-xs font-semibold uppercase tracking-wide cursor-pointer">
-          Daily breakdown ({daily.length} days)
-        </summary>
-        <div className="overflow-x-auto max-h-[480px] overflow-y-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--bg)] sticky top-0">
-              <tr>
-                <th className="text-left p-2 text-xs font-semibold uppercase tracking-wide">Date</th>
-                {COLS.map((c) => (
-                  <th key={c.key} className="text-right p-2 text-xs font-semibold uppercase tracking-wide">
-                    {c.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {daily.map((row) => (
-                <tr key={row.date} className="border-t border-[var(--border)] hover:bg-[var(--bg)]">
-                  <td className="p-2 font-medium whitespace-nowrap">{row.date}</td>
-                  {COLS.map((c) => {
-                    const v = (row as unknown as Record<string, number>)[c.key] ?? 0;
-                    return (
-                      <td
-                        key={c.key}
-                        className={cn(
-                          'p-2 text-right tabular-nums',
-                          c.sign === -1 && v > 0 && 'text-[var(--neg)]',
-                          c.key === 'total_sales' && 'font-semibold',
-                        )}
-                      >
-                        {fmt(v, c.sign)}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-              {daily.length === 0 && (
-                <tr>
-                  <td colSpan={COLS.length + 1} className="p-6 text-center text-[var(--text-muted)]">
-                    No sales in this range.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </details>
+      {/* Daily breakdown — opens in a right-side drawer to keep the panel
+          compact in its 1/3-width slot. */}
+      <button
+        type="button"
+        onClick={() => setDrawerOpen(true)}
+        className={cn(
+          'group flex w-full shrink-0 items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--bg)]',
+          'px-3 py-2 text-left transition-colors',
+          'hover:border-[var(--accent-soft-2)] hover:bg-[var(--accent-soft)]',
+        )}
+      >
+        <span className="flex min-w-0 flex-col">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink)]">
+            Daily Breakdown
+          </span>
+          <span className="mt-0.5 truncate text-[10px] text-[var(--muted)]">
+            {daily.length} days · open as drawer
+          </span>
+        </span>
+        <span
+          aria-hidden
+          className="text-[var(--muted)] group-hover:text-[var(--accent)] transition-colors"
+        >
+          →
+        </span>
+      </button>
+
+      <DailyBreakdownDrawer
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        daily={daily}
+        rangeFrom={sb.current.from}
+        rangeTo={sb.current.to}
+      />
     </div>
   );
 }
 
-/* ─────────────────── Sales Breakdown — 8 KpiCard tiles ─────────────────── */
-type BreakdownKey = keyof Omit<SalesBreakdownTotalsApi, 'order_count'>;
-interface BreakdownTileSpec {
-  key: BreakdownKey;
-  label: string;
-  /** Going up is "good" by default; set true for cost lines (discounts, returns, return_fees). */
-  invert?: boolean;
-  highlight?: boolean;
-  icon: typeof IndianRupee;
-}
-const BREAKDOWN_TILES: BreakdownTileSpec[] = [
-  { key: 'gross_sales',      label: 'Gross sales',  icon: IndianRupee },
-  { key: 'discounts',        label: 'Discounts',    icon: BadgePercent, invert: true },
-  { key: 'returns',          label: 'Returns',      icon: Undo2,        invert: true },
-  { key: 'net_sales',        label: 'Net sales',    icon: Coins },
-  { key: 'shipping_charges', label: 'Shipping',     icon: Truck },
-  { key: 'return_fees',      label: 'Return fees',  icon: Receipt,      invert: true },
-  { key: 'taxes',            label: 'Taxes',        icon: Landmark },
-  { key: 'total_sales',      label: 'Total sales',  icon: Wallet,       highlight: true },
-];
-
-function SalesBreakdownTiles({
-  current, previous, daily, prevFrom, prevTo,
-}: {
-  current: SalesBreakdownTotalsApi;
-  previous: SalesBreakdownTotalsApi;
-  daily: SalesBreakdownDailyPointApi[];
-  prevFrom: string;
-  prevTo: string;
-}) {
-  // One sparkline series per key, derived once from the daily points.
-  const sparkByKey = useMemo(() => {
-    const out: Record<BreakdownKey, number[]> = {} as Record<BreakdownKey, number[]>;
-    for (const t of BREAKDOWN_TILES) {
-      out[t.key] = daily.map((d) => Number(d[t.key] ?? 0));
-    }
-    return out;
-  }, [daily]);
-
-  return (
-    <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] px-5 py-4">
-      <div className="mb-3">
-        <h3 className="text-sm font-semibold text-[var(--ink)]">Total Sales Breakdown</h3>
-        <p className="text-[11px] text-[var(--muted)] mt-0.5">
-          Computed from synced orders · vs prior {prevFrom} → {prevTo}
-        </p>
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3">
-        {BREAKDOWN_TILES.map((t) => (
-          <KpiCard
-            key={t.key}
-            label={t.label}
-            value={formatINRFull(current[t.key])}
-            delta={pctDelta(current[t.key], previous[t.key]) ?? undefined}
-            sub="vs prev"
-            icon={t.icon}
-            trend={sparkByKey[t.key]}
-            invertDelta={t.invert}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
+/* ─────────────────── Sales Breakdown — 8 KpiCard tiles ───────────────────
+ * COMMENTED OUT per design: the 8-tile strip duplicates the Sales Breakdown
+ * table below it. Frontend rendering is disabled but the underlying
+ * /finance/sales-breakdown endpoint remains live because the table panel
+ * still consumes the same payload. To restore: uncomment imports at the top
+ * of this file, this block, and the JSX block in <FinancePage>.
+ *
+ * type BreakdownKey = keyof Omit<SalesBreakdownTotalsApi, 'order_count'>;
+ * interface BreakdownTileSpec {
+ *   key: BreakdownKey;
+ *   label: string;
+ *   invert?: boolean;
+ *   highlight?: boolean;
+ *   icon: typeof IndianRupee;
+ * }
+ * const BREAKDOWN_TILES: BreakdownTileSpec[] = [
+ *   { key: 'gross_sales',      label: 'Gross sales',  icon: IndianRupee },
+ *   { key: 'discounts',        label: 'Discounts',    icon: BadgePercent, invert: true },
+ *   { key: 'returns',          label: 'Returns',      icon: Undo2,        invert: true },
+ *   { key: 'net_sales',        label: 'Net sales',    icon: Coins },
+ *   { key: 'shipping_charges', label: 'Shipping',     icon: Truck },
+ *   { key: 'return_fees',      label: 'Return fees',  icon: Receipt,      invert: true },
+ *   { key: 'taxes',            label: 'Taxes',        icon: Landmark },
+ *   { key: 'total_sales',      label: 'Total sales',  icon: Wallet,       highlight: true },
+ * ];
+ *
+ * function SalesBreakdownTiles({
+ *   current, previous, daily, prevFrom, prevTo,
+ * }: {
+ *   current: SalesBreakdownTotalsApi;
+ *   previous: SalesBreakdownTotalsApi;
+ *   daily: SalesBreakdownDailyPointApi[];
+ *   prevFrom: string;
+ *   prevTo: string;
+ * }) {
+ *   const sparkByKey = useMemo(() => {
+ *     const out: Record<BreakdownKey, number[]> = {} as Record<BreakdownKey, number[]>;
+ *     for (const t of BREAKDOWN_TILES) {
+ *       out[t.key] = daily.map((d) => Number(d[t.key] ?? 0));
+ *     }
+ *     return out;
+ *   }, [daily]);
+ *
+ *   return (
+ *     <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] px-5 py-4">
+ *       <div className="mb-3">
+ *         <h3 className="text-sm font-semibold text-[var(--ink)]">Total Sales Breakdown</h3>
+ *         <p className="text-[11px] text-[var(--muted)] mt-0.5">
+ *           Computed from synced orders · vs prior {prevFrom} → {prevTo}
+ *         </p>
+ *       </div>
+ *       <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3">
+ *         {BREAKDOWN_TILES.map((t) => (
+ *           <KpiCard
+ *             key={t.key}
+ *             label={t.label}
+ *             value={formatINRFull(current[t.key])}
+ *             delta={pctDelta(current[t.key], previous[t.key]) ?? undefined}
+ *             sub="vs prev"
+ *             icon={t.icon}
+ *             trend={sparkByKey[t.key]}
+ *             invertDelta={t.invert}
+ *           />
+ *         ))}
+ *       </div>
+ *     </div>
+ *   );
+ * }
+ */
 
 /* ─────────────────── PAGE ─────────────────── */
 export function FinancePage() {
@@ -1120,7 +1270,10 @@ export function FinancePage() {
               Renders nothing until kpis + salesBreakdown are loaded. */}
           <StorefrontKpiStrip />
 
-          {/* Total Sales Breakdown — 8 KPI tiles (Shopify-spec, with vs-prev deltas + sparklines) */}
+          {/* COMMENTED OUT — Total Sales Breakdown 8-tile strip. The same
+              numbers are visible in the Sales Breakdown table below.
+              Restore by uncommenting this block + the component definition
+              + the imports at the top of the file.
           {finance.salesBreakdown && (
             <SalesBreakdownTiles
               current={finance.salesBreakdown.current.totals}
@@ -1130,51 +1283,54 @@ export function FinancePage() {
               prevTo={finance.salesBreakdown.previous.to}
             />
           )}
+          */}
 
-          {/* Sales Breakdown — detailed table view */}
-          <Panel
-            title="Sales Breakdown"
-            subtitle="Shopify analytics formula · current vs previous period"
-          >
-            <SalesBreakdownPanel />
-          </Panel>
-
-          {/* Row 2: Revenue breakdown chart + Payment-method donut */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2">
+          {/* Row 1: Total sales over time (2/3) + Sales Breakdown (1/3) —
+              the breakdown's deep-dive (per-day table) opens in a right-side
+              drawer so the 1/3 slot stays compact. */}
+          <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-3">
+            <div className="flex min-h-0 lg:col-span-2">
               <Panel
+                className="h-full min-h-0 w-full gap-3 py-4"
                 title="Total sales over time"
                 subtitle="Shopify · Daily total sales · breakdown in tooltip"
               >
                 <RevenueBreakdownChart />
               </Panel>
             </div>
-            <Panel title="Payment Methods" subtitle="Shopify · COD vs Prepaid + gateway split">
-              <PaymentMethodDonut />
+            <Panel
+              className="h-full min-h-0 gap-3 py-4"
+              title="Sales Breakdown"
+              subtitle="Shopify analytics formula · current vs previous period"
+            >
+              <SalesBreakdownPanel />
             </Panel>
           </div>
 
-          {/* Row 2.5: Channel donut + AOV trend + top products (3-col on lg) */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Row 2: Payment Methods + Channel donut + AOV trend (3-col on lg) */}
+          <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-3">
+            <Panel className="h-full min-h-0" title="Payment Methods" subtitle="Shopify · COD vs Prepaid + gateway split">
+              <PaymentMethodDonut />
+            </Panel>
             <Panel
+              className="h-full min-h-0"
               title="Total sales by sales channel"
               subtitle="Shopify total sales · current vs prev"
             >
               <SalesByChannelDonut />
             </Panel>
-            <Panel
-              title="Average order value over time"
-              subtitle="Shopify · Daily AOV · current vs prev"
-            >
+            <Panel className="h-full min-h-0" title="Average order value over time" subtitle="Shopify · Daily AOV · current vs prev">
               <AvgOrderValueChart />
             </Panel>
-            <Panel
-              title="Total sales by product"
-              subtitle="Shopify · Top 5 by total sales · current vs prev"
-            >
-              <SalesByProductBars />
-            </Panel>
           </div>
+
+          {/* Row 3: Top products — full width gives the 5-bar list room to breathe */}
+          <Panel
+            title="Total sales by product"
+            subtitle="Shopify · Top 5 by total sales · current vs prev"
+          >
+            <SalesByProductBars />
+          </Panel>
 
           {/* Row 3: Refund rate chart + Refunds table */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

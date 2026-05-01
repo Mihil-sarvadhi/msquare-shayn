@@ -23,44 +23,84 @@ import { KpiCard } from '@components/shared/KpiCard';
 import { PageLoader } from '@components/shared/PageLoader';
 import { formatINR, formatNum, formatPct, formatDate } from '@utils/formatters';
 import {
-  ACCENT, TEAL, INFO, POS, WARN, NEG, MUTED, AI,
+  ACCENT, MUTED,
   GRID_STROKE, GRID_DASHARRAY, AXIS_TICK_COLOR, AXIS_TICK_SIZE,
   TOOLTIP_CONTENT_STYLE,
 } from '@utils/constants/palette';
+
+/* ── Channel brand palette ───────────────────────────────────────────────
+ * Brand-aligned tones tuned for dashboard contrast. Same saturation across
+ * all five so the palette stays cohesive on the ivory surface. */
+const SHOPIFY_BRAND  = '#4FA85C'; /* Shopify green   */
+const AMAZON_BRAND   = '#F08C28'; /* Amazon orange   */
+const FLIPKART_BRAND = '#E5A82A'; /* Flipkart yellow */
+const MYNTRA_BRAND   = '#D94373'; /* Myntra rose     */
+const ETERNZ_BRAND   = '#0E9488'; /* Eternz teal     */
+
+/* ── Marketplace chart palette ────────────────────────────────────────────
+ * Status, category and supporting tones tuned to the same saturation and
+ * luminance level as the channel palette so every chart on this page sits
+ * at the same visual weight. */
+const MP_GREEN  = '#3F9F4D';
+const MP_BLUE   = '#3878DC';
+const MP_RED    = '#D9453A';
+const MP_AMBER  = '#E08524';
+const MP_PURPLE = '#7A4FD4';
+const MP_GOLD   = '#C5921F';
 import { cn } from '@/lib/utils';
 import type { ChannelSummaryRow, RevenueTrendRow } from '@app/types/unicommerce-api';
 
 type TabDef = { key: ChannelTab; label: string; color: string };
 
 const TABS: TabDef[] = [
-  { key: 'ALL',      label: 'All Channels', color: ACCENT },
-  { key: 'FLIPKART', label: 'Flipkart',     color: INFO   },
-  { key: 'AMAZON',   label: 'Amazon',       color: WARN   },
-  { key: 'MYNTRA',   label: 'Myntra',       color: AI     },
-  { key: 'ETERNZ',   label: 'Eternz',       color: TEAL   },
+  { key: 'ALL',      label: 'All Channels', color: ACCENT          },
+  { key: 'FLIPKART', label: 'Flipkart',     color: FLIPKART_BRAND  },
+  { key: 'AMAZON',   label: 'Amazon',       color: AMAZON_BRAND    },
+  { key: 'MYNTRA',   label: 'Myntra',       color: MYNTRA_BRAND    },
+  { key: 'ETERNZ',   label: 'Eternz',       color: ETERNZ_BRAND    },
 ];
 
 const CHANNEL_COLORS: Record<string, string> = {
-  FLIPKART: INFO,
-  AMAZON:   WARN,
-  MYNTRA:   AI,
-  ETERNZ:   TEAL,
+  SHOPIFY:  SHOPIFY_BRAND,
+  FLIPKART: FLIPKART_BRAND,
+  AMAZON:   AMAZON_BRAND,
+  MYNTRA:   MYNTRA_BRAND,
+  ETERNZ:   ETERNZ_BRAND,
   UNKNOWN:  MUTED,
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  COMPLETE:          POS,
-  COMPLETED:         POS,
-  PROCESSING:        ACCENT,
-  CREATED:           ACCENT,
-  CONFIRMED:         INFO,
-  CANCELLED:         NEG,
-  RETURNED:          WARN,
-  RETURN_REQUESTED:  WARN,
-  RETURN_EXPECTED:   WARN,
-  ON_HOLD:           AI,
+  COMPLETE:          MP_GREEN,
+  COMPLETED:         MP_GREEN,
+  PROCESSING:        MP_GOLD,
+  CREATED:           MP_GOLD,
+  CONFIRMED:         MP_BLUE,
+  CANCELLED:         MP_RED,
+  RETURNED:          MP_AMBER,
+  RETURN_REQUESTED:  MP_AMBER,
+  RETURN_EXPECTED:   MP_AMBER,
+  ON_HOLD:           MP_PURPLE,
   UNKNOWN:           MUTED,
 };
+
+const CHANNEL_LABELS: Record<string, string> = {
+  ETERNZ: 'Eternz',
+  AMAZON_SHAYN: 'Amazon',
+  FLIPKART_SHAYN: 'Flipkart',
+  MYNTRAPPMP: 'Myntra',
+};
+
+function displayChannelName(channel: string | null | undefined): string {
+  if (!channel) return 'Unknown';
+  const upper = channel.toUpperCase();
+  if (CHANNEL_LABELS[upper]) return CHANNEL_LABELS[upper];
+  if (upper.includes('AMAZON')) return 'Amazon';
+  if (upper.includes('FLIPKART')) return 'Flipkart';
+  if (upper.includes('MYNTRA')) return 'Myntra';
+  if (upper.includes('ETERNZ')) return 'Eternz';
+  if (upper.includes('SHOPIFY')) return 'Shopify';
+  return channel;
+}
 
 function statusColor(status: string): string {
   return STATUS_COLORS[status] ?? MUTED;
@@ -72,20 +112,20 @@ function channelColor(channel: string | null | undefined): string {
   // Match by substring so SHOPIFY_SHAYN, FLIPKART_SHAYN, etc. pick up the
   // right colour without needing every tenant variant in the table.
   const upper = channel.toUpperCase();
-  if (upper.includes('SHOPIFY')) return ACCENT;
-  if (upper.includes('FLIPKART')) return INFO;
-  if (upper.includes('AMAZON')) return WARN;
-  if (upper.includes('MYNTRA')) return AI;
-  if (upper.includes('ETERNZ')) return TEAL;
+  if (upper.includes('SHOPIFY')) return SHOPIFY_BRAND;
+  if (upper.includes('FLIPKART')) return FLIPKART_BRAND;
+  if (upper.includes('AMAZON')) return AMAZON_BRAND;
+  if (upper.includes('MYNTRA')) return MYNTRA_BRAND;
+  if (upper.includes('ETERNZ')) return ETERNZ_BRAND;
   return MUTED;
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
-  Earring: INFO,
-  Ring: NEG,
-  Necklace: POS,
-  Bracelet: WARN,
-  Pendant: AI,
+  Earring: MP_BLUE,
+  Ring: MP_RED,
+  Necklace: MP_GREEN,
+  Bracelet: MP_AMBER,
+  Pendant: MP_PURPLE,
   Other: MUTED,
 };
 
@@ -170,7 +210,14 @@ function pivotTrendByChannel(
   const data = Array.from(byDate.values()).sort((a, b) =>
     String(a.date).localeCompare(String(b.date)),
   );
-  return { data, channels: Array.from(channelSet), total };
+  const channels = Array.from(channelSet);
+  // Fill channel/date gaps so line series don't appear visually "cut".
+  for (const row of data) {
+    for (const channel of channels) {
+      if (row[channel] == null) row[channel] = 0;
+    }
+  }
+  return { data, channels, total };
 }
 
 /* ── Page ────────────────────────────────────────────────────────────── */
@@ -239,8 +286,8 @@ export function MarketplacePage() {
 
   const codSplitData = useMemo(
     () => [
-      { name: 'COD',     value: totals.codOrders,     color: WARN },
-      { name: 'Prepaid', value: totals.prepaidOrders, color: POS  },
+      { name: 'COD',     value: totals.codOrders,     color: MP_AMBER },
+      { name: 'Prepaid', value: totals.prepaidOrders, color: MP_GREEN },
     ],
     [totals.codOrders, totals.prepaidOrders],
   );
@@ -254,13 +301,15 @@ export function MarketplacePage() {
       existing.revenue += Number(o.total_price ?? 0);
       map.set(state, existing);
     }
-    return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
+    // All distinct states in recent orders (max 20 rows from API) — fills Top States panel vs pie siblings.
+    return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue);
   }, [recentOrders]);
 
   const channelComparisonData = useMemo(
     () =>
       channelComparison.map((row) => ({
         channel: row.channel,
+        displayChannel: displayChannelName(row.channel),
         orders: Number(row.orders ?? 0),
         revenue: Number(row.revenue ?? 0),
       })),
@@ -300,7 +349,11 @@ export function MarketplacePage() {
       const key = r.channel ?? 'UNKNOWN';
       map.set(key, (map.get(key) ?? 0) + Number(r.count ?? 0));
     }
-    return Array.from(map.entries()).map(([channel, count]) => ({ channel, count }));
+    return Array.from(map.entries()).map(([channel, count]) => ({
+      channel,
+      displayChannel: displayChannelName(channel),
+      count,
+    }));
   }, [returns]);
 
   const returnReasons = useMemo(() => {
@@ -319,43 +372,50 @@ export function MarketplacePage() {
 
   return (
     <div className="px-5 sm:px-7 py-5 flex flex-col gap-5">
-      {/* Snapshot KPI strip — Today/Yesterday + Inventory, independent of the range picker */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <SnapshotCard
-          label="Today's Revenue"
-          value={todaySnapshot ? formatINRExact(todaySnapshot.today_revenue) : '—'}
-          comparison={
-            todaySnapshot
-              ? `Yesterday's Revenue: ${formatINRExact(todaySnapshot.yesterday_revenue)}`
-              : ' '
-          }
-        />
-        <SnapshotCard
-          label="Today's Order Items"
-          value={todaySnapshot ? formatNum(todaySnapshot.today_order_items) : '—'}
-          comparison={
-            todaySnapshot
-              ? `Yesterday's Order Items: ${formatNum(todaySnapshot.yesterday_order_items)}`
-              : ' '
-          }
-        />
-        <SnapshotCard
-          label="Total Counts of SKU's"
-          value={inventorySummary ? formatNum(inventorySummary.total_skus) : '—'}
-          comparison=" "
-        />
-        <SnapshotCard
-          label="Out of Stock % of SKU's"
-          value={
-            inventorySummary ? `${inventorySummary.out_of_stock_pct.toFixed(2)}%` : '—'
-          }
-          comparison={
-            inventorySummary
-              ? `${formatNum(inventorySummary.out_of_stock_skus)} SKUs at zero`
-              : ' '
-          }
-        />
-      </div>
+      {/* Snapshot strip — Today/Yesterday + Inventory. Floating fieldset
+          label calls out that this section is independent of the date-range
+          picker that drives every panel below. */}
+      <section className="relative mt-2.5 rounded-[14px] border border-[var(--accent-soft-2)] bg-[var(--accent-soft)]">
+        <span className="absolute -top-2 left-4 px-2 text-[10px] font-medium uppercase tracking-widish text-[var(--muted)] bg-[var(--bg)] rounded">
+          Independent of date filter
+        </span>
+        <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-[var(--accent-soft-2)]">
+          <SnapshotItem
+            label="Today's Revenue"
+            value={todaySnapshot ? formatINRExact(todaySnapshot.today_revenue) : '—'}
+            comparison={
+              todaySnapshot
+                ? `Yesterday: ${formatINRExact(todaySnapshot.yesterday_revenue)}`
+                : ' '
+            }
+          />
+          <SnapshotItem
+            label="Today's Order Items"
+            value={todaySnapshot ? formatNum(todaySnapshot.today_order_items) : '—'}
+            comparison={
+              todaySnapshot
+                ? `Yesterday: ${formatNum(todaySnapshot.yesterday_order_items)}`
+                : ' '
+            }
+          />
+          <SnapshotItem
+            label="Total SKU Count"
+            value={inventorySummary ? formatNum(inventorySummary.total_skus) : '—'}
+            comparison="Across all marketplaces"
+          />
+          <SnapshotItem
+            label="Out of Stock"
+            value={
+              inventorySummary ? `${inventorySummary.out_of_stock_pct.toFixed(2)}%` : '—'
+            }
+            comparison={
+              inventorySummary
+                ? `${formatNum(inventorySummary.out_of_stock_skus)} SKUs at zero`
+                : ' '
+            }
+          />
+        </div>
+      </section>
 
       {/* Channel tabs */}
       <div className="flex items-center gap-1 p-1 rounded-full bg-[var(--bg-2)] border border-[var(--line)] w-fit">
@@ -469,15 +529,17 @@ export function MarketplacePage() {
                 />
               ) : (
                 <ResponsiveContainer width="100%" height={260}>
-                  <LineChart data={trendPivot.data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                  <LineChart data={trendPivot.data} margin={{ top: 16, right: 28, left: 8, bottom: 6 }}>
                     <CartesianGrid strokeDasharray={GRID_DASHARRAY} stroke={GRID_STROKE} />
                     <XAxis
                       dataKey="date"
                       tick={{ fill: AXIS_TICK_COLOR, fontSize: AXIS_TICK_SIZE }}
                       tickFormatter={(d: string) => formatDate(d)}
+                      padding={{ left: 10, right: 10 }}
                     />
                     <YAxis
                       tick={{ fill: AXIS_TICK_COLOR, fontSize: AXIS_TICK_SIZE }}
+                      domain={[0, (dataMax: number) => (dataMax > 0 ? Math.ceil(dataMax * 1.1) : 10)]}
                       tickFormatter={(v: number) =>
                         trendMetric === 'revenue' ? formatINR(v) : formatNum(v)
                       }
@@ -491,14 +553,19 @@ export function MarketplacePage() {
                       }
                       labelFormatter={(label: string) => formatDate(label)}
                     />
-                    <Legend wrapperStyle={{ fontSize: 11, color: AXIS_TICK_COLOR }} />
+                    <Legend
+                      wrapperStyle={{ fontSize: 11, color: AXIS_TICK_COLOR }}
+                      formatter={(value: string) => displayChannelName(value)}
+                    />
                     {trendPivot.channels.map((ch) => (
                       <Line
                         key={ch}
                         type="monotone"
                         dataKey={ch}
+                        name={displayChannelName(ch)}
                         stroke={channelColor(ch)}
                         strokeWidth={1.6}
+                        connectNulls
                         dot={false}
                         activeDot={{ r: 3 }}
                       />
@@ -512,45 +579,64 @@ export function MarketplacePage() {
               {channelComparisonData.length === 0 ? (
                 <EmptyState message="No channel data" />
               ) : (
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart
-                    data={channelComparisonData}
-                    layout="vertical"
-                    margin={{ top: 8, right: 12, left: 8, bottom: 0 }}
-                  >
-                    <CartesianGrid strokeDasharray={GRID_DASHARRAY} stroke={GRID_STROKE} horizontal={false} />
-                    <XAxis
-                      type="number"
-                      tick={{ fill: AXIS_TICK_COLOR, fontSize: AXIS_TICK_SIZE }}
-                      tickFormatter={(v: number) => formatNum(v)}
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="channel"
-                      tick={{ fill: AXIS_TICK_COLOR, fontSize: AXIS_TICK_SIZE }}
-                      width={120}
-                      interval={0}
-                    />
-                    <Tooltip
-                      contentStyle={TOOLTIP_CONTENT_STYLE}
-                      formatter={(value: number, name: string) =>
-                        name === 'revenue' ? formatINR(value) : formatNum(value)
-                      }
-                    />
-                    <Bar dataKey="orders" radius={[0, 4, 4, 0]}>
-                      {channelComparisonData.map((row) => (
-                        <Cell key={row.channel} fill={channelColor(row.channel)} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                <div className="-ml-2 sm:-ml-2.5 min-w-0">
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart
+                      data={channelComparisonData}
+                      layout="vertical"
+                      margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray={GRID_DASHARRAY} stroke={GRID_STROKE} horizontal={false} />
+                      <XAxis
+                        type="number"
+                        tick={{ fill: AXIS_TICK_COLOR, fontSize: AXIS_TICK_SIZE }}
+                        tickFormatter={(v: number) => formatNum(v)}
+                      />
+                      <YAxis
+                        type="category"
+                        dataKey="displayChannel"
+                        tick={{ fill: AXIS_TICK_COLOR, fontSize: AXIS_TICK_SIZE }}
+                        tickLine={false}
+                        axisLine={false}
+                        width={62}
+                        interval={0}
+                      />
+                      <Tooltip
+                        contentStyle={TOOLTIP_CONTENT_STYLE}
+                        formatter={(value: number) => formatNum(value)}
+                      />
+                      <Bar dataKey="orders" radius={[0, 4, 4, 0]}>
+                        {channelComparisonData.map((row) => (
+                          <Cell key={row.channel} fill={channelColor(row.channel)} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               )}
             </Panel>
           </div>
 
-          {/* Row 3 — Order status / COD vs Prepaid / Top states */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <Panel title="Order Status" subtitle="Distribution by current status">
+          {/* Row 3 — Top Performing Channels + Top Performing Categories */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <TopShareCard
+              title="Top Performing Channels"
+              labelKey="channel"
+              rows={topChannelShares}
+              colorFor={(label) => channelColor(label)}
+              formatLabel={(label) => displayChannelName(label)}
+            />
+            <TopShareCard
+              title="Top Performing Categories"
+              labelKey="category"
+              rows={topCategoryShares}
+              colorFor={(label) => categoryColor(label)}
+            />
+          </div>
+
+          {/* Row 4 — Order status / COD vs Prepaid / Top states */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:items-stretch">
+            <Panel className="h-full" title="Order Status" subtitle="Distribution by current status">
               {orderStatusData.length === 0 ? (
                 <EmptyState message="No status data" />
               ) : (
@@ -578,7 +664,7 @@ export function MarketplacePage() {
               )}
             </Panel>
 
-            <Panel title="COD vs Prepaid" subtitle="Payment mode split">
+            <Panel className="h-full" title="COD vs Prepaid" subtitle="Payment mode split">
               {totals.codOrders + totals.prepaidOrders === 0 ? (
                 <EmptyState message="No payment data" />
               ) : (
@@ -608,202 +694,198 @@ export function MarketplacePage() {
               )}
             </Panel>
 
-            <Panel title="Top States" subtitle="By recent order revenue">
+            <Panel className="h-full" title="Top States" subtitle="By recent order revenue">
               {topStates.length === 0 ? (
-                <EmptyState message="No state data" />
+                <div className="h-[240px] min-w-0 flex items-center justify-center">
+                  <EmptyState message="No state data" />
+                </div>
               ) : (
-                <table className="w-full text-[12px]">
-                  <thead>
-                    <tr className="text-left text-[10px] uppercase tracking-widish text-[var(--muted)]">
-                      <th className="py-1.5">State</th>
-                      <th className="py-1.5 text-right">Orders</th>
-                      <th className="py-1.5 text-right">Revenue</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {topStates.map((row) => (
-                      <tr key={row.state} className="border-t border-[var(--line)]">
-                        <td className="py-1.5 text-[var(--ink)] font-medium">{row.state}</td>
-                        <td className="py-1.5 text-right tabular-nums text-[var(--ink-2)]">
-                          {formatNum(row.orders)}
-                        </td>
-                        <td className="py-1.5 text-right tabular-nums text-[var(--ink-2)]">
-                          {formatINR(row.revenue)}
-                        </td>
+                <div className="h-[240px] min-w-0 overflow-y-auto overscroll-contain">
+                  <table className="w-full text-[12px]">
+                    <thead className="sticky top-0 z-10 bg-[var(--surface)] shadow-[0_1px_0_var(--line)]">
+                      <tr className="text-left text-[10px] uppercase tracking-widish text-[var(--muted)]">
+                        <th className="py-2">State</th>
+                        <th className="py-2 text-right">Orders</th>
+                        <th className="py-2 text-right">Revenue</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {topStates.map((row) => (
+                        <tr key={row.state} className="border-t border-[var(--line)]">
+                          <td className="py-2 text-[var(--ink)] font-medium">{row.state}</td>
+                          <td className="py-2 text-right tabular-nums text-[var(--ink-2)]">
+                            {formatNum(row.orders)}
+                          </td>
+                          <td className="py-2 text-right tabular-nums text-[var(--ink-2)]">
+                            {formatINR(row.revenue)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </Panel>
           </div>
 
-          {/* Row 4 — Top Performing Channels + Top Performing Categories */}
+          {/* Row 5 — Top products panels side-by-side */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <TopShareCard
-              title="Top Performing Channels"
-              labelKey="channel"
-              rows={topChannelShares}
-              colorFor={(label) => channelColor(label)}
-            />
-            <TopShareCard
-              title="Top Performing Categories"
-              labelKey="category"
-              rows={topCategoryShares}
-              colorFor={(label) => categoryColor(label)}
-            />
+            <Panel title="Top Performing Products" subtitle="Best-sellers by revenue">
+              {topProductsPct.length === 0 ? (
+                <EmptyState message="No product data in this range" />
+              ) : (
+                <div className="overflow-auto max-h-[400px]">
+                  <table className="w-full text-[12px] min-w-[640px]">
+                    <thead className="sticky top-0 bg-[var(--surface)] z-10">
+                      <tr className="text-left text-[10px] uppercase tracking-widish text-[var(--muted)]">
+                        <th className="py-2">SKU Code</th>
+                        <th className="py-2">SKU Name</th>
+                        <th className="py-2 text-right">% of Total</th>
+                        <th className="py-2 text-right">Revenue</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {topProductsPct.map((row) => (
+                        <tr key={row.sku} className="border-t border-[var(--line)]">
+                          <td className="py-2 text-[var(--ink)] font-mono">{row.sku}</td>
+                          <td className="py-2 text-[var(--ink-2)] truncate max-w-[420px]">
+                            {row.product_name ?? '—'}
+                          </td>
+                          <td className="py-2 text-right tabular-nums text-[var(--muted)]">
+                            {formatPct(row.pct_of_total, 2)}
+                          </td>
+                          <td className="py-2 text-right tabular-nums font-medium text-[var(--ink)]">
+                            {formatINRExact(row.revenue)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Panel>
+
+            <Panel
+              title="Channel-wise Top Performing Products"
+              subtitle="Per-channel revenue for the top SKUs"
+            >
+              {topProductsByChannel.length === 0 ? (
+                <EmptyState message="No channel revenue in this range" />
+              ) : (
+                <div className="overflow-auto max-h-[400px]">
+                  <table className="w-full text-[12px] min-w-[820px]">
+                    <thead className="sticky top-0 bg-[var(--surface)] z-10">
+                      <tr className="text-left text-[10px] uppercase tracking-widish text-[var(--muted)]">
+                        <th className="py-2">SKU Code</th>
+                        <th className="py-2">Channel Product Name</th>
+                        <th className="py-2 text-right">Shopify</th>
+                        <th className="py-2 text-right">Amazon</th>
+                        <th className="py-2 text-right">Flipkart</th>
+                        <th className="py-2 text-right">Myntra</th>
+                        <th className="py-2 text-right">Eternz</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {topProductsByChannel.map((row) => (
+                        <tr key={row.sku} className="border-t border-[var(--line)]">
+                          <td className="py-2 text-[var(--ink)] font-mono">{row.sku}</td>
+                          <td className="py-2 text-[var(--ink-2)] truncate max-w-[360px]">
+                            {row.product_name ?? '—'}
+                          </td>
+                          <td className="py-2 text-right tabular-nums">
+                            {row.shopify_revenue > 0 ? formatINRExact(row.shopify_revenue) : '—'}
+                          </td>
+                          <td className="py-2 text-right tabular-nums">
+                            {row.amazon_revenue > 0 ? formatINRExact(row.amazon_revenue) : '—'}
+                          </td>
+                          <td className="py-2 text-right tabular-nums">
+                            {row.flipkart_revenue > 0 ? formatINRExact(row.flipkart_revenue) : '—'}
+                          </td>
+                          <td className="py-2 text-right tabular-nums">
+                            {row.myntra_revenue > 0 ? formatINRExact(row.myntra_revenue) : '—'}
+                          </td>
+                          <td className="py-2 text-right tabular-nums">
+                            {row.eternz_revenue > 0 ? formatINRExact(row.eternz_revenue) : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Panel>
           </div>
 
-          {/* Row 5 — Top Performing Products (with % of total) */}
-          <Panel title="Top Performing Products" subtitle="Best-sellers by revenue">
-            {topProductsPct.length === 0 ? (
-              <EmptyState message="No product data in this range" />
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-[12px] min-w-[640px]">
-                  <thead>
-                    <tr className="text-left text-[10px] uppercase tracking-widish text-[var(--muted)]">
-                      <th className="py-2">SKU Code</th>
-                      <th className="py-2">SKU Name</th>
-                      <th className="py-2 text-right">% of Total</th>
-                      <th className="py-2 text-right">Revenue</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {topProductsPct.map((row) => (
-                      <tr key={row.sku} className="border-t border-[var(--line)]">
-                        <td className="py-2 text-[var(--ink)] font-mono">{row.sku}</td>
-                        <td className="py-2 text-[var(--ink-2)] truncate max-w-[420px]">
-                          {row.product_name ?? '—'}
-                        </td>
-                        <td className="py-2 text-right tabular-nums text-[var(--muted)]">
-                          {formatPct(row.pct_of_total, 2)}
-                        </td>
-                        <td className="py-2 text-right tabular-nums font-medium text-[var(--ink)]">
-                          {formatINRExact(row.revenue)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Panel>
-
-          {/* Row 6 — Channel-wise Top Performing Products */}
-          <Panel
-            title="Channel-wise Top Performing Products"
-            subtitle="Per-channel revenue for the top SKUs"
-          >
-            {topProductsByChannel.length === 0 ? (
-              <EmptyState message="No channel revenue in this range" />
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-[12px] min-w-[820px]">
-                  <thead>
-                    <tr className="text-left text-[10px] uppercase tracking-widish text-[var(--muted)]">
-                      <th className="py-2">SKU Code</th>
-                      <th className="py-2">Channel Product Name</th>
-                      <th className="py-2 text-right">Shopify</th>
-                      <th className="py-2 text-right">Amazon</th>
-                      <th className="py-2 text-right">Flipkart</th>
-                      <th className="py-2 text-right">Myntra</th>
-                      <th className="py-2 text-right">Eternz</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {topProductsByChannel.map((row) => (
-                      <tr key={row.sku} className="border-t border-[var(--line)]">
-                        <td className="py-2 text-[var(--ink)] font-mono">{row.sku}</td>
-                        <td className="py-2 text-[var(--ink-2)] truncate max-w-[360px]">
-                          {row.product_name ?? '—'}
-                        </td>
-                        <td className="py-2 text-right tabular-nums">
-                          {row.shopify_revenue > 0 ? formatINRExact(row.shopify_revenue) : '—'}
-                        </td>
-                        <td className="py-2 text-right tabular-nums">
-                          {row.amazon_revenue > 0 ? formatINRExact(row.amazon_revenue) : '—'}
-                        </td>
-                        <td className="py-2 text-right tabular-nums">
-                          {row.flipkart_revenue > 0 ? formatINRExact(row.flipkart_revenue) : '—'}
-                        </td>
-                        <td className="py-2 text-right tabular-nums">
-                          {row.myntra_revenue > 0 ? formatINRExact(row.myntra_revenue) : '—'}
-                        </td>
-                        <td className="py-2 text-right tabular-nums">
-                          {row.eternz_revenue > 0 ? formatINRExact(row.eternz_revenue) : '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Panel>
-
-          {/* Row 6.5 — Channel Wise Return Percent (sold vs returned units, stacked) */}
-          <Panel
-            title="Channel Wise Return Percent"
-            subtitle="Stacked: total units sold + returned units per channel"
-          >
-            {channelReturns.length === 0 ? (
-              <EmptyState message="No channel data in this range" />
-            ) : (
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={channelReturns} margin={{ top: 16, right: 16, left: 0, bottom: 24 }}>
-                  <CartesianGrid strokeDasharray={GRID_DASHARRAY} stroke={GRID_STROKE} />
-                  <XAxis
-                    dataKey="channel"
-                    tick={{ fill: AXIS_TICK_COLOR, fontSize: AXIS_TICK_SIZE }}
-                    interval={0}
-                    angle={-25}
-                    textAnchor="end"
-                    height={50}
-                  />
-                  <YAxis
-                    tick={{ fill: AXIS_TICK_COLOR, fontSize: AXIS_TICK_SIZE }}
-                    tickFormatter={(v: number) => formatNum(v)}
-                  />
-                  <Tooltip
-                    contentStyle={TOOLTIP_CONTENT_STYLE}
-                    formatter={(value: number, name: string) => {
-                      const label =
-                        name === 'units_sold'
-                          ? 'Total Units Sold'
-                          : name === 'return_units'
+          {/* Row 6.5 / 7 — Channel return percent + Returns by channel + Top return reasons */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <Panel
+              title="Channel Wise Return Percent"
+              subtitle="Stacked: total units sold + returned units per channel"
+            >
+              {channelReturns.length === 0 ? (
+                <EmptyState message="No channel data in this range" />
+              ) : (
+                <div className="-ml-2 min-w-0 sm:-ml-2.5">
+                  <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={channelReturns} margin={{ top: 12, right: 12, left: 0, bottom: 22 }}>
+                    <CartesianGrid strokeDasharray={GRID_DASHARRAY} stroke={GRID_STROKE} />
+                    <XAxis
+                      dataKey="displayChannel"
+                      tick={{ fill: AXIS_TICK_COLOR, fontSize: AXIS_TICK_SIZE }}
+                      interval={0}
+                      angle={-25}
+                      textAnchor="end"
+                      height={50}
+                      padding={{ left: 0, right: 4 }}
+                    />
+                    <YAxis
+                      tick={{ fill: AXIS_TICK_COLOR, fontSize: AXIS_TICK_SIZE }}
+                      tickFormatter={(v: number) => formatNum(v)}
+                      tickLine={false}
+                      axisLine={false}
+                      width={40}
+                    />
+                    <Tooltip
+                      contentStyle={TOOLTIP_CONTENT_STYLE}
+                      formatter={(value: number, name: string) => {
+                        const label =
+                          name === 'units_sold'
+                            ? 'Total Units Sold'
+                            : name === 'return_units'
+                              ? 'Returns Unit'
+                              : name;
+                        return [formatNum(Number(value)), label];
+                      }}
+                      labelFormatter={(label: string) => {
+                        const row = channelReturns.find(
+                          (r) => displayChannelName(r.channel) === label,
+                        );
+                        return row ? `${label} — ${row.return_pct.toFixed(2)}% return rate` : label;
+                      }}
+                    />
+                    <Legend
+                      wrapperStyle={{ fontSize: 11, color: AXIS_TICK_COLOR }}
+                      formatter={(value) =>
+                        value === 'units_sold'
+                          ? 'Total Unit Sold'
+                          : value === 'return_units'
                             ? 'Returns Unit'
-                            : name;
-                      return [formatNum(Number(value)), label];
-                    }}
-                    labelFormatter={(label: string) => {
-                      const row = channelReturns.find((r) => r.channel === label);
-                      return row ? `${label} — ${row.return_pct.toFixed(2)}% return rate` : label;
-                    }}
-                  />
-                  <Legend
-                    wrapperStyle={{ fontSize: 11, color: AXIS_TICK_COLOR }}
-                    formatter={(value) =>
-                      value === 'units_sold'
-                        ? 'Total Unit Sold'
-                        : value === 'return_units'
-                          ? 'Returns Unit'
-                          : value
-                    }
-                  />
-                  <Bar dataKey="units_sold" stackId="u" fill={INFO} radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="return_units" stackId="u" fill={NEG} radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </Panel>
+                            : value
+                      }
+                    />
+                    <Bar dataKey="units_sold" stackId="u" fill={MP_BLUE} radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="return_units" stackId="u" fill={MP_RED} radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </Panel>
 
-          {/* Row 7 — Returns */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Panel title="Returns by Channel" subtitle="Total returns initiated">
               {returnsByChannel.length === 0 ? (
                 <EmptyState message="No returns in this range" />
               ) : (
-                <div className="space-y-2">
+                <div className="flex flex-col justify-around h-[280px] py-2">
                   {returnsByChannel.map((row) => (
                     <div key={row.channel} className="flex items-center gap-3">
                       <ChannelChip channel={row.channel} />
@@ -833,11 +915,12 @@ export function MarketplacePage() {
               {returnReasons.length === 0 ? (
                 <EmptyState message="No return reasons logged" />
               ) : (
-                <ResponsiveContainer width="100%" height={220}>
+                <div className="-ml-2 min-w-0 sm:-ml-2.5">
+                  <ResponsiveContainer width="100%" height={280}>
                   <BarChart
                     data={returnReasons}
                     layout="vertical"
-                    margin={{ top: 8, right: 16, left: 8, bottom: 0 }}
+                    margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
                   >
                     <CartesianGrid strokeDasharray={GRID_DASHARRAY} stroke={GRID_STROKE} horizontal={false} />
                     <XAxis
@@ -848,27 +931,106 @@ export function MarketplacePage() {
                       type="category"
                       dataKey="reason"
                       tick={{ fill: AXIS_TICK_COLOR, fontSize: AXIS_TICK_SIZE }}
-                      width={140}
+                      tickLine={false}
+                      axisLine={false}
+                      width={96}
+                      interval={0}
                     />
                     <Tooltip
                       contentStyle={TOOLTIP_CONTENT_STYLE}
                       formatter={(value: number) => formatNum(value)}
                     />
-                    <Bar dataKey="count" fill={NEG} radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="count" fill={MP_RED} radius={[0, 4, 4, 0]} />
                   </BarChart>
-                </ResponsiveContainer>
+                  </ResponsiveContainer>
+                </div>
               )}
             </Panel>
           </div>
 
-          {/* Row 6 — Recent Orders */}
+          {/* Inventory tables — Fast Moving (left) + Zero Orders (right) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Panel title="Inventory Availability of Fast Moving SKUs">
+              {fastMovingSkus.length === 0 ? (
+                <EmptyState message="Inventory not synced yet — run npm run backfill:unicommerce:inventory" />
+              ) : (
+                <div className="overflow-auto max-h-[400px]">
+                  <table className="w-full text-[12px]">
+                    <thead className="sticky top-0 bg-[var(--surface)] z-10">
+                      <tr className="text-left text-[10px] uppercase tracking-widish text-[var(--muted)]">
+                        <th className="py-2">SKU Code</th>
+                        <th className="py-2">SKU Name</th>
+                        <th className="py-2 text-right">Inventory</th>
+                        <th className="py-2 text-right">Sale (30d)</th>
+                        <th className="py-2 text-right">Days of Inv.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {fastMovingSkus.map((row) => (
+                        <tr key={row.sku} className="border-t border-[var(--line)]">
+                          <td className="py-2 text-[var(--ink)] font-mono">{row.sku}</td>
+                          <td className="py-2 text-[var(--ink-2)] truncate max-w-[260px]">
+                            {row.product_name ?? '—'}
+                          </td>
+                          <td className="py-2 text-right tabular-nums">
+                            {formatNum(row.inventory)}
+                          </td>
+                          <td className="py-2 text-right tabular-nums font-medium text-[var(--ink)]">
+                            {formatNum(row.sales_last_30_days)}
+                          </td>
+                          <td className="py-2 text-right tabular-nums text-[var(--muted)]">
+                            {row.days_of_inventory != null
+                              ? Number(row.days_of_inventory).toFixed(0)
+                              : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Panel>
+
+            <Panel title="Products with Zero Order">
+              {zeroOrderSkus.length === 0 ? (
+                <EmptyState message="No zero-order SKUs (or inventory not synced)" />
+              ) : (
+                <div className="overflow-auto max-h-[400px]">
+                  <table className="w-full text-[12px]">
+                    <thead className="sticky top-0 bg-[var(--surface)] z-10">
+                      <tr className="text-left text-[10px] uppercase tracking-widish text-[var(--muted)]">
+                        <th className="py-2">SKU</th>
+                        <th className="py-2">Name</th>
+                        <th className="py-2 text-right">Inventory</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {zeroOrderSkus.map((row) => (
+                        <tr key={row.sku} className="border-t border-[var(--line)]">
+                          <td className="py-2 text-[var(--ink)] font-mono">{row.sku}</td>
+                          <td className="py-2 text-[var(--ink-2)] truncate max-w-[300px]">
+                            {row.product_name ?? '—'}
+                          </td>
+                          <td className="py-2 text-right tabular-nums font-medium text-[var(--ink)]">
+                            {formatNum(row.inventory)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Panel>
+          </div>
+
+          {/* Recent Orders — last (below inventory) */}
           <Panel title="Recent Orders" subtitle="Latest 20 orders in range">
             {recentOrders.length === 0 ? (
               <EmptyState message="No recent orders" />
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-auto max-h-[440px]">
                 <table className="w-full text-[12px] min-w-[820px]">
-                  <thead>
+                  <thead className="sticky top-0 bg-[var(--surface)] z-10">
                     <tr className="text-left text-[10px] uppercase tracking-widish text-[var(--muted)]">
                       <th className="py-2">Order ID</th>
                       <th className="py-2">Channel</th>
@@ -931,81 +1093,6 @@ export function MarketplacePage() {
               </div>
             )}
           </Panel>
-
-          {/* Inventory tables — Fast Moving (left) + Zero Orders (right) */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Panel title="Inventory Availability of Fast Moving SKUs">
-              {fastMovingSkus.length === 0 ? (
-                <EmptyState message="Inventory not synced yet — run npm run backfill:unicommerce:inventory" />
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-[12px]">
-                    <thead>
-                      <tr className="text-left text-[10px] uppercase tracking-widish text-[var(--muted)]">
-                        <th className="py-2">SKU Code</th>
-                        <th className="py-2">SKU Name</th>
-                        <th className="py-2 text-right">Inventory</th>
-                        <th className="py-2 text-right">Sale (30d)</th>
-                        <th className="py-2 text-right">Days of Inv.</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {fastMovingSkus.map((row) => (
-                        <tr key={row.sku} className="border-t border-[var(--line)]">
-                          <td className="py-2 text-[var(--ink)] font-mono">{row.sku}</td>
-                          <td className="py-2 text-[var(--ink-2)] truncate max-w-[260px]">
-                            {row.product_name ?? '—'}
-                          </td>
-                          <td className="py-2 text-right tabular-nums">
-                            {formatNum(row.inventory)}
-                          </td>
-                          <td className="py-2 text-right tabular-nums font-medium text-[var(--ink)]">
-                            {formatNum(row.sales_last_30_days)}
-                          </td>
-                          <td className="py-2 text-right tabular-nums text-[var(--muted)]">
-                            {row.days_of_inventory != null
-                              ? Number(row.days_of_inventory).toFixed(0)
-                              : '—'}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </Panel>
-
-            <Panel title="Products with Zero Order">
-              {zeroOrderSkus.length === 0 ? (
-                <EmptyState message="No zero-order SKUs (or inventory not synced)" />
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-[12px]">
-                    <thead>
-                      <tr className="text-left text-[10px] uppercase tracking-widish text-[var(--muted)]">
-                        <th className="py-2">SKU</th>
-                        <th className="py-2">Name</th>
-                        <th className="py-2 text-right">Inventory</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {zeroOrderSkus.map((row) => (
-                        <tr key={row.sku} className="border-t border-[var(--line)]">
-                          <td className="py-2 text-[var(--ink)] font-mono">{row.sku}</td>
-                          <td className="py-2 text-[var(--ink-2)] truncate max-w-[300px]">
-                            {row.product_name ?? '—'}
-                          </td>
-                          <td className="py-2 text-right tabular-nums font-medium text-[var(--ink)]">
-                            {formatNum(row.inventory)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </Panel>
-          </div>
         </>
       )}
     </div>
@@ -1025,6 +1112,7 @@ interface TopShareCardProps {
   labelKey: string;
   rows: ShareRow[];
   colorFor: (label: string) => string;
+  formatLabel?: (label: string) => string;
 }
 
 /**
@@ -1032,7 +1120,13 @@ interface TopShareCardProps {
  * `TOP PERFORMING CHANNELS` / `TOP PERFORMING CATEGORIES` cards. Toggles
  * between a sortable table and a pie chart of the same data.
  */
-function TopShareCard({ title, labelKey, rows, colorFor }: TopShareCardProps) {
+function TopShareCard({
+  title,
+  labelKey,
+  rows,
+  colorFor,
+  formatLabel = (label) => label,
+}: TopShareCardProps) {
   const [view, setView] = useState<'table' | 'pie'>('pie');
 
   return (
@@ -1086,7 +1180,7 @@ function TopShareCard({ title, labelKey, rows, colorFor }: TopShareCardProps) {
                     className="inline-block h-2 w-2 rounded-full"
                     style={{ backgroundColor: colorFor(row.label) }}
                   />
-                  {row.label}
+                  {formatLabel(row.label)}
                 </td>
                 <td className="py-2 text-right tabular-nums text-[var(--muted)]">
                   {row.pct.toFixed(2)}
@@ -1109,15 +1203,16 @@ function TopShareCard({ title, labelKey, rows, colorFor }: TopShareCardProps) {
               cy="46%"
               outerRadius={82}
               paddingAngle={1}
-              // Keep channel/category labels visible without clipping long names.
               label={({ name, percent }: { name: string; percent: number }) => {
-                const shortName = name.length > 12 ? `${name.slice(0, 12)}...` : name;
+                const displayName = formatLabel(name);
+                const shortName =
+                  displayName.length > 12 ? `${displayName.slice(0, 12)}...` : displayName;
                 return `${shortName} ${(percent * 100).toFixed(0)}%`;
               }}
               labelLine
             >
               {rows.map((row) => (
-                <Cell key={row.label} fill={colorFor(row.label)} />
+                <Cell key={row.label} fill={colorFor(row.label)} name={formatLabel(row.label)} />
               ))}
             </Pie>
             <Tooltip
@@ -1128,6 +1223,7 @@ function TopShareCard({ title, labelKey, rows, colorFor }: TopShareCardProps) {
               verticalAlign="bottom"
               align="center"
               wrapperStyle={{ fontSize: 10, color: AXIS_TICK_COLOR, paddingTop: 8 }}
+              formatter={(value: string) => formatLabel(value)}
             />
           </PieChart>
         </ResponsiveContainer>
@@ -1136,26 +1232,22 @@ function TopShareCard({ title, labelKey, rows, colorFor }: TopShareCardProps) {
   );
 }
 
-interface SnapshotCardProps {
+interface SnapshotItemProps {
   label: string;
   value: string;
   comparison: string;
 }
 
-/** Today's vs Yesterday's snapshot card (matches Uniware's TENANT WISE
- *  SALES PERFORMANCE strip). Always renders; `comparison` is shown muted. */
-function SnapshotCard({ label, value, comparison }: SnapshotCardProps) {
+/** Single cell inside the Live Snapshot strip. Borrows its dividers from
+ *  the parent grid; the cell itself is transparent so the accent-tinted
+ *  strip background shows through. */
+function SnapshotItem({ label, value, comparison }: SnapshotItemProps) {
   return (
-    <div
-      className={cn(
-        'bg-[var(--surface)] rounded-[12px] border border-[var(--line)]',
-        'px-4 py-3 flex flex-col gap-1',
-      )}
-    >
+    <div className="px-5 py-3.5 flex flex-col gap-1">
       <span className="text-[10px] font-medium uppercase tracking-widish text-[var(--muted)]">
         {label}
       </span>
-      <span className="text-[26px] font-medium leading-none tracking-tightx tabular-nums text-[var(--ink)]">
+      <span className="text-[24px] font-medium leading-none tracking-tightx tabular-nums text-[var(--ink)]">
         {value}
       </span>
       <span className="text-[11.5px] text-[var(--muted)] tabular-nums">{comparison}</span>
@@ -1164,7 +1256,7 @@ function SnapshotCard({ label, value, comparison }: SnapshotCardProps) {
 }
 
 function ChannelChip({ channel }: { channel: string | null | undefined }) {
-  const label = channel ?? 'Unknown';
+  const label = displayChannelName(channel);
   const color = channelColor(channel);
   return (
     <span

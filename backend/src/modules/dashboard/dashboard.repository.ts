@@ -139,16 +139,18 @@ export async function getKpis(since: string, until: string): Promise<KpiResult> 
 export async function getShipmentsTrend(
   since: string,
   until: string,
-): Promise<{
-  date: string;
-  total_shipments: number;
-  delivered: number;
-  rto: number;
-  ofd: number;
-  ndr: number;
-  cod_orders: number;
-  prepaid_orders: number;
-}[]> {
+): Promise<
+  {
+    date: string;
+    total_shipments: number;
+    delivered: number;
+    rto: number;
+    ofd: number;
+    ndr: number;
+    cod_orders: number;
+    prepaid_orders: number;
+  }[]
+> {
   const rows = await sequelize.query<{
     date: string;
     total_shipments: string;
@@ -293,10 +295,7 @@ export async function getLogistics(since: string, until: string): Promise<Logist
   );
 }
 
-export async function getAbandonedCarts(
-  since: string,
-  until: string,
-): Promise<AbandonedCartsRow> {
+export async function getAbandonedCarts(since: string, until: string): Promise<AbandonedCartsRow> {
   const rows = await sequelize.query<AbandonedCartsRow>(
     `SELECT COUNT(*) AS count, COALESCE(SUM(cart_value), 0) AS total_value,
             COALESCE(AVG(cart_value), 0) AS avg_value

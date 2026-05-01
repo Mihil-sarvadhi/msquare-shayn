@@ -8,6 +8,8 @@ import { useAppDispatch, useAppSelector } from '@store/hooks';
 import { fetchDashboard } from '@store/slices/dashboardSlice';
 import { fetchMarketingData, fetchOperationsData } from '@store/slices/analyticsSlice';
 import { fetchGA4Data, fetchGA4RealtimeWidgetData, refreshGA4Realtime } from '@store/slices/ga4Slice';
+import { fetchUnicommerceOverview } from '@store/slices/unicommerceSlice';
+import { fetchMarqueeData } from '@store/slices/marqueeSlice';
 import { Ticker } from '@components/layout/Ticker';
 import { DrawerProvider } from '@components/shared/DrawerContext';
 import { InfoDrawer } from '@components/shared/InfoDrawer';
@@ -25,7 +27,8 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import type { RangeState } from '@store/slices/rangeSlice';
-import type { KPIs, RecentOrder, RevenueTrendItem, RevenueVsSpendItem } from '@app/types/dashboard';
+import type { KPIs, RecentOrder, RevenueVsSpendItem } from '@app/types/dashboard';
+import type { RevenueTrendRow } from '@app/types/unicommerce-api';
 import type {
   GA4Summary, GA4TrafficDaily, GA4Channel, GA4EcommerceDaily,
   GA4Product, GA4RealtimeWidget, GA4PageScreen, GA4CountryActiveUsers,
@@ -41,13 +44,56 @@ const NEG    = '#C4361F';   /* red */
 const MUTED  = '#98948A';
 const AI     = '#6E3FD0';   /* purple */
 
+/* Brand-aligned channel palette — kept in sync with marketplace/page.tsx
+ * so the same channel reads the same colour across pages. */
 const CHANNEL_DEFS = [
-  { key: 'shopify',  label: 'Shopify',  color: ACCENT,   active: true  },
-  { key: 'amazon',   label: 'Amazon',   color: '#E8A838', active: false },
-  { key: 'flipkart', label: 'Flipkart', color: WARN,     active: false },
-  { key: 'myntra',   label: 'Myntra',   color: '#8C6624', active: false },
-  { key: 'eternz',   label: 'Eternz',   color: MUTED,    active: false },
+  { key: 'shopify',  label: 'Shopify',  color: '#4FA85C', active: true },
+  { key: 'amazon',   label: 'Amazon',   color: '#F08C28', active: true },
+  { key: 'flipkart', label: 'Flipkart', color: '#E5A82A', active: true },
+  { key: 'myntra',   label: 'Myntra',   color: '#D94373', active: true },
+  { key: 'eternz',   label: 'Eternz',   color: '#0E9488', active: true },
 ] as const;
+
+type ChannelKey = (typeof CHANNEL_DEFS)[number]['key'];
+
+function normalizeChannelKey(raw: string | null | undefined): ChannelKey | null {
+  const u = (raw ?? '').toUpperCase();
+  if (u.includes('SHOPIFY')) return 'shopify';
+  if (u.includes('AMAZON')) return 'amazon';
+  if (u.includes('FLIPKART')) return 'flipkart';
+  if (u.includes('MYNTRA')) return 'myntra';
+  if (u.includes('ETERNZ')) return 'eternz';
+  return null;
+}
+
+interface ChannelDailyRow {
+  date: string;
+  shopify: number;
+  amazon: number;
+  flipkart: number;
+  myntra: number;
+  eternz: number;
+  total: number;
+}
+
+/** Pivot per-channel daily rows (one row per channel per date) to one row
+ *  per date with stacked-bar–ready columns for each channel. */
+function pivotChannelTrend(rows: RevenueTrendRow[]): ChannelDailyRow[] {
+  const byDate = new Map<string, ChannelDailyRow>();
+  for (const r of rows) {
+    if (!r.date) continue;
+    const date = r.date.slice(0, 10);
+    const existing =
+      byDate.get(date) ??
+      { date, shopify: 0, amazon: 0, flipkart: 0, myntra: 0, eternz: 0, total: 0 };
+    const ch = normalizeChannelKey(r.channel);
+    const value = Number(r.revenue ?? 0);
+    if (ch) existing[ch] += value;
+    existing.total += value;
+    byDate.set(date, existing);
+  }
+  return Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date));
+}
 
 const CHANNEL_COLORS: Record<string, string> = {
   'Organic Search':  POS,
@@ -67,19 +113,6 @@ function delta(current: number | undefined | null, prev: number | undefined | nu
   const p = Number(prev ?? 0);
   if (!p) return undefined;
   return ((c - p) / p) * 100;
-}
-
-function fillDateSeries(data: RevenueTrendItem[]): RevenueTrendItem[] {
-  if (data.length === 0) return data;
-  const map = new Map(data.map((d) => [d.date.slice(0, 10), d]));
-  const start = new Date(data[0].date);
-  const end   = new Date(data[data.length - 1].date);
-  const result: RevenueTrendItem[] = [];
-  for (const cur = new Date(start); cur <= end; cur.setDate(cur.getDate() + 1)) {
-    const key = cur.toISOString().slice(0, 10);
-    result.push(map.get(key) ?? { date: key, revenue: 0, orders: 0 });
-  }
-  return result;
 }
 
 function niceMax(v: number): number {
@@ -104,13 +137,6 @@ function fmtAxisINR(v: number): string {
   if (v >= 100000)   return `₹${(v / 100000).toFixed(1)}L`;
   if (v >= 1000)     return `₹${(v / 1000).toFixed(0)}K`;
   return `₹${v}`;
-}
-
-function isSyncGap(data: RevenueTrendItem[], idx: number): boolean {
-  if (data[idx].revenue !== 0) return false;
-  const hasPrev = data.slice(0, idx).some((d) => d.revenue > 0);
-  const hasNext = data.slice(idx + 1).some((d) => d.revenue > 0);
-  return hasPrev && hasNext;
 }
 
 function fmtAxisDate(dateStr: string): string {
@@ -239,55 +265,66 @@ function LiveActivityFeed({ orders, kpis, prevKpis }: { orders: RecentOrder[]; k
       {prevOrders > 0 && (
         <p className="text-[11.5px] text-[var(--muted-2)] mb-3">vs {formatNum(prevOrders)} previous period</p>
       )}
-      <div className="space-y-0">
+      {/* Drawer-on-hover list. Hovered row expands inline to reveal products
+          and timestamp; sibling rows dim + blur via :has() so focus is
+          unambiguous. */}
+      <div className="space-y-0 [&:has(.order-row:hover)>.order-row:not(:hover)]:opacity-40 [&:has(.order-row:hover)>.order-row:not(:hover)]:blur-[1px] [&_.order-row]:transition-all [&_.order-row]:duration-300">
         {orders.slice(0, 5).map((o, i) => (
-          <div key={o.order_id || i} className="group relative grid grid-cols-[1fr_auto] items-start gap-3 py-3 border-b border-[var(--line)] last:border-0 transition-[padding] hover:pl-1.5">
-            <div className="min-w-0">
-              <p className="font-mono text-[12px] font-medium text-[var(--ink)] truncate">{o.order_name}</p>
-              <p className="text-[11px] uppercase tracking-widish text-[var(--muted)] truncate mt-[2px]">{o.customer_city || '—'}</p>
-              <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
-                <span className={cn(
-                  'inline-flex px-2 py-[3px] rounded-md text-[10.5px] font-medium tracking-[0.04em] capitalize',
-                  prettyStatus(o.financial_status).includes('paid')
-                    ? 'bg-[var(--green-soft)] text-[var(--green)]'
-                    : 'bg-[var(--amber-soft)] text-[var(--amber)]',
-                )}>
-                  {prettyStatus(o.financial_status)}
-                </span>
-                <span className={cn(
-                  'inline-flex px-2 py-[3px] rounded-md text-[10.5px] font-medium tracking-[0.04em] capitalize',
-                  prettyStatus(o.fulfillment_status).includes('fulfill') && !prettyStatus(o.fulfillment_status).includes('un')
-                    ? 'bg-[var(--blue-soft)] text-[var(--blue)]'
-                    : 'bg-[var(--bg-2)] text-[var(--muted)]',
-                )}>
-                  {prettyStatus(o.fulfillment_status)}
-                </span>
+          <div
+            key={o.order_id || i}
+            className={cn(
+              'order-row group/row relative px-2 -mx-2 py-3 rounded-md',
+              'border-b border-[var(--line)] last:border-0',
+              'hover:bg-[var(--surface-2)] hover:border-transparent',
+            )}
+          >
+            <div className="grid grid-cols-[1fr_auto] items-start gap-3">
+              <div className="min-w-0">
+                <p className="font-mono text-[12px] font-medium text-[var(--ink)] truncate">{o.order_name}</p>
+                <p className="text-[11px] uppercase tracking-widish text-[var(--muted)] truncate mt-[2px]">{o.customer_city || '—'}</p>
+                <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                  <span className={cn(
+                    'inline-flex px-2 py-[3px] rounded-md text-[10.5px] font-medium tracking-[0.04em] capitalize',
+                    prettyStatus(o.financial_status).includes('paid')
+                      ? 'bg-[var(--green-soft)] text-[var(--green)]'
+                      : 'bg-[var(--amber-soft)] text-[var(--amber)]',
+                  )}>
+                    {prettyStatus(o.financial_status)}
+                  </span>
+                  <span className={cn(
+                    'inline-flex px-2 py-[3px] rounded-md text-[10.5px] font-medium tracking-[0.04em] capitalize',
+                    prettyStatus(o.fulfillment_status).includes('fulfill') && !prettyStatus(o.fulfillment_status).includes('un')
+                      ? 'bg-[var(--blue-soft)] text-[var(--blue)]'
+                      : 'bg-[var(--bg-2)] text-[var(--muted)]',
+                  )}>
+                    {prettyStatus(o.fulfillment_status)}
+                  </span>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="font-mono text-[13px] font-medium text-[var(--ink)] tabular-nums">{formatINRFull(o.revenue)}</p>
+                <p className="text-[10.5px] uppercase tracking-[0.04em] text-[var(--muted-2)] mt-[2px]">{formatDate(o.created_at)}</p>
               </div>
             </div>
-            <div className="text-right">
-              <p className="font-mono text-[13px] font-medium text-[var(--ink)] tabular-nums">{formatINRFull(o.revenue)}</p>
-              <p className="text-[10.5px] uppercase tracking-[0.04em] text-[var(--muted-2)] mt-[2px]">{formatDate(o.created_at)}</p>
-            </div>
-            <div className="pointer-events-none absolute left-0 top-full z-20 mt-1 hidden w-[320px] rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2 shadow-lg group-hover:block">
-              <p className="text-[11px] font-semibold text-[var(--text)] mb-1">{o.order_name}</p>
-              <p className="text-[10px] text-[var(--text-subtle)] mb-1.5">
-                {new Date(o.created_at).toLocaleString('en-IN', {
-                  day: '2-digit',
-                  month: 'short',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </p>
-              <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)] mb-1">Products</p>
-              <ul className="space-y-0.5">
-                {(o.products ?? []).slice(0, 4).map((product) => (
-                  <li key={product} className="text-[11px] text-[var(--text)] truncate">• {product}</li>
-                ))}
-                {(o.products ?? []).length === 0 && (
-                  <li className="text-[11px] text-[var(--text-subtle)]">No product data</li>
-                )}
-              </ul>
+            {/* Drawer — animates open via grid-rows 0fr → 1fr (height-auto trick). */}
+            <div className="grid grid-rows-[0fr] group-hover/row:grid-rows-[1fr] transition-[grid-template-rows] duration-300 ease-out">
+              <div className="overflow-hidden">
+                <div className="mt-2 pt-2 border-t border-[var(--line)]">
+                  <p className="text-[10px] uppercase tracking-widish text-[var(--muted)] mb-1.5">
+                    Products · {new Date(o.created_at).toLocaleString('en-IN', {
+                      day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+                    })}
+                  </p>
+                  <ul className="space-y-0.5">
+                    {(o.products ?? []).slice(0, 4).map((product) => (
+                      <li key={product} className="text-[11.5px] text-[var(--ink-2)] truncate">• {product}</li>
+                    ))}
+                    {(o.products ?? []).length === 0 && (
+                      <li className="text-[11px] text-[var(--muted)] italic">No product data</li>
+                    )}
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
         ))}
@@ -335,53 +372,86 @@ function AbandonedCartsWidget({ carts }: { carts: { count: number; total_value: 
 /* ═══════════════════════════════════════════════════════════════
  * FINANCIALS — Revenue by Channel
  * ═══════════════════════════════════════════════════════════════ */
-function RevenueByChannelPanel({ data, range, className }: { data: RevenueTrendItem[]; range: RangeState; className?: string }) {
-  const filled    = useMemo(() => fillDateSeries(data), [data]);
-  const chartData = filled;
-  const yMax      = useMemo(() => niceMax(Math.max(...chartData.map((d) => d.revenue), 1)), [chartData]);
+function RevenueByChannelPanel({ data, range, className }: { data: RevenueTrendRow[]; range: RangeState; className?: string }) {
+  const [solo, setSolo] = useState<ChannelKey | null>(null);
+  const chartData = useMemo(() => pivotChannelTrend(data), [data]);
+  const visibleChannels = useMemo(
+    () => (solo ? CHANNEL_DEFS.filter((c) => c.key === solo) : CHANNEL_DEFS),
+    [solo],
+  );
+  const yMax = useMemo(() => {
+    const peak = solo
+      ? Math.max(...chartData.map((d) => d[solo]), 1)
+      : Math.max(...chartData.map((d) => d.total), 1);
+    return niceMax(peak);
+  }, [chartData, solo]);
   const xInterval = Math.max(1, Math.floor(chartData.length / 6) - 1);
-  const todayKey  = new Date().toISOString().slice(0, 10);
+
+  // Same chip pressed again clears the filter and returns to "All".
+  const handleChannelClick = (key: ChannelKey) => {
+    setSolo((cur) => (cur === key ? null : key));
+  };
 
   return (
     <Panel
       className={className}
       title="Revenue by Channel"
-      subtitle={`Shopify · Daily · ${rangeLabel(range)}`}
-      info={{ what: 'Daily Shopify revenue over the selected period. Amazon, Flipkart, Myntra and Eternz channels will be added once connected.', source: 'Shopify Orders', readIt: 'Each bar = one day of revenue. Zero-revenue interior days may indicate a sync gap.' }}
-      ai={{ observation: 'Revenue cadence reveals dependence on weekend spikes vs weekday consistency.', insight: 'Consistent mid-week revenue (Mon–Thu) indicates organic demand; spikes on weekends usually correlate with email campaigns or Meta ads. A healthy brand builds both.', actions: ['Launch campaigns Mon–Wed to lift weekday baseline', 'Schedule email sends for Tuesday 10am for best open rates', 'Track revenue per day-of-week to find highest-conversion day'] }}
+      subtitle={`${solo ? CHANNEL_DEFS.find((c) => c.key === solo)?.label : 'All channels'} · Daily · ${rangeLabel(range)}`}
+      info={{ what: 'Daily revenue stacked by sales channel — Shopify, Amazon, Flipkart, Myntra and Eternz combined. Click a channel chip below to solo it.', source: 'Shopify Orders + Unicommerce', readIt: 'Each bar = one day, segments show contribution from each marketplace. Hover for the per-channel breakdown.' }}
+      ai={{ observation: 'Channel mix exposes marketplace dependence vs. D2C strength.', insight: 'A healthy mix has D2C (Shopify) carrying baseline revenue and marketplaces driving incremental volume. Heavy single-channel reliance is a margin and discoverability risk.', actions: ['Identify channels under 10% share and either grow or sunset', 'Match top SKUs to under-indexed channels to lift incremental revenue', 'Track channel mix weekly to spot drift early'] }}
     >
       <ResponsiveContainer width="100%" height={240}>
         <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barCategoryGap="30%">
           <CartesianGrid strokeDasharray="2 3" stroke="var(--line)" vertical={false} />
           <XAxis dataKey="date" tickFormatter={fmtAxisDate} tick={{ fontSize: 10, fill: MUTED }} tickLine={false} interval={xInterval} />
           <YAxis tickFormatter={fmtAxisINR} tick={{ fontSize: 10, fill: MUTED }} axisLine={false} tickLine={false} domain={[0, yMax]} tickCount={5} />
-          <Tooltip content={<CustomTooltip formatter={(v: number) => (v === 0 ? 'No orders' : formatINR(v))} />} cursor={{ fill: 'rgba(184,137,62,0.08)' }} />
-          <Bar dataKey="revenue" name="Shopify" radius={[3, 3, 0, 0]} maxBarSize={24}>
-            {chartData.map((d, i) => {
-              const isGap     = isSyncGap(chartData, i);
-              const isToday   = d.date.slice(0, 10) === todayKey;
-              const isNoData  = d.revenue === 0;
-              const fill = isGap ? '#E0B070' : isToday ? `${ACCENT}99` : isNoData ? 'var(--bg-2)' : ACCENT;
-              return <Cell key={i} fill={fill} />;
-            })}
-          </Bar>
+          <Tooltip content={<CustomTooltip formatter={(v: number) => (v === 0 ? '—' : formatINR(v))} />} cursor={{ fill: 'rgba(184,137,62,0.08)' }} />
+          {visibleChannels.map((ch, i) => (
+            <Bar
+              key={ch.key}
+              dataKey={ch.key}
+              name={ch.label}
+              stackId="ch"
+              fill={ch.color}
+              maxBarSize={24}
+              radius={i === visibleChannels.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]}
+            />
+          ))}
         </BarChart>
       </ResponsiveContainer>
 
-      <div className="flex items-center flex-wrap gap-x-4 gap-y-1.5 mt-3 pt-3 border-t border-[var(--border)]">
-        {CHANNEL_DEFS.map((ch) => (
-          <span key={ch.key} className={cn('flex items-center gap-1.5 text-xs', ch.active ? 'text-[var(--text-muted)]' : 'text-[var(--text-subtle)] opacity-50')} title={ch.active ? undefined : 'Coming soon — connect this channel to unlock'}>
-            <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: ch.active ? ch.color : 'var(--line-3)' }} />
-            {ch.label}
-            {!ch.active && (<span className="text-[9px] font-medium bg-[var(--surface-2)] text-[var(--text-subtle)] px-1 py-0.5 rounded">soon</span>)}
-          </span>
-        ))}
-        {chartData.some((d) => d.date.slice(0, 10) === todayKey) && (
-          <span className="flex items-center gap-1.5 text-xs text-[var(--text-subtle)]">
-            <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: `${ACCENT}99` }} />
-            Today (partial)
-          </span>
-        )}
+      <div className="flex items-center flex-wrap gap-x-2 gap-y-1.5 mt-3 pt-3 border-t border-[var(--border)]">
+        <button
+          type="button"
+          onClick={() => setSolo(null)}
+          className={cn(
+            'flex items-center gap-1.5 text-xs px-2 py-1 rounded-full transition-colors',
+            solo === null
+              ? 'bg-[var(--surface-2)] text-[var(--ink)] font-medium'
+              : 'text-[var(--text-muted)] hover:text-[var(--ink)]',
+          )}
+        >
+          All
+        </button>
+        {CHANNEL_DEFS.map((ch) => {
+          const isActive = solo === ch.key;
+          const isDimmed = solo !== null && !isActive;
+          return (
+            <button
+              key={ch.key}
+              type="button"
+              onClick={() => handleChannelClick(ch.key)}
+              className={cn(
+                'flex items-center gap-1.5 text-xs px-2 py-1 rounded-full transition-all',
+                isActive && 'bg-[var(--surface-2)] font-medium',
+                isDimmed ? 'opacity-40 hover:opacity-100' : 'text-[var(--text-muted)] hover:text-[var(--ink)]',
+              )}
+            >
+              <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: ch.color }} />
+              {ch.label}
+            </button>
+          );
+        })}
       </div>
     </Panel>
   );
@@ -886,6 +956,7 @@ export function DashboardPage() {
     topProducts, logistics, reviewsSummary, topRatedProducts,
   } = useAppSelector((s) => s.dashboard);
   const { topSkus } = useAppSelector((s) => s.analytics);
+  const unicommerceRevenueTrend = useAppSelector((s) => s.unicommerce.revenueTrend);
   const {
     summary: ga4Summary,
     summaryInsights: ga4Insights,
@@ -909,6 +980,8 @@ export function DashboardPage() {
     dispatch(fetchMarketingData(range));
     dispatch(fetchOperationsData(range));
     dispatch(fetchGA4Data(range));
+    dispatch(fetchUnicommerceOverview({ range, channel: 'ALL' }));
+    dispatch(fetchMarqueeData(range));
   }, [dispatch, range]);
 
   useEffect(() => {
@@ -1098,7 +1171,7 @@ export function DashboardPage() {
 
           {/* ═══ ROW 3 · REVENUE OVERVIEW (2 + 1) ═══ */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <RevenueByChannelPanel data={revenueTrend} range={range} className="lg:col-span-2" />
+            <RevenueByChannelPanel data={unicommerceRevenueTrend} range={range} className="lg:col-span-2" />
             <Panel
               title="COD vs Prepaid"
               subtitle="Shopify · Payment mix"

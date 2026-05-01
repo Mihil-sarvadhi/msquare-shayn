@@ -9,6 +9,7 @@ import refundsReducer   from './slices/refundsSlice';
 import transactionsReducer from './slices/transactionsSlice';
 import catalogReducer from './slices/catalogSlice';
 import unicommerceReducer from './slices/unicommerceSlice';
+import marqueeReducer from './slices/marqueeSlice';
 
 const rootReducer = combineReducers({
   auth:         authReducer,
@@ -21,6 +22,7 @@ const rootReducer = combineReducers({
   transactions: transactionsReducer,
   catalog:      catalogReducer,
   unicommerce:  unicommerceReducer,
+  marquee:      marqueeReducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;

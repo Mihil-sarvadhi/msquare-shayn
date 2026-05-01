@@ -148,3 +148,103 @@ export interface RevenueVsSpendRow {
   revenue: string;
   ad_spend: string;
 }
+
+/* ── Marquee (grouped top-of-page ticker) ────────────────────────────────
+ * Aggregates current-period + previous-period values for every metric the
+ * top-of-dashboard ticker needs in a single round-trip. The frontend Ticker
+ * renders these in named groups (Finance, Sales, Marketing, Operations,
+ * Customers, Reviews) — one tinted card per group. */
+export interface MarqueeFinance {
+  revenue: number;
+  prevRevenue: number;
+  netRevenue: number;
+  prevNetRevenue: number;
+  aov: number;
+  prevAov: number;
+  logisticsCost: number;
+  prevLogisticsCost: number;
+  rtoWaste: number;
+  prevRtoWaste: number;
+  /** Net margin % = netRevenue / grossRevenue * 100 */
+  netMargin: number;
+  prevNetMargin: number;
+}
+
+export interface MarqueeSales {
+  orders: number;
+  prevOrders: number;
+  cancelledOrders: number;
+  prevCancelledOrders: number;
+  codOrders: number;
+  prevCodOrders: number;
+  prepaidOrders: number;
+  prevPrepaidOrders: number;
+  /** COD share % of paid orders */
+  codShare: number;
+  prevCodShare: number;
+}
+
+export interface MarqueeMarketing {
+  adSpend: number;
+  prevAdSpend: number;
+  roas: number;
+  prevRoas: number;
+  impressions: number;
+  prevImpressions: number;
+  clicks: number;
+  prevClicks: number;
+  purchases: number;
+  prevPurchases: number;
+  /** Click-through rate % = clicks / impressions * 100 */
+  ctr: number;
+  prevCtr: number;
+}
+
+export interface MarqueeOperations {
+  totalShipments: number;
+  prevTotalShipments: number;
+  delivered: number;
+  prevDelivered: number;
+  /** Delivered / total * 100 */
+  fulfilledPct: number;
+  prevFulfilledPct: number;
+  rtoRate: number;
+  prevRtoRate: number;
+  ndr: number;
+  prevNdr: number;
+  ofd: number;
+}
+
+export interface MarqueeCustomers {
+  /** Lifetime customer count from shopify_customers (range-independent). */
+  lifetimeCustomers: number;
+  newCustomers: number;
+  prevNewCustomers: number;
+  returningCustomers: number;
+  prevReturningCustomers: number;
+  repeatRate: number;
+  prevRepeatRate: number;
+  abandonedCarts: number;
+  prevAbandonedCarts: number;
+}
+
+export interface MarqueeReviews {
+  /** Lifetime store rating across all published reviews. */
+  storeRating: number;
+  /** Reviews collected in the selected range. */
+  totalReviews: number;
+  prevTotalReviews: number;
+  fiveStarCount: number;
+  verifiedCount: number;
+}
+
+export interface MarqueeResult {
+  range: { since: string; until: string };
+  prevRange: { since: string; until: string };
+  finance: MarqueeFinance;
+  sales: MarqueeSales;
+  marketing: MarqueeMarketing;
+  operations: MarqueeOperations;
+  customers: MarqueeCustomers;
+  reviews: MarqueeReviews;
+}

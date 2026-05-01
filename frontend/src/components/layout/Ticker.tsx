@@ -1,23 +1,27 @@
-import { useMemo } from 'react';
+import { Fragment, useMemo } from 'react';
 import { useAppSelector } from '@store/hooks';
 import { formatINR, formatNum } from '@utils/formatters';
 import { cn } from '@/lib/utils';
+import type {
+  MarqueePayload,
+  MarqueeFinance,
+  MarqueeSales,
+  MarqueeMarketing,
+  MarqueeOperations,
+  MarqueeCustomers,
+  MarqueeReviews,
+} from '@app/types/marquee';
+
+/* ─── Delta helpers (shared with the old ticker logic) ─────────────────── */
 
 type Direction = 'up' | 'down' | 'flat';
 
-interface TickerItem {
-  label: string;
-  value: string;
-  delta?: { dir: Direction; text: string };
-  /** Lift this item with a soft-gold backdrop + pulsing dot (lead metric). */
-  highlight?: boolean;
+interface Delta {
+  dir: Direction;
+  text: string;
 }
 
-function pct(
-  curr: number | null | undefined,
-  prev: number | null | undefined,
-  opts: { invert?: boolean } = {},
-): { dir: Direction; text: string } | undefined {
+function pct(curr: number | null | undefined, prev: number | null | undefined, opts: { invert?: boolean } = {}): Delta | undefined {
   const c = Number(curr ?? 0);
   const p = Number(prev ?? 0);
   if (!p) return undefined;
@@ -25,18 +29,12 @@ function pct(
   const positive = opts.invert ? change <= -0.05 : change >= 0.05;
   const negative = opts.invert ? change >= 0.05 : change <= -0.05;
   return {
-    dir:  positive ? 'up' : negative ? 'down' : 'flat',
+    dir: positive ? 'up' : negative ? 'down' : 'flat',
     text: `${change >= 0 ? '↑' : '↓'} ${Math.abs(change).toFixed(1)}%`,
   };
 }
 
-/** Integer-count diff (+/- N). Use for orders, customers, NDR — values where
- *  the absolute difference itself is meaningful. */
-function countDiff(
-  curr: number | null | undefined,
-  prev: number | null | undefined,
-  opts: { invert?: boolean } = {},
-): { dir: Direction; text: string } | undefined {
+function countDiff(curr: number | null | undefined, prev: number | null | undefined, opts: { invert?: boolean } = {}): Delta | undefined {
   const c = Number(curr ?? 0);
   const p = Number(prev ?? 0);
   if (!p && !c) return undefined;
@@ -44,35 +42,20 @@ function countDiff(
   if (Math.abs(d) < 1) return { dir: 'flat', text: '— flat' };
   const positive = opts.invert ? d < 0 : d > 0;
   return {
-    dir:  positive ? 'up' : 'down',
+    dir: positive ? 'up' : 'down',
     text: `${d > 0 ? '+' : '−'}${formatNum(Math.abs(d))}`,
   };
 }
 
-/** Fixed-decimal ratio diff (e.g. ROAS 1.45× → 1.20×). Reports as % change for
- *  meaning, not raw integer (which rounds sub-1 deltas to 0). */
-function ratioDiff(
-  curr: number | null | undefined,
-  prev: number | null | undefined,
-): { dir: Direction; text: string } | undefined {
-  return pct(curr, prev);
-}
-
-function ppDiff(
-  curr: number | null | undefined,
-  prev: number | null | undefined,
-  opts: { invert?: boolean } = {},
-): { dir: Direction; text: string } | undefined {
+function ppDiff(curr: number | null | undefined, prev: number | null | undefined, opts: { invert?: boolean } = {}): Delta | undefined {
   const c = Number(curr ?? 0);
   const p = Number(prev ?? 0);
   if (!p && !c) return undefined;
   const d = c - p;
   if (Math.abs(d) < 0.05) return { dir: 'flat', text: '— flat' };
-  /* For "lower-is-better" metrics like RTO, invert the colour: arrow still
-   *  reflects raw direction, but the dir (which drives green/red) flips. */
   const positive = opts.invert ? d < 0 : d > 0;
   return {
-    dir:  positive ? 'up' : 'down',
+    dir: positive ? 'up' : 'down',
     text: `${d > 0 ? '↑' : '↓'} ${Math.abs(d).toFixed(1)}pp`,
   };
 }
@@ -80,118 +63,225 @@ function ppDiff(
 function compactINR(value: number | null | undefined): string {
   const n = Number(value ?? 0);
   if (n >= 1_00_00_000) return `₹${(n / 1_00_00_000).toFixed(1)}Cr`;
-  if (n >= 1_00_000)    return `₹${(n / 1_00_000).toFixed(1)}L`;
-  if (n >= 1_000)       return `₹${(n / 1_000).toFixed(1)}K`;
+  if (n >= 1_00_000) return `₹${(n / 1_00_000).toFixed(1)}L`;
+  if (n >= 1_000) return `₹${(n / 1_000).toFixed(1)}K`;
   return formatINR(n);
 }
 
+/* ─── Item + Group rendering ──────────────────────────────────────────── */
+
+interface MarqueeItem {
+  label: string;
+  value: string;
+  delta?: Delta;
+}
+
+interface MarqueeGroup {
+  /** Stable key used for React keys. */
+  key: string;
+  label: string;
+  /** Tailwind tokens — kept inline so the renderer doesn't need a registry. */
+  bgClass: string;
+  borderClass: string;
+  titleClass: string;
+  items: MarqueeItem[];
+}
+
+function GroupBlock({ group }: { group: MarqueeGroup }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex shrink-0 items-center gap-3 pl-2.5 pr-3.5 py-[5px] rounded-full border',
+        group.bgClass,
+        group.borderClass,
+      )}
+    >
+      <span
+        className={cn(
+          'text-[10px] font-semibold uppercase tracking-widish whitespace-nowrap',
+          group.titleClass,
+        )}
+      >
+        {group.label}
+      </span>
+      <span className="h-3 w-px bg-[var(--line-2)]" aria-hidden />
+      {group.items.map((item, i) => (
+        <Fragment key={`${group.key}-${item.label}-${i}`}>
+          {i > 0 && <span aria-hidden className="w-1 h-1 rounded-full bg-[var(--line-3)]" />}
+          <span className="inline-flex items-center gap-1.5 text-[12px] whitespace-nowrap">
+            <span className="text-[10.5px] uppercase tracking-widish font-medium text-[var(--muted)]">
+              {item.label}
+            </span>
+            <span className="font-mono font-medium text-[var(--ink)] tabular-nums">{item.value}</span>
+            {item.delta && (
+              <span
+                className={cn(
+                  'font-mono tabular-nums text-[11px]',
+                  item.delta.dir === 'up' && 'text-[var(--green)]',
+                  item.delta.dir === 'down' && 'text-[var(--red)]',
+                  item.delta.dir === 'flat' && 'text-[var(--muted)]',
+                )}
+              >
+                {item.delta.text}
+              </span>
+            )}
+          </span>
+        </Fragment>
+      ))}
+    </span>
+  );
+}
+
 interface TickerTrackProps {
-  items: TickerItem[];
+  groups: MarqueeGroup[];
   ariaHidden?: boolean;
 }
 
-function TickerTrack({ items, ariaHidden }: TickerTrackProps) {
+function TickerTrack({ groups, ariaHidden }: TickerTrackProps) {
   return (
     <div
       data-ticker-track
       aria-hidden={ariaHidden}
-      className="flex shrink-0 items-center gap-12 px-6 py-2 whitespace-nowrap"
-      style={{ animation: 'tickerScroll 60s linear infinite' }}
+      className="flex shrink-0 items-center gap-4 px-4 py-2 whitespace-nowrap"
+      style={{ animation: 'tickerScroll 90s linear infinite' }}
     >
-      {items.map((item, i) => (
-        <span
-          key={`${item.label}-${i}`}
-          className={cn(
-            'inline-flex items-center gap-2 text-[12px]',
-            /* Subtle goldy lift on the lead metric — works in both themes */
-            item.highlight &&
-              'pl-2 pr-2.5 py-[3px] rounded-full bg-[var(--accent-soft)] ring-1 ring-[var(--accent-soft-2)] shadow-[inset_0_0_0_1px_rgba(184,137,62,0.08)]',
-          )}
-        >
-          {!item.highlight && i > 0 && (
-            <span aria-hidden className="w-1 h-1 rounded-full bg-[rgba(184,137,62,0.6)]" />
-          )}
-          {item.highlight && (
-            <span aria-hidden className="relative flex h-[6px] w-[6px] mr-0.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--accent)] opacity-60" />
-              <span className="relative inline-flex h-[6px] w-[6px] rounded-full bg-[var(--accent)]" />
-            </span>
-          )}
-          <span
-            className={cn(
-              'text-[10.5px] uppercase tracking-widish font-medium',
-              item.highlight ? 'text-[var(--accent)]' : 'text-[var(--muted)]',
-            )}
-          >
-            {item.label}
-          </span>
-          <span className="font-mono font-medium text-[var(--ink)] tabular-nums">{item.value}</span>
-          {item.delta && (
-            <span
-              className={cn(
-                'font-mono tabular-nums',
-                item.delta.dir === 'up'   && 'text-[var(--green)]',
-                item.delta.dir === 'down' && 'text-[var(--red)]',
-                item.delta.dir === 'flat' && 'text-[var(--muted)]',
-              )}
-            >
-              {item.delta.text}
-            </span>
-          )}
-        </span>
+      {groups.map((group) => (
+        <GroupBlock key={group.key} group={group} />
       ))}
     </div>
   );
 }
 
+/* ─── Group builders ──────────────────────────────────────────────────── */
+
+function buildFinance(d: MarqueeFinance): MarqueeItem[] {
+  return [
+    { label: 'Revenue',    value: compactINR(d.revenue),       delta: pct(d.revenue,       d.prevRevenue) },
+    { label: 'Net Rev',    value: compactINR(d.netRevenue),    delta: pct(d.netRevenue,    d.prevNetRevenue) },
+    { label: 'AOV',        value: formatINR(d.aov),            delta: pct(d.aov,           d.prevAov) },
+    { label: 'Margin',     value: `${d.netMargin.toFixed(1)}%`, delta: ppDiff(d.netMargin, d.prevNetMargin) },
+    { label: 'Logistics',  value: compactINR(d.logisticsCost), delta: pct(d.logisticsCost, d.prevLogisticsCost, { invert: true }) },
+  ];
+}
+
+function buildSales(d: MarqueeSales): MarqueeItem[] {
+  return [
+    { label: 'Orders',    value: formatNum(d.orders),          delta: countDiff(d.orders,          d.prevOrders) },
+    { label: 'Cancelled', value: formatNum(d.cancelledOrders), delta: countDiff(d.cancelledOrders, d.prevCancelledOrders, { invert: true }) },
+    { label: 'COD %',     value: `${d.codShare.toFixed(0)}%`,  delta: ppDiff(d.codShare,           d.prevCodShare,        { invert: true }) },
+    { label: 'Prepaid',   value: formatNum(d.prepaidOrders),   delta: countDiff(d.prepaidOrders,   d.prevPrepaidOrders) },
+  ];
+}
+
+function buildMarketing(d: MarqueeMarketing): MarqueeItem[] {
+  return [
+    { label: 'Ad Spend',    value: compactINR(d.adSpend),         delta: pct(d.adSpend,     d.prevAdSpend) },
+    { label: 'ROAS',        value: `${d.roas.toFixed(2)}×`,        delta: pct(d.roas,        d.prevRoas) },
+    { label: 'CTR',         value: `${d.ctr.toFixed(2)}%`,         delta: ppDiff(d.ctr,      d.prevCtr) },
+    { label: 'Clicks',      value: formatNum(d.clicks),            delta: countDiff(d.clicks, d.prevClicks) },
+    { label: 'Purchases',   value: formatNum(d.purchases),         delta: countDiff(d.purchases, d.prevPurchases) },
+  ];
+}
+
+function buildOperations(d: MarqueeOperations): MarqueeItem[] {
+  return [
+    { label: 'Shipments', value: formatNum(d.totalShipments),   delta: countDiff(d.totalShipments, d.prevTotalShipments) },
+    { label: 'Delivered', value: formatNum(d.delivered),         delta: countDiff(d.delivered,      d.prevDelivered) },
+    { label: 'Fulfilled', value: `${d.fulfilledPct.toFixed(0)}%`, delta: ppDiff(d.fulfilledPct,    d.prevFulfilledPct) },
+    { label: 'RTO',       value: `${d.rtoRate.toFixed(1)}%`,     delta: ppDiff(d.rtoRate,          d.prevRtoRate, { invert: true }) },
+    { label: 'NDR',       value: formatNum(d.ndr),               delta: countDiff(d.ndr,           d.prevNdr,     { invert: true }) },
+  ];
+}
+
+function buildCustomers(d: MarqueeCustomers): MarqueeItem[] {
+  return [
+    { label: 'Lifetime',   value: formatNum(d.lifetimeCustomers) },
+    { label: 'New',        value: formatNum(d.newCustomers),       delta: countDiff(d.newCustomers,       d.prevNewCustomers) },
+    { label: 'Returning',  value: formatNum(d.returningCustomers), delta: countDiff(d.returningCustomers, d.prevReturningCustomers) },
+    { label: 'Repeat %',   value: `${d.repeatRate.toFixed(1)}%`,    delta: ppDiff(d.repeatRate,            d.prevRepeatRate) },
+    { label: 'Carts',      value: formatNum(d.abandonedCarts),      delta: countDiff(d.abandonedCarts,    d.prevAbandonedCarts, { invert: true }) },
+  ];
+}
+
+function buildReviews(d: MarqueeReviews): MarqueeItem[] {
+  return [
+    { label: 'Rating',  value: `${d.storeRating.toFixed(2)}★` },
+    { label: 'New',     value: formatNum(d.totalReviews),     delta: countDiff(d.totalReviews, d.prevTotalReviews) },
+    { label: '5★',      value: formatNum(d.fiveStarCount) },
+    { label: 'Verified', value: formatNum(d.verifiedCount) },
+  ];
+}
+
+function buildGroups(payload: MarqueePayload | null): MarqueeGroup[] {
+  if (!payload) return [];
+  return [
+    {
+      key: 'finance',
+      label: 'Finance',
+      bgClass:     'bg-[var(--accent-soft)]',
+      borderClass: 'border-[var(--accent-soft-2)]',
+      titleClass:  'text-[var(--accent)]',
+      items: buildFinance(payload.finance),
+    },
+    {
+      key: 'sales',
+      label: 'Sales',
+      bgClass:     'bg-[var(--blue-soft)]',
+      borderClass: 'border-[var(--blue-soft)]',
+      titleClass:  'text-[var(--blue)]',
+      items: buildSales(payload.sales),
+    },
+    {
+      key: 'marketing',
+      label: 'Marketing',
+      bgClass:     'bg-[var(--ai-soft)]',
+      borderClass: 'border-[var(--ai-soft)]',
+      titleClass:  'text-[var(--purple)]',
+      items: buildMarketing(payload.marketing),
+    },
+    {
+      key: 'operations',
+      label: 'Operations',
+      bgClass:     'bg-[var(--green-soft)]',
+      borderClass: 'border-[var(--green-soft)]',
+      titleClass:  'text-[var(--green)]',
+      items: buildOperations(payload.operations),
+    },
+    {
+      key: 'customers',
+      label: 'Customers',
+      bgClass:     'bg-[var(--teal-soft)]',
+      borderClass: 'border-[var(--teal-soft)]',
+      titleClass:  'text-[var(--teal)]',
+      items: buildCustomers(payload.customers),
+    },
+    {
+      key: 'reviews',
+      label: 'Reviews',
+      bgClass:     'bg-[var(--amber-soft)]',
+      borderClass: 'border-[var(--amber-soft)]',
+      titleClass:  'text-[var(--amber)]',
+      items: buildReviews(payload.reviews),
+    },
+  ];
+}
+
+/* ─── Component ───────────────────────────────────────────────────────── */
+
 export function Ticker() {
-  const kpis           = useAppSelector((s) => s.dashboard.kpis);
-  const prevKpis       = useAppSelector((s) => s.dashboard.prevKpis);
-  const abandonedCarts = useAppSelector((s) => s.dashboard.abandonedCarts);
-  const netRevenue     = useAppSelector((s) => s.dashboard.netRevenue);
-  const range          = useAppSelector((s) => s.range);
+  const payload = useAppSelector((s) => s.marquee.data);
+  const groups = useMemo(() => buildGroups(payload), [payload]);
 
-  // Lead-tile label reflects the actual range, not always "Today".
-  const leadLabel = useMemo(() => {
-    if (range.presetKey === 'today')        return 'Today';
-    if (range.presetKey === 'yesterday')    return 'Yesterday';
-    if (range.presetKey === 'last_7d')      return 'Revenue · 7d';
-    if (range.presetKey === 'last_30d')     return 'Revenue · 30d';
-    if (range.presetKey === 'last_90d')     return 'Revenue · 90d';
-    if (range.presetKey === 'last_365d')    return 'Revenue · 12mo';
-    if (range.presetKey === 'mtd')          return 'Revenue · MTD';
-    if (range.presetKey === 'qtd')          return 'Revenue · QTD';
-    if (range.presetKey === 'ytd')          return 'Revenue · YTD';
-    return 'Revenue';
-  }, [range.presetKey]);
-
-  // Net revenue = gross revenue − refunds − logistics cost − RTO waste
-  // (already computed by backend, exposed as `dashboard.netRevenue`).
-  const netRev = netRevenue?.net_revenue;
-
-  // Fulfillment % (delivered / total shipments) — operational health.
-  const fulfilled    = (kpis?.totalShipments ?? 0) > 0
-    ? ((kpis?.delivered ?? 0) / (kpis?.totalShipments ?? 1)) * 100
-    : 0;
-  const prevFulfilled = (prevKpis?.totalShipments ?? 0) > 0
-    ? ((prevKpis?.delivered ?? 0) / (prevKpis?.totalShipments ?? 1)) * 100
-    : 0;
-
-  const items = useMemo<TickerItem[]>(() => [
-    { label: leadLabel, value: compactINR(kpis?.revenue),                   delta: pct(kpis?.revenue,        prevKpis?.revenue),         highlight: true },
-    { label: 'Net Rev', value: compactINR(netRev),                                                                                                          },
-    { label: 'Orders',  value: formatNum(kpis?.orders ?? 0),                delta: countDiff(kpis?.orders,   prevKpis?.orders)            },
-    { label: 'AOV',     value: formatINR(kpis?.aov ?? 0),                   delta: pct(kpis?.aov,            prevKpis?.aov)               },
-    { label: 'ROAS',    value: `${(kpis?.roas ?? 0).toFixed(2)}×`,          delta: ratioDiff(kpis?.roas,     prevKpis?.roas)              },
-    { label: 'RTO',     value: `${(kpis?.rtoRate ?? 0).toFixed(1)}%`,       delta: ppDiff(kpis?.rtoRate,     prevKpis?.rtoRate, { invert: true }) },
-    { label: 'NDR',     value: formatNum(kpis?.ndr ?? 0),                   delta: countDiff(kpis?.ndr,      prevKpis?.ndr,     { invert: true }) },
-    { label: 'Fulfilled', value: `${fulfilled.toFixed(0)}%`,                delta: ppDiff(fulfilled,         prevFulfilled)                },
-    // Lifetime total — independent of the date range, so no delta. Shows the
-    // full customer base size (matches Shopify Admin → Customers count).
-    { label: 'Customers', value: formatNum(kpis?.lifetimeCustomers ?? 0)                                                                    },
-    { label: 'Carts',   value: formatNum(abandonedCarts?.count ?? 0)                                                                       },
-    { label: 'Ad spend', value: compactINR(kpis?.adSpend),                  delta: pct(kpis?.adSpend,        prevKpis?.adSpend)            },
-  ], [leadLabel, kpis, prevKpis, abandonedCarts, netRev, fulfilled, prevFulfilled]);
+  if (groups.length === 0) {
+    // Render an empty placeholder strip so layout doesn't jump on first paint.
+    return (
+      <div
+        role="region"
+        aria-label="KPI ticker"
+        className="bg-[var(--surface)] border-b border-[var(--line)] h-[40px]"
+      />
+    );
+  }
 
   return (
     <div
@@ -201,8 +291,8 @@ export function Ticker() {
                  [&:hover_[data-ticker-track]]:[animation-play-state:paused]"
     >
       <div className="flex overflow-hidden">
-        <TickerTrack items={items} />
-        <TickerTrack items={items} ariaHidden />
+        <TickerTrack groups={groups} />
+        <TickerTrack groups={groups} ariaHidden />
       </div>
     </div>
   );
